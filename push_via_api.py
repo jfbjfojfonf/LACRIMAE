@@ -171,9 +171,9 @@ def main():
     parent = ref["object"]["sha"]
     print(f"      parent: {parent[:10]} ({BRANCH} current head)")
 
-    message = (
-        "feat(dev6-D): sync full working tree — F00→F09 pipeline, "
-        "assets, videos, docs, presets"
+    message = os.environ.get(
+        "GH_COMMIT_MESSAGE",
+        "feat(dev6-D): sync full working tree — F00→F09 pipeline, assets, videos, docs, presets",
     )
     status, commit = api(
         "POST",

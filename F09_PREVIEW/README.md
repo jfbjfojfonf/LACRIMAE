@@ -26,7 +26,7 @@ npm run dev
 
 3. Dans le navigateur :
    - Upload la frame extraite
-   - Bouge les sliders (RESTORE + STYLE) ou choisis un preset (12 disponibles)
+   - Bouge les sliders (RESTORE + STYLE) ou choisis un preset (13 disponibles)
    - Choisis un Glow Mode (Classic, Aurora, Neon, Cosmic, Digital)
    - Vois le résultat en side-by-side
    - Exporte le JSON (il contient TOUT, y compris exposure/vibrance/vignette)
@@ -63,7 +63,7 @@ python3 F09_PREVIEW/process_video.py input.mp4 output.mp4 "$(cat mon_preset.json
 | Glow Width | 5 | 480 | Rayon du glow |
 | Vignette | 0 | 100 | Assombrissement radial (équivalent CC Vignette), appliqué en dernier |
 
-## Presets (12)
+## Presets (13)
 
 | Preset | Look | Points clés |
 |---|---|---|
@@ -78,6 +78,7 @@ python3 F09_PREVIEW/process_video.py input.mp4 output.mp4 "$(cat mon_preset.json
 | 🔍 Ultra Sharp | Clarté max, zéro glow | sharpen fort |
 | 📱 TikTok 4K | Oversharpen viral | exposure 0.6, saturation 1.45, vibrance 40, vignette 75, glow 0.1 |
 | 🎞 Clean CC | Correction naturelle (tuto n°2) | glow 0, exposure 0.35, saturation 1.25, vignette 50, clarity via detailReveal |
+| 🧵 Polyester | Look « polyester edit » — côté visuel uniquement | sharpen 2.6 crispé, glow doux 0.55/65, exposure 0.25, sat 1.18 + vibrance 15, warmth 1.04, vignette 35, zéro audio/beats |
 | (Beauty par défaut) | | |
 
 ## Corrections v2.2.0 (parité preview ↔ rendu)
@@ -85,6 +86,16 @@ python3 F09_PREVIEW/process_video.py input.mp4 output.mp4 "$(cat mon_preset.json
 - **Vibrance** : direction corrigée (booster, pas délaver)
 - **Contraste** : pivot adaptatif sur la luminance moyenne — plus d'écrasement des ombres sur clips sombres
 - **Glow (rendu Python)** : alphas désormais multipliés par `glowIntensity` (identique à la preview JS)
+
+## Tests de rendu (comparatif, même segment)
+
+| Date | Campagne | Preset | Entrée | Sortie | Statut | Mesures vs source |
+|---|---|---|---|---|---|---|
+| 2026-09-06 | `v2_tiktok4k_test` | TikTok 4K | 120 FPS / 1920×1080 (5 s) | 30 FPS / 720p, 1.1 Mo | OK | chroma +47%, lum −4%, netteté +382% |
+| 2026-09-06 | `v2_cleancc_test` | Clean CC | 120 FPS / 1920×1080 (5 s) | 30 FPS / 720p, 0.9 Mo | OK | chroma +19%, lum −5%, netteté +378% |
+| 2026-09-07 | `v2_polyester_test` | Polyester | 120 FPS / 1920×1080 (5 s) | 30 FPS / 720p, 1.0 Mo | OK | chroma +18%, lum +14%, netteté +395% |
+
+Rendus conservés dans `output/` et archivés dans `F09_PREVIEW/CODEBASE/public/`.
 
 ## Coût
 
