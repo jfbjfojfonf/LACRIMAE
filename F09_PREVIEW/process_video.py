@@ -15,14 +15,14 @@ p = {
     'denoise': 5, 'dehalo': 8, 'sharpenIntensity': 2.0, 'sharpenWidth': 1.8,
     'edgeThreshold': 12, 'contrast': 1.15, 'exposure': 0.0, 'saturation': 1.08,
     'vibrance': 0, 'warmth': 1.0, 'glowIntensity': 0.3, 'glowWidth': 62,
-    'vignette': 0,
+    'vignette': 0, 'microContrast': 0, 'grain': 0,
 }
 
 def box_blur(src, radius):
     r = max(1, int(round(radius)))
     return cv2.blur(src, (r*2+1, r*2+1))
 
-def process_frame(img):
+def process_frame(img, frame_idx=0):
     h, w = img.shape[:2]
     # Resize to 720p for speed
     scale = 720 / max(h, w)
@@ -123,6 +123,16 @@ def process_frame(img):
             cd[:,:,c] = np.clip(cd[:,:,c] + diff[:,:,c]*amount*emask, 0, 255)
         img_u8 = cd.astype(np.uint8)
 
+    # Micro Contrast — wide-radius unsharp (AE Unsharp Mask parity, radius 20@1080p):
+    # applied on the WHOLE frame, no edge mask — this is the "texture body" layer
+    # that gives fabrics/hair/skin their dense mid-frequency grain
+    if p['microContrast'] > 0:
+        radius = max(6, round(13 * (max(h, w) / 720.0)))   # AE radius 20 scaled to working res
+        amount = p['microContrast'] / 100.0
+        bl = box_blur(img_u8, radius).astype(np.float32)
+        cd = img_u8.astype(np.float32)
+        img_u8 = np.clip(cd + (cd - bl) * amount, 0, 255).astype(np.uint8)
+
     # Glow Classic (single pass, fast)
     if p['glowIntensity'] > 0:
         bw = max(1, round(p['glowWidth']))
@@ -159,6 +169,22 @@ def process_frame(img):
         f = (1 - strength * sm)[:,:,np.newaxis]
         img_u8 = np.clip(img_u8.astype(np.float32) * f, 0, 255).astype(np.uint8)
 
+    # Texture Grain — fine monochromatic film grain, applied last:
+    # luminance-weighted (strongest in mids, protected blacks/highlights),
+    # deterministic per frame (seeded) so re-renders are reproducible.
+    # This is the dense speckle layer that reads as "polyester" texture
+    # and masks residual compression banding.
+    if p['grain'] > 0:
+        amp = p['grain'] / 100.0 * 22.0
+        luma = (0.0722*img_u8[:,:,0].astype(np.float32)
+                + 0.7152*img_u8[:,:,1].astype(np.float32)
+                + 0.2126*img_u8[:,:,2].astype(np.float32))
+        t = np.abs(luma - 118.0) / 140.0
+        weight = np.clip(1.0 - t*t, 0.18, 1.0)
+        rng = np.random.default_rng(1000 + frame_idx)
+        noise = rng.normal(0.0, amp, size=luma.shape) * weight
+        img_u8 = np.clip(img_u8.astype(np.float32) + noise[:,:,np.newaxis], 0, 255).astype(np.uint8)
+
     return img_u8
 
 
@@ -189,7 +215,7 @@ def main():
         if not ret:
             break
         if idx % skip == 0:
-            processed = process_frame(frame)
+            processed = process_frame(frame, idx)
             cv2.imwrite(os.path.join(tmpdir, f'frame_{written:05d}.png'), processed)
             written += 1
             if written % 20 == 0:

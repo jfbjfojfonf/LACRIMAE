@@ -47,6 +47,12 @@ SKIP_COMPONENTS = {"node_modules", ".git"}
 SKIP_PATHS = {"F03_AI/.test/f03_ai_modal_test/f03_ai_modal_final.mp4"}
 
 
+def is_sensitive(rel: str) -> bool:
+    """Never push secrets: .env* files, private .ffx presets (règle CONTINUATION.md)."""
+    base = rel.rsplit("/", 1)[-1].lower()
+    return base.startswith(".env") or base.endswith(".ffx")
+
+
 def api(method, path, data=None, timeout=600):
     req = urllib.request.Request(f"{API}{path}", method=method)
     req.add_header("Authorization", f"token {TOKEN}")
@@ -91,7 +97,7 @@ def collect_files():
         dirnames[:] = [d for d in dirnames if d not in SKIP_COMPONENTS]
         for fn in filenames:
             rel = os.path.relpath(os.path.join(dirpath, fn), ROOT).replace(os.sep, "/")
-            if rel in SKIP_PATHS:
+            if rel in SKIP_PATHS or is_sensitive(rel):
                 continue
             files.append(rel)
     return sorted(files)

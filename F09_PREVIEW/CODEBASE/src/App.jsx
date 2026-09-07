@@ -36,6 +36,8 @@ const SECTIONS = {
       { key: 'glowIntensity',    min: 0.0, max: 6.0, step: 0.05, label: 'Glow',          unit: 'x' },
       { key: 'glowWidth',        min: 5,   max: 480,  step: 1,    label: 'Glow Width',    unit: 'px' },
       { key: 'vignette',         min: 0,   max: 100, step: 1,    label: 'Vignette',      unit: '%' },
+      { key: 'microContrast',    min: 0,   max: 100, step: 1,    label: 'Micro Contrast', unit: '%' },
+      { key: 'grain',            min: 0,   max: 100, step: 1,    label: 'Texture Grain', unit: '%' },
     ],
   },
 };
@@ -52,7 +54,7 @@ const PRESETS = {
   ultraSharp: { compressionFix: 15, detailEnhance: 50, detailReveal: 45, denoise: 5, dehalo: 8, sharpenIntensity: 2.0, sharpenWidth: 1.8, edgeThreshold: 12, contrast: 1.15, saturation: 1.08, warmth: 1.0, glowIntensity: 0.0, glowWidth: 5, glowMode: 'classic', exposure: 0, vibrance: 0, vignette: 0, label: 'Ultra Sharp', icon: '\uD83D\uDD2D' },
   tiktok4k: { compressionFix: 20, detailEnhance: 30, detailReveal: 25, denoise: 10, dehalo: 10, sharpenIntensity: 3.2, sharpenWidth: 2.5, edgeThreshold: 8, contrast: 1.25, exposure: 0.6, saturation: 1.45, vibrance: 40, warmth: 1.06, glowIntensity: 0.1, glowWidth: 75, glowMode: 'classic', vignette: 75, label: 'TikTok 4K', icon: '\u{1F4F1}' },
   cleanCC: { compressionFix: 25, detailEnhance: 40, detailReveal: 35, denoise: 15, dehalo: 8, sharpenIntensity: 1.3, sharpenWidth: 1.2, edgeThreshold: 20, contrast: 1.12, exposure: 0.35, saturation: 1.25, vibrance: 0, warmth: 1.0, glowIntensity: 0.0, glowWidth: 5, glowMode: 'classic', vignette: 50, label: 'Clean CC', icon: '\uD83C\uDF9A' },
-  polyester: { compressionFix: 25, detailEnhance: 45, detailReveal: 35, denoise: 10, dehalo: 10, sharpenIntensity: 2.6, sharpenWidth: 1.6, edgeThreshold: 15, contrast: 1.18, exposure: 0.25, saturation: 1.18, vibrance: 15, warmth: 1.04, glowIntensity: 0.55, glowWidth: 65, glowMode: 'classic', vignette: 35, label: 'Polyester', icon: '\u{1F9F5}' },
+  polyester: { compressionFix: 30, detailEnhance: 55, detailReveal: 45, denoise: 8, dehalo: 14, sharpenIntensity: 4.2, sharpenWidth: 1.8, edgeThreshold: 6, contrast: 1.42, exposure: 0.08, saturation: 1.5, vibrance: 40, warmth: 1.02, glowIntensity: 0.75, glowWidth: 80, glowMode: 'classic', vignette: 45, microContrast: 55, grain: 32, label: 'Polyester', icon: '\u{1F9F5}' },
 };
 
 const DEFAULTS = PRESETS.beauty;
@@ -629,6 +631,23 @@ function processImage(canvas, ctx, img, p) {
     ctx.putImageData(currentData, 0, 0);
   }
 
+  // ═══ MICRO CONTRAST — wide-radius unsharp, whole frame (no edge mask) ═══
+  // AE Unsharp Mask parity (radius 20 @1080p): the "texture body" layer that
+  // gives fabrics/hair/skin their dense mid-frequency grain
+  if (p.microContrast > 0) {
+    const currentData = ctx.getImageData(0, 0, w, h);
+    const cd = currentData.data;
+    const radius = Math.max(6, Math.round(13 * (Math.max(w, h) / 720)));
+    const blurred = boxBlur(cd, w, h, radius);
+    const amount = p.microContrast / 100;
+    for (let i = 0; i < cd.length; i += 4) {
+      cd[i]   = Math.min(255, Math.max(0, cd[i]   + (cd[i]   - blurred[i])   * amount));
+      cd[i+1] = Math.min(255, Math.max(0, cd[i+1] + (cd[i+1] - blurred[i+1]) * amount));
+      cd[i+2] = Math.min(255, Math.max(0, cd[i+2] + (cd[i+2] - blurred[i+2]) * amount));
+    }
+    ctx.putImageData(currentData, 0, 0);
+  }
+
   // ═══ GLOW — mode-based ═══
   if (p.glowIntensity > 0) {
     const baseW = Math.round(p.glowWidth);
@@ -661,6 +680,31 @@ function processImage(canvas, ctx, img, p) {
       }
     }
     ctx.putImageData(vData, 0, 0);
+  }
+
+  // ═══ TEXTURE GRAIN — fine monochromatic grain, applied last ═══
+  // Luminance-weighted (strongest in mids, protected blacks/highlights),
+  // deterministic (hashed) so the preview stays stable across re-renders.
+  if (p.grain > 0) {
+    const amp = (p.grain / 100) * 22;
+    const gData = ctx.getImageData(0, 0, w, h);
+    const gd = gData.data;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        const luma = 0.2126 * gd[i] + 0.7152 * gd[i+1] + 0.0722 * gd[i+2];
+        const t = Math.abs(luma - 118) / 140;
+        const weight = Math.max(0.18, Math.min(1, 1 - t * t));
+        let hsh = x * 374761393 + y * 668265263 + 2246822519;
+        hsh = (hsh ^ (hsh >> 13)) * 1274126177;
+        hsh = hsh ^ (hsh >> 16);
+        const noise = ((hsh & 0xffff) / 32768 - 1) * amp * weight;
+        gd[i]   = Math.min(255, Math.max(0, gd[i]   + noise));
+        gd[i+1] = Math.min(255, Math.max(0, gd[i+1] + noise));
+        gd[i+2] = Math.min(255, Math.max(0, gd[i+2] + noise));
+      }
+    }
+    ctx.putImageData(gData, 0, 0);
   }
 
   return canvas.toDataURL('image/png');
@@ -770,7 +814,7 @@ function PresetBar({ active, onSelect }) {
 function ExportPanel({ params }) {
   const config = {
     f09_preview: {
-      version: '2.2.0',
+      version: '2.3.0',
       generated: new Date().toISOString(),
       glowMode: params.glowMode,
       restore: {
@@ -792,6 +836,8 @@ function ExportPanel({ params }) {
         exposure: params.exposure,
         vibrance: params.vibrance,
         vignette: params.vignette,
+        microContrast: params.microContrast || 0,
+        grain: params.grain || 0,
       },
     },
   };

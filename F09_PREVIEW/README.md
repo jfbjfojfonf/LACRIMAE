@@ -78,7 +78,7 @@ python3 F09_PREVIEW/process_video.py input.mp4 output.mp4 "$(cat mon_preset.json
 | 🔍 Ultra Sharp | Clarté max, zéro glow | sharpen fort |
 | 📱 TikTok 4K | Oversharpen viral | exposure 0.6, saturation 1.45, vibrance 40, vignette 75, glow 0.1 |
 | 🎞 Clean CC | Correction naturelle (tuto n°2) | glow 0, exposure 0.35, saturation 1.25, vignette 50, clarity via detailReveal |
-| 🧵 Polyester | Look « polyester edit » — côté visuel uniquement | sharpen 2.6 crispé, glow doux 0.55/65, exposure 0.25, sat 1.18 + vibrance 15, warmth 1.04, vignette 35, zéro audio/beats |
+| 🧵 Polyester | Look « polyester edit » — côté visuel uniquement | sharpen 4.2 crunchy, contraste 1.42 (noirs crushés), sat 1.5 + vibrance 40, glow soyeux 0.75/80, exposure 0.08, warmth 1.02, vignette 45, zéro audio/beats |
 | (Beauty par défaut) | | |
 
 ## Corrections v2.2.0 (parité preview ↔ rendu)
@@ -93,7 +93,7 @@ python3 F09_PREVIEW/process_video.py input.mp4 output.mp4 "$(cat mon_preset.json
 |---|---|---|---|---|---|---|
 | 2026-09-06 | `v2_tiktok4k_test` | TikTok 4K | 120 FPS / 1920×1080 (5 s) | 30 FPS / 720p, 1.1 Mo | OK | chroma +47%, lum −4%, netteté +382% |
 | 2026-09-06 | `v2_cleancc_test` | Clean CC | 120 FPS / 1920×1080 (5 s) | 30 FPS / 720p, 0.9 Mo | OK | chroma +19%, lum −5%, netteté +378% |
-| 2026-09-07 | `v2_polyester_test` | Polyester | 120 FPS / 1920×1080 (5 s) | 30 FPS / 720p, 1.0 Mo | OK | chroma +18%, lum +14%, netteté +395% |
+| 2026-09-07 | `v2_polyester_test` | Polyester | 120 FPS / 1920×1080 (5 s) | 30 FPS / 720p, 1.2 Mo | OK | chroma +39%, lum +9%, netteté +73% (variance Laplacien), noirs crushés ~0 |
 
 Rendus conservés dans `output/` et archivés dans `F09_PREVIEW/CODEBASE/public/`.
 
