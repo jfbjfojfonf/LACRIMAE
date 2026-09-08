@@ -40,6 +40,16 @@ const SECTIONS = {
       { key: 'grain',            min: 0,   max: 100, step: 1,    label: 'Texture Grain', unit: '%' },
     ],
   },
+  noise: {
+    label: 'ANTI-NOISE (v2)',
+    icon: '\u{1F9F5}',
+    sliders: [
+      { key: 'temporalDenoise',  min: 0, max: 100, step: 1, label: 'Temporal Denoise', unit: '%' },
+      { key: 'spatialDenoise',   min: 0, max: 100, step: 1, label: 'Spatial Denoise',  unit: '%' },
+      { key: 'chromaClean',      min: 0, max: 100, step: 1, label: 'Chroma Clean',     unit: '%' },
+      { key: 'grainShadowProtect', min: 0, max: 100, step: 1, label: 'Grain Shadow Prot.', unit: '%' },
+    ],
+  },
 };
 
 const PRESETS = {
@@ -54,7 +64,8 @@ const PRESETS = {
   ultraSharp: { compressionFix: 15, detailEnhance: 50, detailReveal: 45, denoise: 5, dehalo: 8, sharpenIntensity: 2.0, sharpenWidth: 1.8, edgeThreshold: 12, contrast: 1.15, saturation: 1.08, warmth: 1.0, glowIntensity: 0.0, glowWidth: 5, glowMode: 'classic', exposure: 0, vibrance: 0, vignette: 0, label: 'Ultra Sharp', icon: '\uD83D\uDD2D' },
   tiktok4k: { compressionFix: 20, detailEnhance: 30, detailReveal: 25, denoise: 10, dehalo: 10, sharpenIntensity: 3.2, sharpenWidth: 2.5, edgeThreshold: 8, contrast: 1.25, exposure: 0.6, saturation: 1.45, vibrance: 40, warmth: 1.06, glowIntensity: 0.1, glowWidth: 75, glowMode: 'classic', vignette: 75, label: 'TikTok 4K', icon: '\u{1F4F1}' },
   cleanCC: { compressionFix: 25, detailEnhance: 40, detailReveal: 35, denoise: 15, dehalo: 8, sharpenIntensity: 1.3, sharpenWidth: 1.2, edgeThreshold: 20, contrast: 1.12, exposure: 0.35, saturation: 1.25, vibrance: 0, warmth: 1.0, glowIntensity: 0.0, glowWidth: 5, glowMode: 'classic', vignette: 50, label: 'Clean CC', icon: '\uD83C\uDF9A' },
-  polyester: { compressionFix: 30, detailEnhance: 55, detailReveal: 45, denoise: 8, dehalo: 14, sharpenIntensity: 4.2, sharpenWidth: 1.8, edgeThreshold: 6, contrast: 1.42, exposure: 0.08, saturation: 1.5, vibrance: 40, warmth: 1.02, glowIntensity: 0.75, glowWidth: 80, glowMode: 'classic', vignette: 45, microContrast: 55, grain: 32, label: 'Polyester', icon: '\u{1F9F5}' },
+  polyester: { compressionFix: 30, detailEnhance: 55, detailReveal: 45, denoise: 8, dehalo: 14, sharpenIntensity: 4.2, sharpenWidth: 1.8, edgeThreshold: 6, contrast: 1.42, exposure: 0.08, saturation: 1.5, vibrance: 40, warmth: 1.02, glowIntensity: 0.75, glowWidth: 80, glowMode: 'classic', vignette: 45, microContrast: 55, grain: 32, label: 'Polyester v1', icon: '\u{1F9F5}' },
+  polyesterV2: { compressionFix: 30, detailEnhance: 55, detailReveal: 45, denoise: 8, dehalo: 14, sharpenIntensity: 4.2, sharpenWidth: 1.8, edgeThreshold: 6, contrast: 1.42, exposure: 0.08, saturation: 1.5, vibrance: 40, warmth: 1.02, glowIntensity: 0.75, glowWidth: 80, glowMode: 'classic', vignette: 45, microContrast: 48, grain: 32, temporalDenoise: 35, spatialDenoise: 25, chromaClean: 40, grainShadowProtect: 100, label: 'Polyester v2', icon: '\u{1F9F9}' },
 };
 
 const DEFAULTS = PRESETS.beauty;
@@ -62,6 +73,36 @@ const DEFAULTS = PRESETS.beauty;
 /* ── Canvas Processing ─────────────────────────────────── */
 
 // Fast box blur — sliding window O(w*h) regardless of radius
+// channelCount=4 (RGBA) for ImageData, or 3 with a channel offset for planar YCrCb
+function boxBlur3(srcData, w, h, radius, channel) {
+  const dst = new Float32Array(w * h);
+  const r = Math.max(1, Math.round(radius));
+  const diam = r * 2 + 1;
+  for (let y = 0; y < h; y++) {
+    let sum = 0;
+    const row = y * w;
+    for (let dx = -r; dx <= r; dx++) sum += srcData[(row + Math.min(w - 1, Math.max(0, dx))) * 3 + channel];
+    dst[row] = sum / diam;
+    for (let x = 1; x < w; x++) {
+      const addX = Math.min(w - 1, x + r), subX = Math.max(0, x - r - 1);
+      sum += srcData[(row + addX) * 3 + channel] - srcData[(row + subX) * 3 + channel];
+      dst[row + x] = sum / diam;
+    }
+  }
+  const out = new Float32Array(w * h);
+  for (let x = 0; x < w; x++) {
+    let sum = 0;
+    for (let dy = -r; dy <= r; dy++) sum += dst[Math.min(h - 1, Math.max(0, dy)) * w + x];
+    out[x] = sum / diam;
+    for (let y = 1; y < h; y++) {
+      const addY = Math.min(h - 1, y + r), subY = Math.max(0, y - r - 1);
+      sum += dst[addY * w + x] - dst[subY * w + x];
+      out[y * w + x] = sum / diam;
+    }
+  }
+  return out;   // indexed [y * w + x]
+}
+
 function boxBlur(srcData, w, h, radius) {
   const dst = new Uint8ClampedArray(srcData.length);
   const r = Math.max(1, Math.round(radius));
@@ -483,6 +524,52 @@ function processImage(canvas, ctx, img, p) {
 
   let imageData = ctx.getImageData(0, 0, w, h);
   let d = imageData.data;
+
+  // ═══ POLYESTER V2 · TEMPORAL DENOISE (single-frame parity: disabled live, used in render) ═══
+  // The browser preview is frame-based (no previous frame available), so this
+  // layer is a no-op live; the Python engine owns it for video renders.
+
+  // ═══ POLYESTER V2 · CHROMA CLEAN — smooth Cr/Cb only ═══
+  if (p.chromaClean > 0) {
+    const s = p.chromaClean / 100;
+    // BGR→YCrCb manual conversion
+    const ycc = new Float32Array(w * h * 3);
+    for (let i = 0, j = 0; i < d.length; i += 4, j += 3) {
+      const b = d[i], g = d[i+1], r = d[i+2];
+      ycc[j]   = 0.299*r + 0.587*g + 0.114*b;                    // Y
+      ycc[j+1] = (r - ycc[j]) * 0.713 + 128;                      // Cr
+      ycc[j+2] = (b - ycc[j]) * 0.564 + 128;                      // Cb
+    }
+    // box blur Cr and Cb with radius scaled by strength
+    const radius = Math.max(1, Math.round(1.2 + s * 2.2));
+    const crBlurred = boxBlur3(ycc, w, h, radius, 1);
+    const cbBlurred = boxBlur3(ycc, w, h, radius, 2);
+    const m = s * 0.8;
+    for (let i = 0, j = 0; i < d.length; i += 4, j += 3) {
+      const Y = ycc[j], cr = ycc[j+1]*(1-m) + crBlurred[j+1]*m, cb = ycc[j+2]*(1-m) + cbBlurred[j+2]*m;
+      let r = Y + 1.403*(cr - 128);
+      let g = Y - 0.714*(cr - 128) - 0.344*(cb - 128);
+      let b = Y + 1.773*(cb - 128);
+      d[i]   = Math.min(255, Math.max(0, b));
+      d[i+1] = Math.min(255, Math.max(0, g));
+      d[i+2] = Math.min(255, Math.max(0, r));
+    }
+  }
+
+  // ═══ POLYESTER V2 · SPATIAL DENOISE (flat zones only) ═══
+  if (p.spatialDenoise > 0) {
+    const s = p.spatialDenoise / 100;
+    const blurred = boxBlur(d, w, h, 4);
+    for (let i = 0; i < d.length; i += 4) {
+      // local variance proxy: |pixel - local mean| (luma-ish)
+      const detail = (Math.abs(d[i] - blurred[i]) + Math.abs(d[i+1] - blurred[i+1]) + Math.abs(d[i+2] - blurred[i+2])) / 3;
+      const flat = Math.max(0, Math.min(1, (26 - detail) / 18));   // 1 = flat, 0 = detailed
+      const m = s * 0.9 * flat;
+      d[i]   = d[i]  *(1-m) + blurred[i]  *m;
+      d[i+1] = d[i+1]*(1-m) + blurred[i+1]*m;
+      d[i+2] = d[i+2]*(1-m) + blurred[i+2]*m;
+    }
+  }
 
   // ═══ TOPAZ RESTORE ═══
   if (p.denoise > 0) {

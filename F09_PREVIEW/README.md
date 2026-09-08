@@ -79,7 +79,19 @@ python3 F09_PREVIEW/process_video.py input.mp4 output.mp4 "$(cat mon_preset.json
 | 📱 TikTok 4K | Oversharpen viral | exposure 0.6, saturation 1.45, vibrance 40, vignette 75, glow 0.1 |
 | 🎞 Clean CC | Correction naturelle (tuto n°2) | glow 0, exposure 0.35, saturation 1.25, vignette 50, clarity via detailReveal |
 | 🧵 Polyester | Look « polyester edit » — côté visuel uniquement | sharpen 4.2 crunchy, contraste 1.42 (noirs crushés), sat 1.5 + vibrance 40, glow soyeux 0.75/80, exposure 0.08, warmth 1.02, vignette 45, zéro audio/beats |
+| 🧵 Polyester v2 | Polyester + couche anti-bruit (texture protégée) | identique v1 + microContrast 48, temporalDenoise 35, spatialDenoise 25, chromaClean 40, grainShadowProtect 100 |
 | (Beauty par défaut) | | |
+
+## Anti-noise (v2) — 4 nouveaux sliders
+
+La section ANTI-NOISE (v2) attaque le bruit sans tuer la texture :
+
+| Slider | Rôle |
+|---|---|
+| Temporal Denoise | Moyenne temporelle sur zones statiques uniquement (le mouvement est protégé par un seuil de différence) — le bruit capteur/compression décorréle frame à frame, le contenu reste en place |
+| Spatial Denoise | Lissage edge-preserving réservé aux zones plates (variance locale faible) — le détail réel n'est jamais touché |
+| Chroma Clean | Lissage des seuls canaux Cr/Cb — la speckle colorée meurt, la luma (texture) reste identique |
+| Grain Shadow Prot. | Protection des ombres contre le grain (plancher 0.18 → 0.04) + grain concentré là où il y a du vrai détail |
 
 ## Corrections v2.2.0 (parité preview ↔ rendu)
 
@@ -94,8 +106,9 @@ python3 F09_PREVIEW/process_video.py input.mp4 output.mp4 "$(cat mon_preset.json
 | 2026-09-06 | `v2_tiktok4k_test` | TikTok 4K | 120 FPS / 1920×1080 (5 s) | 30 FPS / 720p, 1.1 Mo | OK | chroma +47%, lum −4%, netteté +382% |
 | 2026-09-06 | `v2_cleancc_test` | Clean CC | 120 FPS / 1920×1080 (5 s) | 30 FPS / 720p, 0.9 Mo | OK | chroma +19%, lum −5%, netteté +378% |
 | 2026-09-07 | `v2_polyester_test` | Polyester | 120 FPS / 1920×1080 (5 s) | 30 FPS / 720p, 1.2 Mo | OK | chroma +39%, lum +9%, netteté +73% (variance Laplacien), noirs crushés ~0 |
+| 2026-09-08 | `v2_polyester_v2_test` | Polyester v2 | 120 FPS / 1920×1080 (5 s) | 30 FPS / 720p, 1.5 Mo | OK | bruit zones plates −56% (std 1.84 → 0.80), texture préservée (netteté −3%, chroma/lum identiques) |
 
-Rendus conservés dans `output/` et archivés dans `F09_PREVIEW/CODEBASE/public/`.
+Rendus conservés dans `output/` et archivés dans `F09_PREVIEW/CODEBASE/public/`. Comparaison : `compare_polyester_v1.png` / `compare_polyester_v2.png` (frame à 2 s).
 
 ## Coût
 

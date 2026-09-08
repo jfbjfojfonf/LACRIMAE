@@ -1,0 +1,35 @@
+{
+  "f09_preview": {
+    "version": "2.3.0",
+    "generated": "2026-09-08T05:36:35.837Z",
+    "glowMode": "classic",
+    "restore": {
+      "compressionFix": 30,
+      "detailEnhance": 55,
+      "detailReveal": 45,
+      "denoise": 8,
+      "dehalo": 14
+    },
+    "style": {
+      "sharpenIntensity": 4.2,
+      "sharpenWidth": 1.8,
+      "edgeThreshold": 6,
+      "contrast": 1.42,
+      "saturation": 1.5,
+      "warmth": 1.02,
+      "glowIntensity": 0.75,
+      "glowWidth": 80,
+      "exposure": 0.08,
+      "vibrance": 40,
+      "vignette": 45,
+      "microContrast": 48,
+      "grain": 32
+    },
+    "noise": {
+      "temporalDenoise": 35,
+      "spatialDenoise": 25,
+      "chromaClean": 40,
+      "grainShadowProtect": 100
+    }
+  }
+}

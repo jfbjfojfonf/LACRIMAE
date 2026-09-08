@@ -16,26 +16,70 @@ p = {
     'edgeThreshold': 12, 'contrast': 1.15, 'exposure': 0.0, 'saturation': 1.08,
     'vibrance': 0, 'warmth': 1.0, 'glowIntensity': 0.3, 'glowWidth': 62,
     'vignette': 0, 'microContrast': 0, 'grain': 0,
+    # ── Polyester v2 — anti-noise layer (all default 0: v1 presets bit-identical) ──
+    'temporalDenoise': 0, 'spatialDenoise': 0, 'chromaClean': 0, 'grainShadowProtect': 0,
 }
 
 def box_blur(src, radius):
     r = max(1, int(round(radius)))
     return cv2.blur(src, (r*2+1, r*2+1))
 
-def process_frame(img, frame_idx=0):
+def process_frame(img, frame_idx=0, prev_u8=None):
     h, w = img.shape[:2]
     # Resize to 720p for speed
     scale = 720 / max(h, w)
     if scale < 1:
         img = cv2.resize(img, (int(w*scale), int(h*scale)), interpolation=cv2.INTER_AREA)
+
+    # ── Polyester v2 · TEMPORAL DENOISE ─────────────────────────────
+    # Blend the current frame with the previous frame where the frame-to-frame
+    # difference is small: sensor/compression noise decorrelates frame to frame
+    # while real content stays put, so averaging kills noise, not texture.
+    # Motion threshold prevents ghosting/trails on moving subjects.
+    temporal_out = None
+    if p['temporalDenoise'] > 0 and prev_u8 is not None:
+        s = p['temporalDenoise'] / 100.0
+        prev_r = cv2.resize(prev_u8, (img.shape[1], img.shape[0]), interpolation=cv2.INTER_AREA) if prev_u8.shape[:2] != img.shape[:2] else prev_u8
+        diff = cv2.absdiff(img, prev_r).astype(np.float32).mean(axis=-1)
+        motion = np.clip((diff - 8.0) / 20.0, 0.0, 1.0)   # 0 = static, 1 = moving
+        blend = (1.0 - motion) * (s * 0.65)
+        blended = img.astype(np.float32) * (1.0 - blend[..., np.newaxis]) + prev_r.astype(np.float32) * blend[..., np.newaxis]
+        img = np.clip(blended, 0, 255).astype(np.uint8)
+
     img_f = img.astype(np.float32)
 
-    # Denoise
-    if p['denoise'] > 0:
-        s = p['denoise'] / 100.0
-        bl = box_blur(img, max(1, round(1 + s*3))).astype(np.float32)
-        m = s * 0.4
-        img_f = img_f*(1-m) + bl*m
+    # ── Polyester v2 · CHROMA CLEAN ─────────────────────────────────
+    # Smooth ONLY the chroma channels (Cr/Cb in YCrCb): colored speckle noise
+    # dies while luma — and therefore texture detail — stays bit-identical.
+    if p['chromaClean'] > 0:
+        s = p['chromaClean'] / 100.0
+        ycc = cv2.cvtColor(np.clip(img_f, 0, 255).astype(np.uint8), cv2.COLOR_BGR2YCrCb)
+        cr = ycc[:,:,1].astype(np.float32)
+        cb = ycc[:,:,2].astype(np.float32)
+        cr_s = cv2.GaussianBlur(cr, (0, 0), 1.2 + s*1.8)
+        cb_s = cv2.GaussianBlur(cb, (0, 0), 1.2 + s*1.8)
+        m = s * 0.8
+        ycc[:,:,1] = np.clip(cr*(1-m) + cr_s*m, 0, 255)
+        ycc[:,:,2] = np.clip(cb*(1-m) + cb_s*m, 0, 255)
+        img_f = cv2.cvtColor(ycc, cv2.COLOR_YCrCb2BGR).astype(np.float32)
+
+    img_u8_for_next = None
+
+    # ── Polyester v2 · SPATIAL DENOISE (flat zones only) ────────────
+    # FastNlMeans-style edge-preserving smoothing applied ONLY where local
+    # variance is low (flat areas): the real detail (edges, texture) is spared
+    # while the amplified noise floor in flat zones collapses.
+    if p['spatialDenoise'] > 0:
+        s = p['spatialDenoise'] / 100.0
+        u8 = np.clip(img_f, 0, 255).astype(np.uint8)
+        gray = (0.0722*u8[:,:,0].astype(np.float32) + 0.7152*u8[:,:,1].astype(np.float32) + 0.2126*u8[:,:,2].astype(np.float32))
+        loc_var = cv2.blur((gray - cv2.blur(gray, (5, 5)))**2, (5, 5))
+        np.maximum(loc_var, 0.0, out=loc_var)   # float32 rounding can go slightly negative → NaN on sqrt
+        flat = np.clip((90.0 - np.sqrt(loc_var)) / 60.0, 0.0, 1.0)   # 1 = flat, 0 = detailed
+        den = cv2.fastNlMeansDenoisingColored(u8, None, h=3 + s*7, hColor=3 + s*7, templateWindowSize=7, searchWindowSize=15)
+        den_f = den.astype(np.float32)
+        m = s * 0.9 * flat[..., np.newaxis]
+        img_f = img_f*(1-m) + den_f*m
 
     # Compression Fix
     if p['compressionFix'] > 0:
@@ -170,10 +214,12 @@ def process_frame(img, frame_idx=0):
         img_u8 = np.clip(img_u8.astype(np.float32) * f, 0, 255).astype(np.uint8)
 
     # Texture Grain — fine monochromatic film grain, applied last:
-    # luminance-weighted (strongest in mids, protected blacks/highlights),
-    # deterministic per frame (seeded) so re-renders are reproducible.
-    # This is the dense speckle layer that reads as "polyester" texture
-    # and masks residual compression banding.
+    # luminance-weighted (strongest in mids), deterministic per frame (seeded)
+    # so re-renders are reproducible. This is the dense speckle layer that
+    # reads as "polyester" texture and masks residual compression banding.
+    # v2 · grainShadowProtect: shadow floor drops 0.18 → ~0.04 and the grain is
+    # concentrated where real detail lives (variance mask) — grain becomes
+    # texture, not uniform noise.
     if p['grain'] > 0:
         amp = p['grain'] / 100.0 * 22.0
         luma = (0.0722*img_u8[:,:,0].astype(np.float32)
@@ -181,6 +227,16 @@ def process_frame(img, frame_idx=0):
                 + 0.2126*img_u8[:,:,2].astype(np.float32))
         t = np.abs(luma - 118.0) / 140.0
         weight = np.clip(1.0 - t*t, 0.18, 1.0)
+        if p['grainShadowProtect'] > 0:
+            gsp = p['grainShadowProtect'] / 100.0
+            shadow = np.clip((luma - 10.0) / 70.0, 0.0, 1.0)
+            shadow = shadow*shadow*(3 - 2*shadow)            # smoothstep
+            floor = 0.18 * (1.0 - gsp) + 0.04 * gsp          # 0.18 → 0.04
+            weight = np.clip(1.0 - t*t, floor, 1.0) * (0.35 + 0.65*shadow)
+            gray_blur = cv2.blur(luma, (5, 5))
+            detail = np.abs(luma - gray_blur)
+            detail_mask = np.clip(detail / 6.0, 0.0, 1.0)
+            weight = weight * (0.45 + 0.55*detail_mask)
         rng = np.random.default_rng(1000 + frame_idx)
         noise = rng.normal(0.0, amp, size=luma.shape) * weight
         img_u8 = np.clip(img_u8.astype(np.float32) + noise[:,:,np.newaxis], 0, 255).astype(np.uint8)
@@ -209,13 +265,15 @@ def main():
     tmpdir = tempfile.mkdtemp(prefix='f09_')
     idx = 0
     written = 0
+    prev_u8 = None
 
     while True:
         ret, frame = cap.read()
         if not ret:
             break
         if idx % skip == 0:
-            processed = process_frame(frame, idx)
+            processed = process_frame(frame, idx, prev_u8)
+            prev_u8 = frame.copy()   # raw previous frame for temporal denoise
             cv2.imwrite(os.path.join(tmpdir, f'frame_{written:05d}.png'), processed)
             written += 1
             if written % 20 == 0:
