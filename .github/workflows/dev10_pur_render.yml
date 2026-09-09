@@ -96,7 +96,7 @@ jobs:
           python3 - << 'PYEOF'
           import json
           from pathlib import Path
-          codex_path = Path('F03_PICTOR/CODEBASE/public/codex.json')
+          codex_path = Path('F03_PICTOR/CODEBASE/src/data/codex.json')
           d = json.loads(codex_path.read_text()) if codex_path.exists() else {}
           manifest = json.loads(Path('F03_PREVIEW/CODEBASE/public/pur_manifest.json').read_text())
           d['pur_manifest'] = manifest

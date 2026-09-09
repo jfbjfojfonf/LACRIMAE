@@ -64,7 +64,7 @@ export function PurPackComposition({ purManifest, session: sessionProp }) {
   return (
     <AbsoluteFill style={{ backgroundColor: '#050505', overflow: 'hidden' }}>
       {/* SFX des zooms (volume 50-60% sous la voix) */}
-      {(entry.sfx_list || []).map((sfx, index) => (
+      {(manifest.sfx_available === true ? entry.sfx_list || [] : []).map((sfx, index) => (
         Math.abs(frame - Number(sfx.moment_frame || 0)) < 1 && sfx.type ? (
           <Sequence key={`pur_sfx_${index}`} from={Number(sfx.moment_frame || 0)} durationInFrames={Math.max(1, durationInFrames - Number(sfx.moment_frame || 0))}>
             <Audio src={staticFile(`sfx/${sfx.type}.mp3`)} volume={Number(sfx.volume ?? 0.55)} />
