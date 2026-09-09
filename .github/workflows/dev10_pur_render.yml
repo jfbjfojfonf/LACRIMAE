@@ -12,14 +12,10 @@ on:
         default: 'pur_A01'
         type: string
       canvas:
-        description: 'Format de sortie'
+        description: 'Format de sortie (9:16, 16:9 ou 1:1)'
         required: false
         default: '9:16'
-        type: choice
-        options:
-          - 9:16
-          - 16:9
-          - 1:1
+        type: string
       perturabo_branch:
         description: 'Branche PERTURABO à lire'
         required: false
