@@ -27,3 +27,11 @@ F05_CAMOUFLAGE/OUT/
 F06_LUTHER/IN/
 F06_LUTHER/OUT/
 TRACKING/pre_f00ab_backup/
+
+# Artefacts générés runtime (jamais commités)
+BRIDGE_PERTURABO/OUT/
+F03_PICTOR/CODEBASE/public/clips/
+F03_PICTOR/CODEBASE/public/codex.json
+F03_PICTOR/CODEBASE/public/pur_manifest.json
+F03_PREVIEW/CODEBASE/public/pur_manifest.json
+F03_PREVIEW/CODEBASE/public/clips/
