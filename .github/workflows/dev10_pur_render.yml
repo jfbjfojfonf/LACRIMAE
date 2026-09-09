@@ -101,7 +101,10 @@ jobs:
           manifest = json.loads(Path('F03_PREVIEW/CODEBASE/public/pur_manifest.json').read_text())
           d['pur_manifest'] = manifest
           d.setdefault('session', {})['review_mode'] = 'pur_pack'
-          d.setdefault('clips', [{}])[0].setdefault('video', {})['fps'] = manifest.get('fps', 30)
+          clips = d.setdefault('clips', [])
+          if not isinstance(clips, list) or len(clips) == 0:
+              d['clips'] = [{}]
+          d['clips'][0].setdefault('video', {})['fps'] = manifest.get('fps', 30)
           codex_path.parent.mkdir(parents=True, exist_ok=True)
           codex_path.write_text(json.dumps(d, indent=2) + '\n')
           print(f"codex.json : pur_manifest injecté ({manifest['total_frames']} frames, mode pur_pack)")
