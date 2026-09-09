@@ -154,9 +154,74 @@ function RevealCompilationComposition({ codex, session: sessionProp, revealManif
   );
 }
 
+/**
+ * PUR style=ranking → manifeste dev9.ranking.v1 équivalent.
+ * Réutilise la mécanique ranking éprouvée (dev9) : hook 0-3s sans overlay,
+ * rangs affichés, final #1 en gros, anti-détection portée par l'entry.
+ */
+function buildRankingFromPur(purManifest) {
+  if (!purManifest) return null;
+  const entry = purManifest.entries?.[0] || {};
+  const fps = Number(purManifest.fps || 30);
+  const hookSec = Number(purManifest.pur?.hook?.duration_sec || 3);
+  const label = String(purManifest.narrative?.overlay?.lines?.[0] || purManifest.pur?.angle_id || '').slice(0, 24);
+  return {
+    schema_version: 'dev9.ranking.v1',
+    mode: 'ranking_compilation',
+    fps,
+    narrative: {
+      title: String(purManifest.pur?.angle_id || 'PUR').toUpperCase(),
+      category: label,
+      header_label: '',
+      final_label: label,
+    },
+    entries: [{
+      rank: 1,
+      source_id: entry.source_id || 'pur_rank_1',
+      clip_file: entry.clip_file || '',
+      duration_seconds: Number(entry.duration_seconds || 30),
+      label,
+      position: { x_pct: 50, y_pct: 50, scale: 1.15, rotation: 0 },
+      motion: { preset: 'none', intensity: 0.2 },
+      sfx: { enabled: false, file: '', volume: 0.6 },
+      text_style: { font_size: 54, color: '#FFFFFF', accent_color: '#FFD400', x_pct: 8, y_pct: 34 },
+      role: 'final_rank',
+      pur_anti_detection: entry.anti_detection || {},
+      pur_hook_sec: hookSec,
+    }],
+    total_frames: Number(purManifest.total_frames || 0),
+    duration_seconds: Number(purManifest.duration_seconds || 0),
+  };
+}
+
 export const OmniComposition = ({ codex, videoSrc, session: sessionProp, sequences, hybridManifest, hybridIntroSrc, musicTimeline, revealManifest, purManifest }) => {
   if (sessionProp?.review_mode === 'pur_pack' || purManifest?.mode === 'pur_pack') {
-    return <PurPackComposition purManifest={purManifest || sessionProp?.pur_manifest} />;
+    const rawPur = purManifest || sessionProp?.pur_manifest;
+    const purStyle = String(rawPur?.style || '');
+    const styleSource = String(rawPur?.style_source || '');
+    // Règle du 2026-09-09 : SEULS le style déclaré par le pack (source: pack)
+    // ou le choix explicite de l'opérateur (source: operator) rendent.
+    // Style inféré/inconnu → BLOQUÉ, jamais de rendu en silence.
+    const styleAuthorized = purStyle === 'ranking' && (styleSource === 'pack' || styleSource === 'operator');
+    if (rawPur && !styleAuthorized) {
+      return (
+        <AbsoluteFill style={{ backgroundColor: '#0a0a0a', justifyContent: 'center', alignItems: 'center', padding: 60 }}>
+          <div style={{ fontFamily: 'monospace', textAlign: 'center', color: '#ffb347' }}>
+            <div style={{ fontSize: 54, fontWeight: 900, marginBottom: 18 }}>⏸ RENDU BLOQUÉ — STYLE PUR « {purStyle || 'INCONNU'} » ({styleSource || 'non déclaré'})</div>
+            <div style={{ fontSize: 26, color: '#ddd', lineHeight: 1.5 }}>
+              Seuls un style déclaré par le pack (PERTURABO --style) ou ton choix
+              explicite (--style …) autorisent le rendu.<br />
+              Styles valides : ranking, reframing, blur, split_scene.<br />
+              Rien n'est rendu en silence — c'est TOI qui choisis.
+            </div>
+          </div>
+        </AbsoluteFill>
+      );
+    }
+    if (styleAuthorized) {
+      return <RankingCompilationComposition session={sessionProp} rankingManifest={buildRankingFromPur(rawPur)} musicTimeline={musicTimeline} />;
+    }
+    return <PurPackComposition purManifest={rawPur} />;
   }
   if (sessionProp?.review_mode === 'ranking_compilation' || revealManifest?.mode === 'ranking_compilation') {
     return <RankingCompilationComposition session={sessionProp} rankingManifest={revealManifest || sessionProp?.ranking} musicTimeline={musicTimeline} />;

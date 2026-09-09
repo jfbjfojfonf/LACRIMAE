@@ -31,15 +31,17 @@ PERTURABO EXPORT/production_pack_pur_*.json
 | Gate | Moment | Vérification | Critère de passage |
 |---|---|---|---|
 | **G0 PACK** | Avant tout | Pack PUR exploitable | `mode=pur`, `vod_url` présente, `start_sec < end_sec`, segment ≤ 150 s, `montage_instructions` présente |
+| **G0-S STYLE** | Conversion | Style de montage identifié ET autorisé | `montage_style` (racine pack) ou `metadata.style` ∈ {ranking, reframing, blur, split_scene}, **OU** choix explicite opérateur (`--style`). Style inféré seul ou inconnu → **REFUSÉ (exit 2), rendu bloqué** — règle du 2026-09-09 : c'est l'opérateur qui choisit, jamais le code en silence |
 | **G1 VOD** | Téléchargement | Segment VOD obtenu | yt-dlp OK, fichier produit, ≤ 300 s de download |
 | **G2 DUREE** | Après download | Durée du clip | `duration == end_sec − start_sec ± 0.5 s` |
 | **G3 CODEC** | Après download | Lisibilité | codec ∈ {h264, vp9, hevc, av1}, dimensions > 0 |
-| **P0 MANIFESTE** | Après conversion | `pur_manifest.json` valide | `schema_version=dev10.pur.v1`, ≥ 1 entrée, overlay non vide |
+| **P0 MANIFESTE** | Après conversion | `pur_manifest.json` valide | `schema_version=dev10.pur.v1`, ≥ 1 entrée, overlay non vide, `style` ∈ les 4 valeurs avec `style_source` ∈ {pack, operator} |
 | **P1 PREVIEW** | Avant rendu | Validation visuelle F03 | Hook 0-3 s sans texte, overlay lisible, anti-détection conforme au pack |
 | **P2 RENDU** | CI | MP4 produit | Résolution du canvas choisi, durée ≈ manifeste, artefact uploadé |
 
 ## Politique d'échec
 
+- **G0-S échoue → RENDU BLOQUÉ.** L'écran de rendu affiche « ⏸ RENDU BLOQUÉ — STYLE PUR » avec la marche à suivre. Deux sorties : (1) regénérer le pack côté PERTURABO avec `--style`, (2) relancer la conversion avec `--style ranking|reframing|blur|split_scene` — choix de l'opérateur, jamais du code.
 - G0 échoue → le pack retourne à PERTURABO (F06_DIRECTOR) — jamais de correction manuelle côté dev10.
 - G1/G2/G3 échouent → VOD expirée ou privée : basculer le clip en asset GitHub Release (pattern dev9 Spider-Man) et rejouer.
 - P1 échoue → corriger dans le preview (overlay, canvas), re-valider avant rendu.

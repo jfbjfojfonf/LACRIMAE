@@ -5,7 +5,11 @@
  *
  * Usage :
  *   node tools/convert_pur_pack.mjs --pack pack_pur_A01.json --out pur_manifest.json \
- *     [--canvas 9:16] [--clip clips/pur_A01.mp4] [--fps 30]
+ *     [--canvas 9:16] [--clip clips/pur_A01.mp4] [--fps 30] [--style ranking]
+ *
+ * Règle opérateur (2026-09-09) : si le style du pack est inconnu (ni déclaré,
+ * ni inférable) et que --style n'est pas fourni → CONVERSION REFUSÉE.
+ * C'est TOI qui choisis le style, jamais le code en silence.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -36,13 +40,29 @@ if (!packPath || !outPath) {
 const bridgeClipperUrl = new URL('../F03_PREVIEW/CODEBASE/src/preview/bridgeClipper.js', `file://${resolve(here)}/`);
 const { parsePurPack } = await import(bridgeClipperUrl.href);
 
+const styleArg = get('--style');
 const pack = JSON.parse(readFileSync(resolve(packPath), 'utf-8'));
-const manifest = parsePurPack(pack, { fps, canvas, clipFiles: clip ? [clip] : [] });
+
+// Contrôle opérateur AVANT conversion : style déclaré ?
+const declaredStyle = String(pack.montage_style || pack.montage_instructions?.metadata?.style || '').toLowerCase();
+if (!declaredStyle && !styleArg) {
+  console.error('✗ REFUSÉ : pack sans style déclaré (montage_style/metadata.style absent).');
+  console.error('  → relance avec --style ranking|reframing|blur|split_scene (ton choix),');
+  console.error('    ou regénère le pack côté PERTURABO avec --style (packs récents).');
+  process.exit(2);
+}
+
+const manifest = parsePurPack(pack, { fps, canvas, clipFiles: clip ? [clip] : [], style: styleArg });
 
 if (!manifest.entries.length) {
   console.error('✗ Pack PUR illisible (montage_instructions manquante ?)');
   process.exit(1);
 }
+if (manifest.style_unknown) {
+  console.error(`✗ REFUSÉ : style « ${manifest.style_source} » non reconnu — BLOQUÉ par règle opérateur.`);
+  process.exit(2);
+}
+console.log(`  style: ${manifest.style} (source: ${manifest.style_source})`);
 
 writeFileSync(resolve(outPath), JSON.stringify(manifest, null, 2) + '\n');
 console.log(`✓ ${manifest.schema_version} écrit : ${outPath}`);

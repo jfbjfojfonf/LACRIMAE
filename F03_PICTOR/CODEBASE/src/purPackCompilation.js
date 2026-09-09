@@ -12,13 +12,22 @@ export const PUR_CANVAS = {
   '1:1': { width: 1080, height: 1080 },
 };
 
+export const PUR_STYLE_VALUES = ['ranking', 'reframing', 'blur', 'split_scene'];
+
 export function normalizePurManifest(raw, fps = 30) {
   const manifest = raw && typeof raw === 'object' ? raw : {};
   if (manifest.schema_version === 'dev10.pur.v1' && Array.isArray(manifest.entries)) {
     const speed = Number(manifest.entries?.[0]?.anti_detection?.speed || 1);
+    const rawStyle = String(manifest.style || '');
+    const style = PUR_STYLE_VALUES.includes(rawStyle) ? rawStyle
+      : PUR_STYLE_VALUES.includes(String(manifest.pur?.montage_style || '')) ? String(manifest.pur.montage_style)
+      : '';
     return {
       ...manifest,
       fps: Number(manifest.fps || fps),
+      style,
+      style_source: String(manifest.style_source || (style ? 'pack' : 'none')),
+      style_unknown: style === '' || !['pack', 'operator'].includes(String(manifest.style_source || '')),
       total_frames: Number(manifest.total_frames) || Math.max(1, Math.round((Number(manifest.duration_seconds || 0) / speed) * fps)),
     };
   }

@@ -27,6 +27,26 @@
 
 ---
 
+## Étape 0 — Le style : c'est TOI qui choisis (règle du 2026-09-09)
+
+Le pack déclare normalement son style (`montage_style` — PERTURABO le stampe
+désormais via `--style ranking|reframing|blur|split_scene`). Si le pack ne le
+déclare pas (anciens packs), **rien n'est rendu** : la conversion refuse (exit 2)
+et le rendu affiche « ⏸ RENDU BLOQUÉ ». Deux options, TON choix :
+
+```bash
+# Option A : tu décides au moment de la conversion
+node tools/convert_pur_pack.mjs --pack ... --style blur ...
+
+# Option B : champ "style" du workflow CI (Run workflow)
+```
+
+Jamais de rendu en silence. Un style inféré par le code ne compte pas.
+
+Routing actuel par style : `ranking` → mécanique ranking éprouvée dev9 ;
+`reframing` / `blur` / `split_scene` → rendu **bloqué en attente du portage
+de leurs compositions dédiées** (l'écran le dit clairement).
+
 ## Étape 1 — Bridge : récupérer + convertir le pack
 
 ```bash

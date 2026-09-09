@@ -350,6 +350,15 @@ export function parsePurPack(pack, options = {}) {
   const platformRules = mi.platform_rules || {};
   const mainTitle = (body.text_overlays && body.text_overlays.main_title) || {};
 
+  // Style de montage : déclaré dans le pack (montage_style / metadata.style),
+  // sinon option opérateur (options.style), sinon inférence par signature.
+  // Rien n'est rendu en silence : style inconnu → style_unknown=true (BLOQUÉ,
+  // l'opérateur choisit — règle du 2026-09-09).
+  const declared = String(pack.montage_style || mi.metadata?.style || '').toLowerCase();
+  const operatorStyle = String(options.style || '').toLowerCase();
+  const resolvedStyle = operatorStyle || declared || inferPurStyle(mi);
+  const styleKnown = PUR_STYLE_VALUES.includes(resolvedStyle);
+
   // Copywriting v2 (copywriting.overlay_title) avec repli text_payload legacy
   const overlayLines = extractOverlayLines(pack.copywriting || pack.text_payload || {});
 
@@ -383,6 +392,9 @@ export function parsePurPack(pack, options = {}) {
     schema_version: 'dev10.pur.v1',
     mode: 'pur_pack',
     fps,
+    style: styleKnown ? resolvedStyle : '',
+    style_source: operatorStyle ? 'operator' : declared ? 'pack' : styleKnown ? 'inferred' : 'none',
+    style_unknown: !styleKnown,
     canvas: { ...canvas, aspect },
     narrative: {
       category: style.pacing || '',
@@ -481,6 +493,32 @@ export function normalizePurZooms(zooms = [], cuts = [], fps = 30) {
       sfx_sync: z.sfx_sync || '',
     };
   });
+}
+
+/** Styles de montage PUR valides (contrat PERTURABO pur_montage_pipeline --style). */
+export const PUR_STYLE_VALUES = ['ranking', 'reframing', 'blur', 'split_scene'];
+
+/**
+ * Inférence du style par signature du montage_instructions — filet de sécurité
+ * pour les packs antérieurs au stamp montage_style. Aucune invention : on ne
+ * devine QUE sur des marqueurs structurels non ambigus, sinon '' (inconnu).
+ */
+export function inferPurStyle(mi = {}) {
+  const body = mi.body || {};
+  const miAny = mi;
+  // split_scene : instructions de layout explicites
+  if (miAny.split_scene?.layout || miAny.layout || body.layout) return 'split_scene';
+  // blur : dual-layer (couche floutée + couche nette)
+  if (Array.isArray(body.layers) && body.layers.length >= 2) return 'blur';
+  if (miAny.dual_layer === true || body.dual_layer === true) return 'blur';
+  // reframing : push-in lent sans cuts multiples
+  const zooms = Array.isArray(body.zooms) ? body.zooms : [];
+  const cuts = Array.isArray(body.cuts) ? body.cuts : [];
+  const pushIn = zooms.find((z) => String(z.type || z.note || '').includes('push'));
+  if (pushIn && cuts.length <= 1) return 'reframing';
+  // ranking : plan de cuts multiples / structure de rangs
+  if (cuts.length >= 2) return 'ranking';
+  return '';
 }
 
 /** SFX dérivés des zooms (sfx_sync) — volume 50-60% sous la voix. */
