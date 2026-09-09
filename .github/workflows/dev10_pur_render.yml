@@ -21,6 +21,11 @@ on:
         required: false
         default: 'main'
         type: string
+      style:
+        description: 'Style PUR — requis si le pack ne le déclare pas (ranking/reframing/blur/split_scene). Ton choix.'
+        required: false
+        default: ''
+        type: string
       max_duration:
         description: 'Durée max du rendu en secondes (0 = durée complète)'
         required: false
@@ -89,6 +94,7 @@ jobs:
             --pack "../../${{ env.PACK_PATH }}" \
             --out public/pur_manifest.json \
             --canvas "${{ inputs.canvas }}" \
+            ${{ inputs.style != '' && format('--style {0}', inputs.style) || '' }} \
             --clip "clips/pur_$(echo "${{ env.PACK_NAME }}" | grep -oE 'A0[0-9]+' | head -1 || echo clip).mp4"
 
       - name: Injecter pur_manifest dans codex.json
