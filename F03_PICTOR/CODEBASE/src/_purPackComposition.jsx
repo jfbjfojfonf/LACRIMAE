@@ -1,8 +1,8 @@
 /* ═══════════════════════════════════════════════════════════════════
    PurPackComposition — Mode PUR côté RENDU (F04 PICTOR)
    Miroir exact du composant F03 Preview : mêmes calques, mêmes valeurs.
-   Consomme codex.pur_manifest (dev10.pur.v1) + clips téléchargés par F00-PUR.
-   Gère les 4 mises en page : blur / split / reframing / fullscreen.
+   v2 TEXTE (2026-09-10) : statique début→fin, auto-fit, boîte arrondie,
+   casse mixte, blur positionnable — identique au preview.
    ═══════════════════════════════════════════════════════════════════ */
 import React from 'react';
 import { AbsoluteFill, Audio, Sequence, staticFile, useCurrentFrame, useVideoConfig, Video } from 'remotion';
@@ -16,9 +16,25 @@ function withAlpha(hex, alpha) {
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${Number(alpha ?? 1).toFixed(3)})`;
 }
 
+/**
+ * Auto-fit SANS Canvas API (rendu Node) : ratio de largeur moyenne d'un
+ * glyphe en ExtraBold ≈ 0.62 × taille. Même formule que le preview ne
+ * peut pas être garanti au pixel — on reste conservateur (0.62) pour ne
+ * JAMAIS dépasser la largeur utile. Le preview reste la référence visuelle.
+ */
+function fitOverlayLinesNode(lines, baseSize, canvasWidth, minSize) {
+  const list = (lines || []).slice(0, 3).map((l) => String(l));
+  if (!canvasWidth || list.length === 0) return { lines: list, size: baseSize };
+  const usable = canvasWidth * 0.92;
+  const widest = Math.max(...list.map((l) => l.length * baseSize * 0.62));
+  if (widest <= usable) return { lines: list, size: baseSize };
+  const fitted = Math.max(Number(minSize || 28), Math.floor(baseSize * (usable / widest)));
+  return { lines: list, size: fitted };
+}
+
 export function PurPackComposition({ purManifest: rawManifest }) {
   const frame = useCurrentFrame();
-  const { fps, durationInFrames } = useVideoConfig();
+  const { fps, durationInFrames, width: canvasWidth } = useVideoConfig();
   const manifest = normalizePurManifest(rawManifest, fps);
   const entry = manifest.entries?.[0] || {};
   const overlayRaw = manifest.narrative?.overlay || {};
@@ -39,26 +55,36 @@ export function PurPackComposition({ purManifest: rawManifest }) {
   const antiTransform = purAntiTransform(anti, frame, fps);
   const zoomScale = purZoomAtFrame(entry.zooms, frame);
 
-  const overlayFrom = Number(overlayRaw.visible_from_frame ?? Math.round(3 * fps));
-  const popFrames = Number(overlayRaw.animation_frames ?? 6);
-  const popProgress = Math.min(1, (frame - overlayFrom) / Math.max(1, popFrames));
-  const overlayVisible = frame >= overlayFrom && overlayRaw.lines?.length > 0;
-  const popScale = overlayVisible ? (0.9 + 0.2 * Math.min(1, popProgress) - 0.1 * Math.max(0, popProgress - 0.55)) : 1;
+  // v2 : texte STATIQUE — visible du début à la fin, pas d'animation
+  const staticText = overlay.static_text !== false;
+  const overlayVisible = staticText
+    ? overlayRaw.lines?.length > 0
+    : frame >= Number(overlayRaw.visible_from_frame ?? Math.round(3 * fps)) && overlayRaw.lines?.length > 0;
 
-  // Texte overlay : valeurs éditoriales (avec fallback legacy color/accent/font_size/outline)
   const lineColors = [overlay.line1_color || overlayRaw.color || '#FFFFFF', overlay.line2_color || overlayRaw.accent || '#FFD700'];
-  const fontFamily = `${overlay.font_family || overlayRaw.fallback_font || 'Arial Black, Impact'}, sans-serif`;
-  const fontSize = Number(overlay.size ?? overlayRaw.font_size ?? 68);
+  const fontFamilyBase = overlay.font_family || overlayRaw.fallback_font || 'Arial Black, Impact';
+  const uppercase = overlay.uppercase === true;
   const outlineWidth = Number(overlay.outline_width ?? 3);
   const outlineColor = overlay.outline_color || overlayRaw.outline || '#000000';
   const textX = Number(overlay.x_pct ?? 50);
   const textY = Number(overlay.y_pct ?? 22);
-  const splitTextSize = styleLayout === 'split' ? Number(sp.text_size ?? fontSize) : fontSize;
+  const splitTextSize = styleLayout === 'split' ? Number(sp.text_size ?? overlay.size ?? 68) : Number(overlay.size ?? 68);
   const splitTextX = styleLayout === 'split' ? Number(sp.text_x_pct ?? textX) : textX;
   const splitTextY = styleLayout === 'split' ? Number(sp.text_y_pct ?? textY) : textY;
+
+  const fitted = fitOverlayLinesNode(overlayRaw.lines, splitTextSize, canvasWidth || 1080, overlay.min_size);
+  const renderLines = overlay.auto_fit === false ? (overlayRaw.lines || []).slice(0, 3) : fitted.lines;
+  const renderSize = overlay.auto_fit === false ? splitTextSize : fitted.size;
+
   const bgEnabled = overlay.bg_enabled === true;
+  const boxRadius = Number(overlay.box_radius ?? 10);
+  const boxPadding = Number(overlay.box_padding ?? 14);
   const bgStyle = bgEnabled
-    ? { background: withAlpha(overlay.bg_color || '#000000', overlay.bg_opacity ?? 0.65), padding: '4px 14px', borderRadius: 6 }
+    ? {
+        background: withAlpha(overlay.bg_color || '#000000', overlay.bg_opacity ?? 0.65),
+        borderRadius: boxRadius,
+        padding: `${Math.round(boxPadding * 0.6)}px ${boxPadding}px`,
+      }
     : {};
 
   const videoProps = {
@@ -81,13 +107,13 @@ export function PurPackComposition({ purManifest: rawManifest }) {
       <AbsoluteFill style={{ transform: antiTransform, transformOrigin: 'center center' }}>
         {videoUrl ? (
           styleLayout === 'blur' ? (
-            /* ── BLUR : couche arrière floutée + couche avant nette ── */
+            /* ── BLUR : couche arrière floutée + couche avant nette positionnable ── */
             <>
               <Video {...videoProps}
                 style={{ width: '100%', height: '100%', objectFit: 'cover', filter: `blur(${Number(sp.degree || 24)}px) brightness(0.6)`, transform: `scale(${(Number(sp.bg_scale || 118) / 100).toFixed(4)})` }} />
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ position: 'absolute', left: 0, right: 0, top: `${Number(sp.fg_y_pct ?? 62)}%`, height: `${Number(sp.fg_scale || 72)}%`, transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Video {...videoProps}
-                  style={{ width: '100%', height: `${Number(sp.fg_scale || 72)}%`, objectFit: 'cover', boxShadow: '0 12px 48px rgba(0,0,0,0.65)' }} />
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', boxShadow: '0 12px 48px rgba(0,0,0,0.65)' }} />
               </div>
             </>
           ) : styleLayout === 'split' ? (
@@ -115,6 +141,7 @@ export function PurPackComposition({ purManifest: rawManifest }) {
         )}
       </AbsoluteFill>
 
+      {/* Overlay titre PUR : STATIQUE du début à la fin (v2) — pas d'animation */}
       {overlayVisible && (
         <AbsoluteFill style={{ pointerEvents: 'none' }}>
           <div
@@ -122,28 +149,29 @@ export function PurPackComposition({ purManifest: rawManifest }) {
               position: 'absolute',
               left: `${splitTextX}%`,
               top: `${splitTextY}%`,
-              maxWidth: '88%',
+              maxWidth: '92%',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'flex-start',
-              gap: 6,
-              transform: `translateX(-50%) scale(${popScale.toFixed(3)})`,
-              transformOrigin: 'center top',
+              gap: 4,
+              transform: 'translateX(-50%)',
             }}
           >
-            {overlayRaw.lines.map((line, index) => (
+            {renderLines.map((line, index) => (
               <div
                 key={`pur_line_${index}`}
                 style={{
-                  fontFamily,
-                  fontSize: splitTextSize,
+                  fontFamily: `"${fontFamilyBase}", sans-serif`,
+                  fontSize: renderSize,
                   fontWeight: 900,
-                  lineHeight: 1.04,
-                  textTransform: 'uppercase',
+                  lineHeight: 1.12,
+                  textTransform: uppercase ? 'uppercase' : 'none',
                   color: lineColors[index] || lineColors[0],
-                  WebkitTextStroke: `${outlineWidth}px ${outlineColor}`,
-                  textShadow: '0 4px 18px rgba(0,0,0,0.85)',
+                  WebkitTextStroke: outlineWidth > 0 ? `${outlineWidth}px ${outlineColor}` : undefined,
+                  paintOrder: 'stroke fill',
+                  textShadow: outlineWidth > 0 ? undefined : '0 2px 12px rgba(0,0,0,0.5)',
                   ...bgStyle,
+                  whiteSpace: 'nowrap',
                 }}
               >
                 {line}

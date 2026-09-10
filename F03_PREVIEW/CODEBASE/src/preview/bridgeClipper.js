@@ -506,7 +506,7 @@ export const PUR_STYLE_VALUES = ['ranking', 'reframing', 'blur', 'split_scene'];
  * les deux composants (preview + render).
  */
 export const PUR_STYLE_PARAMS_DEFAULTS = {
-  blur: { degree: 24, bg_scale: 118, fg_scale: 72 },
+  blur: { degree: 24, bg_scale: 118, fg_scale: 72, fg_y_pct: 62 },
   split_scene: { top_scale: 62, bottom_scale: 38, text_size: 56, text_x_pct: 50, text_y_pct: 8 },
   reframing: { scale: 130, offset_x_pct: 0, offset_y_pct: -6 },
   ranking: {},
@@ -525,6 +525,15 @@ export const PUR_OVERLAY_DEFAULTS = {
   size: 68,
   x_pct: 50,
   y_pct: 22,
+  // v2 (2026-09-10, décision Warsmith) : texte STATIQUE du début à la fin
+  // (plus d'apparition à 3 s ni pop_in), casse mixte, boîte coins arrondis,
+  // auto-fit anti-débordement (1 ligne = 1 ligne visuelle, max 3).
+  static_text: true,
+  uppercase: false,
+  box_radius: 10,
+  box_padding: 14,
+  auto_fit: true,
+  min_size: 28,
 };
 
 /** Fusionne les style_params du manifeste (opérateur) avec les défauts du style. */

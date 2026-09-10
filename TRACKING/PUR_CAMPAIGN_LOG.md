@@ -49,6 +49,19 @@ Fixes notés pendant la mise en service : input `canvas` en string (le type choi
   taille fixe). La position de la vidéo nette (blur) sera un curseur
   opérateur, pas un placement automatique.
 
+### Implémentation texte v2 (2026-09-10) — FAIT
+
+Phases A-E de `PUR_TEXT_IMPLEMENTATION.md` livrées :
+- Texte statique début→fin (plus de hook sans texte, plus de pop_in)
+- Auto-fit : 1 ligne = 1 ligne visuelle (mesure Canvas côté preview, ratio
+  0.62 conservateur côté rendu Node), max 3 lignes, min 28 px
+- Boîte coins arrondis + padding réglables ; preset « Référence TikTok »
+  (boîte blanche, texte noir, Montserrat, size 44, sans contour)
+- Casse mixte par défaut (toggle MAJUSCULES)
+- Blur : curseur position verticale de la vidéo nette (fg_y_pct)
+- pur_manifest.json régénéré avec le preset TikTok appliqué
+- Miroir F04 synchronisé (purPackCompilation.js + _purPackComposition.jsx)
+
 ## Règle d'exploitation (ajoutée après incident du 2026-09-09)
 
 **Aucun run CI réel (dispatch, render, consommation de minutes Actions) ne doit être

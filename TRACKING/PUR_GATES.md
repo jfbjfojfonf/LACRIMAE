@@ -36,7 +36,7 @@ PERTURABO EXPORT/production_pack_pur_*.json
 | **G2 DUREE** | Après download | Durée du clip | `duration == end_sec − start_sec ± 0.5 s` |
 | **G3 CODEC** | Après download | Lisibilité | codec ∈ {h264, vp9, hevc, av1}, dimensions > 0 |
 | **P0 MANIFESTE** | Après conversion | `pur_manifest.json` valide | `schema_version=dev10.pur.v1`, ≥ 1 entrée, overlay non vide, `style` ∈ les 4 valeurs avec `style_source` ∈ {pack, operator} |
-| **P1 PREVIEW** | Avant rendu | Validation visuelle F03 | Overlay lisible (1 ligne = 1 ligne visuelle, max 3), texte statique du début à la fin (règle « hook sans texte » ABROGÉE le 2026-09-10 — voir `PUR_TEXT_IMPLEMENTATION.md`), anti-détection conforme au pack. Panneaux opérateur (texte, style, anti-détection) — réglages dans `style_params` |
+| **P1 PREVIEW** | Avant rendu | Validation visuelle F03 | Overlay lisible (1 ligne = 1 ligne visuelle, max 3), texte statique du début à la fin (règle « hook sans texte » ABROGÉE le 2026-09-10), auto-fit 1 ligne = 1 ligne visuelle (max 3) — **implémenté le 2026-09-10**, anti-détection conforme au pack. Panneaux opérateur (texte, style, anti-détection) — réglages dans `style_params` |
 | **P2 RENDU** | CI | MP4 produit | Résolution du canvas choisi, durée ≈ manifeste, artefact uploadé |
 
 ## Politique d'échec

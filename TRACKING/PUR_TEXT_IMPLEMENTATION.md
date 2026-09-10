@@ -4,7 +4,8 @@
 > « Aishah Sofey » — vidéo 9:16, texte en boîte blanche à coins arrondis,
 > texte noir gras, 3 lignes, collé en haut au centre, **statique du début à
 > la fin**, vidéo nette positionnée juste sous le texte.
-> Ce document est le PLAN. Rien n'est implémenté à ce jour (état 2026-09-10).
+> **IMPLÉMENTÉ le 2026-09-10** (phases A-E). Le preview affiche le texte
+> statique avec auto-fit ; le preset « Référence TikTok » est disponible.
 
 ---
 
@@ -39,6 +40,7 @@ gestion du nombre de lignes.
    `popProgress`, l'animation pop_in — texte rendu dès `frame >= 0`,
    position fixe pour toute la durée.
 2. `visible_from_frame` ignoré (gardé dans le manifeste pour rétro-compat).
+   ✅ FAIT — F03 `_purPackComposition.jsx` + miroir F04 synchronisés.
 3. Défauts `PUR_OVERLAY_DEFAULTS` : `visible_from_frame: 0`, nouveau champ
    `static: true`, `uppercase: false`.
 
@@ -73,7 +75,8 @@ gestion du nombre de lignes.
 1. Miroir `_purPackComposition.jsx` F03_PICTOR synchronisé (mêmes valeurs).
 2. Nouveaux champs dans `PUR_STYLE_PARAMS_DEFAULTS` / `PUR_OVERLAY_DEFAULTS`
    (bridgeClipper.js F03 ↔ purPackCompilation.js F04).
-3. pur_manifest.json régénéré avec les nouveaux défauts.
+3. pur_manifest.json régénéré avec les nouveaux défauts + preset TikTok
+   appliqué par défaut (boîte blanche, casse mixte, Montserrat, size 44).
 4. Vérification : build Vite OK, preview visuel, frames de contrôle
    (0 s = texte présent, milieu = même position, fin = identique).
 

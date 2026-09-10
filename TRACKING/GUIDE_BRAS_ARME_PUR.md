@@ -48,7 +48,7 @@ ET leur panneau de réglage dans le preview :
 
 | Style | Rendu | Panneau opérateur (onglet ⚡ PUR) |
 |---|---|---|
-| `blur` | couche arrière floutée + couche avant nette | degré de flou, taille vidéo floue (fond), taille vidéo nette (devant) |
+| `blur` | couche arrière floutée + couche avant nette | degré de flou, taille vidéo floue (fond), taille vidéo nette (devant), position verticale de la vidéo nette |
 | `split_scene` | vidéo en haut + élément bas | taille vidéo du HAUT, taille élément du BAS, taille/position X/Y du texte du haut |
 | `reframing` | recadrage du clip | échelle, décalage X, décalage Y |
 | `ranking` | clip plein écran (mécanique dev9) | — (plein écran) |
@@ -98,10 +98,15 @@ Lancer F03 Preview (Vite), ouvrir l'onglet **⚡ PUR** :
 - Le canvas 9:16 / 16:9 / 1:1 est switchable en direct.
 - **Panneaux de configuration** (tous éditables en direct, écrits dans le
   manifeste `style_params` — le pack PERTURABO n'est jamais modifié) :
-  - 🎨 **TEXTE OVERLAY** : texte des 2 lignes, couleur ligne 1 / ligne 2,
-    police (Arial Black, Montserrat, Bebas Neue, Impact, Anton, Archivo Black),
-    case à cocher fond + couleur/opacité du fond, couleur et épaisseur du
-    contour, taille du texte, position X % / Y %.
+  - 🎨 **TEXTE OVERLAY** : lignes éditables avec boutons « + Ligne / − Ligne »
+    (2-3 lignes max), couleur par ligne, police (Arial Black, Montserrat,
+    Bebas Neue, Impact, Anton, Archivo Black), case à cocher boîte
+    (couleur/opacité/coins arrondis/padding), contour couleur + épaisseur,
+    taille du texte, position X % / Y %. Toggles : statique début→fin,
+    MAJUSCULES, auto-fit (1 ligne = 1 ligne visuelle). Bouton
+    « 🎬 PRESET RÉFÉRENCE TIKTOK » : boîte blanche, texte noir, Montserrat,
+    sans contour — la mise en page de la vidéo de référence.
+    Le texte est STATIQUE du début à la fin (règle hook abrogée).
   - 🌫️ **STYLE BLUR** / ✂️ **STYLE SPLIT** / 🎯 **STYLE REFRAMING** : le
     panneau du style actif apparaît seul (voir table ci-dessus).
   - 🛡️ **ANTI-DÉTECTION** : miroir on/off, vitesse, zoom respiration

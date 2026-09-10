@@ -33,14 +33,14 @@ overlay, style blur/split/reframing, anti-détection) — voir
 1. ✅ Clip pur_A01 réparé (la copie .mp4 était tronquée — moov atom absent)
 2. ✅ Panneaux F03 branchés sur `style_params` (dev10.pur.v1) + rendu par
    style (blur dual-layer / split top-bas / reframing) + miroir F04 synchronisé
-3. 📋 **NOUVEAU — Texte overlay v2 (plan dans
-   `TRACKING/PUR_TEXT_IMPLEMENTATION.md`, décision Warsmith 2026-09-10)** :
-   règle « pas de texte pendant le hook » ABROGÉE → texte statique du début
-   à la fin, auto-fit 1 ligne = 1 ligne visuelle (max 3 lignes), boîte
-   blanche coins arrondis façon référence TikTok (capture Aishah Sofey),
-   casse mixte, police embarquée, curseur position verticale de la vidéo
-   nette (blur). À implémenter (phases A-E du plan).
-4. **Validation visuelle P1** par le Warsmith sur le preview — GO obligatoire
+3. ✅ **Texte overlay v2 IMPLÉMENTÉ (2026-09-10)** — phases A-E de
+   `TRACKING/PUR_TEXT_IMPLEMENTATION.md` : texte statique début→fin, auto-fit
+   (1 ligne = 1 ligne visuelle, max 3, min 28 px), boîte coins arrondis +
+   padding, preset « Référence TikTok » (boîte blanche, texte noir,
+   Montserrat, casse mixte), curseur position verticale de la vidéo nette
+   (blur). Boutons +/− lignes dans le panneau. Miroir F04 synchronisé.
+4. **Validation visuelle P1** par le Warsmith sur le preview (le preset
+   TikTok est appliqué par défaut dans pur_manifest.json) — GO obligatoire
    avant tout run CI (règle du 2026-09-09)
 5. Puis E2E PUR réel : GitHub Actions → "DEV10 PUR — Bras armé PERTURABO"
    (workflow_dispatch, inputs : pack_filter=pur_A01, canvas=9:16), vérifier

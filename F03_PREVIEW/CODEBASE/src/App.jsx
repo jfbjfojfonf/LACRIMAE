@@ -271,6 +271,15 @@ export default function App() {
       return next;
     });
   };
+  // PUR : ajoute/retire une ligne d'overlay (2-3 lignes max — v2 2026-09-10)
+  const updatePurOverlayLines = (lines) => {
+    setPurManifest((current) => {
+      if (!current) return current;
+      const next = { ...current, narrative: { ...current.narrative, overlay: { ...current.narrative?.overlay, lines } } };
+      setSession((s) => ({ ...s, pur_manifest: next }));
+      return next;
+    });
+  };
   // PUR : met à jour narrative.overlay.style_params (paramètres éditoriaux du texte)
   const updatePurOverlayParams = (key, value) => {
     setPurManifest((current) => {
@@ -1026,6 +1035,16 @@ export default function App() {
                           onChange={(e) => updatePurOverlayLine(index, e.target.value)} />
                       ))}
                       {!overlayLines.length && <div style={{ color: '#ff9f66', fontSize: 12, marginTop: 4 }}>Aucune ligne d'overlay dans le pack.</div>}
+                      <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                        <button style={{ ...styles.button, flex: 1 }} disabled={overlayLines.length >= 3}
+                          onClick={() => updatePurOverlayLines([...overlayLines, 'NOUVELLE LIGNE'])}>
+                          + Ligne ({overlayLines.length}/3)
+                        </button>
+                        <button style={{ ...styles.button, flex: 1 }} disabled={overlayLines.length <= 1}
+                          onClick={() => updatePurOverlayLines(overlayLines.slice(0, -1))}>
+                          − Ligne
+                        </button>
+                      </div>
                     </div>
 
                     <div style={{ marginTop: 10, padding: 8, border: '1px solid #1a4a5a', borderRadius: 7, background: '#081820' }}>
@@ -1045,9 +1064,36 @@ export default function App() {
                         <option value="Anton">Anton</option>
                         <option value="Archivo Black">Archivo Black</option>
                       </select>
+                      <div style={{ display: 'flex', gap: 12, marginTop: 6, flexWrap: 'wrap' }}>
+                        <label style={styles.label}>
+                          <input type="checkbox" style={{ marginRight: 6, accentColor: '#00ff88' }} checked={op.static_text !== false} onChange={(e) => updatePurOverlayParams('static_text', e.target.checked)} />
+                          Statique début→fin
+                        </label>
+                        <label style={styles.label}>
+                          <input type="checkbox" style={{ marginRight: 6, accentColor: '#00ff88' }} checked={op.uppercase === true} onChange={(e) => updatePurOverlayParams('uppercase', e.target.checked)} />
+                          MAJUSCULES
+                        </label>
+                        <label style={styles.label}>
+                          <input type="checkbox" style={{ marginRight: 6, accentColor: '#00ff88' }} checked={op.auto_fit !== false} onChange={(e) => updatePurOverlayParams('auto_fit', e.target.checked)} />
+                          Auto-fit (1 ligne = 1 ligne)
+                        </label>
+                      </div>
+                      <button style={{ ...styles.button, marginTop: 6 }} onClick={() => {
+                        updatePurOverlayParams('font_family', 'Montserrat');
+                        updatePurOverlayParams('bg_enabled', true);
+                        updatePurOverlayParams('bg_color', '#FFFFFF');
+                        updatePurOverlayParams('bg_opacity', 0.95);
+                        updatePurOverlayParams('line1_color', '#111111');
+                        updatePurOverlayParams('line2_color', '#111111');
+                        updatePurOverlayParams('outline_width', 0);
+                        updatePurOverlayParams('box_radius', 10);
+                        updatePurOverlayParams('uppercase', false);
+                        updatePurOverlayParams('size', 44);
+                        updatePurOverlayParams('y_pct', 6);
+                      }}>🎬 PRESET RÉFÉRENCE TIKTOK (boîte blanche, 3 lignes)</button>
                       <label style={styles.label}>
                         <input type="checkbox" style={{ marginRight: 8, accentColor: '#00ff88' }} checked={op.bg_enabled === true} onChange={(e) => updatePurOverlayParams('bg_enabled', e.target.checked)} />
-                        Fond derrière le texte
+                        Fond derrière le texte (boîte)
                       </label>
                       {op.bg_enabled && (
                         <>
@@ -1057,6 +1103,10 @@ export default function App() {
                           </div>
                           <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Opacité du fond</span><span style={{ color: '#ffd400' }}>{Math.round((op.bg_opacity ?? 0.65) * 100)}%</span></label>
                           <input style={styles.slider} type="range" min="0" max="1" step="0.05" value={op.bg_opacity ?? 0.65} onChange={(e) => updatePurOverlayParams('bg_opacity', parseFloat(e.target.value))} />
+                          <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Coins arrondis</span><span style={{ color: '#ffd400' }}>{op.box_radius}px</span></label>
+                          <input style={styles.slider} type="range" min="0" max="30" step="1" value={op.box_radius} onChange={(e) => updatePurOverlayParams('box_radius', parseInt(e.target.value, 10))} />
+                          <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Padding de la boîte</span><span style={{ color: '#ffd400' }}>{op.box_padding}px</span></label>
+                          <input style={styles.slider} type="range" min="4" max="40" step="1" value={op.box_padding} onChange={(e) => updatePurOverlayParams('box_padding', parseInt(e.target.value, 10))} />
                         </>
                       )}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
@@ -1082,6 +1132,8 @@ export default function App() {
                         <input style={styles.slider} type="range" min="100" max="180" step="1" value={sp.bg_scale} onChange={(e) => updatePurStyleParams('bg_scale', parseInt(e.target.value, 10))} />
                         <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Taille vidéo nette (devant)</span><span style={{ color: '#ffd400' }}>{sp.fg_scale}%</span></label>
                         <input style={styles.slider} type="range" min="30" max="100" step="1" value={sp.fg_scale} onChange={(e) => updatePurStyleParams('fg_scale', parseInt(e.target.value, 10))} />
+                        <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Position verticale vidéo nette</span><span style={{ color: '#ffd400' }}>{sp.fg_y_pct}%</span></label>
+                        <input style={styles.slider} type="range" min="0" max="100" step="1" value={sp.fg_y_pct} onChange={(e) => updatePurStyleParams('fg_y_pct', parseInt(e.target.value, 10))} />
                       </div>
                     )}
                     {styleName === 'split_scene' && (
