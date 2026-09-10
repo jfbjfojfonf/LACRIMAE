@@ -62,6 +62,19 @@ Phases A-E de `PUR_TEXT_IMPLEMENTATION.md` livrées :
 - pur_manifest.json régénéré avec le preset TikTok appliqué
 - Miroir F04 synchronisé (purPackCompilation.js + _purPackComposition.jsx)
 
+### Fix codex de base (2026-09-10) — FAIT
+
+- `exportCodex` corrigé : review_mode racine toujours synchronisé avec le
+  mode actif (pur_pack inclus), pur_manifest racine rempli, session de
+  clips[0] cohérente avec la racine, clips[] ne perd plus rien si vide.
+- `public/codex.json` régénéré : base PUR propre = réglages opérateur
+  validés (size 39, Y 14, padding 25, blur fg 49 % @ 54 %) ; les anciens
+  blocs Spider-Man ranking archivés dans clips[0].ranking_manifest.
+- Police Montserrat ExtraBold embarquée (OFL, JulietaUla) :
+  `public/fonts/Montserrat-ExtraBold.ttf` dans F03 et F04 + loader
+  `ensurePurFont()` — parité preview/rendu au pixel.
+- Le codex de base sert de référence aux prochaines vidéos PUR.
+
 ## Règle d'exploitation (ajoutée après incident du 2026-09-09)
 
 **Aucun run CI réel (dispatch, render, consommation de minutes Actions) ne doit être

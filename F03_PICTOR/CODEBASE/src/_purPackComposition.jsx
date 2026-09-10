@@ -32,7 +32,17 @@ function fitOverlayLinesNode(lines, baseSize, canvasWidth, minSize) {
   return { lines: list, size: fitted };
 }
 
+/** Police embarquée (parité preview/rendu CI) — chargée une seule fois. */
+let purFontLoaded = false;
+function ensurePurFont() {
+  if (purFontLoaded || typeof document === 'undefined') return;
+  purFontLoaded = true;
+  const face = new FontFace('Montserrat', 'url(fonts/Montserrat-ExtraBold.ttf)', { weight: '900' });
+  face.load().then((f) => document.fonts.add(f)).catch(() => {});
+}
+
 export function PurPackComposition({ purManifest: rawManifest }) {
+  ensurePurFont();
   const frame = useCurrentFrame();
   const { fps, durationInFrames, width: canvasWidth } = useVideoConfig();
   const manifest = normalizePurManifest(rawManifest, fps);

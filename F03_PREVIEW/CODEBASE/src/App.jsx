@@ -562,25 +562,45 @@ export default function App() {
 
   const exportCodex = () => {
     // Réintègre le clip édité + la session dans le codex multi-clips
+    // Fix 2026-09-10 : review_mode racine TOUJOURS synchronisé avec le mode
+    // actif (pur_pack inclus), pur_manifest racine rempli, session de
+    // clips[0] cohérente — le codex est la base des prochaines vidéos.
+    const activeReviewMode = reviewMode === 'pur_pack' && purManifest
+      ? 'pur_pack'
+      : activeRanking ? 'ranking_compilation'
+      : activeReveal ? 'reveal_compilation'
+      : session.review_mode || 'pur_pack';
+    const firstClip = {
+      ...(codex?.clips?.[0] || clip || {}),
+      review_mode: activeReviewMode,
+      session: {
+        ...(codex?.clips?.[0]?.session || session),
+        review_mode: activeReviewMode,
+        ...(reviewMode === 'pur_pack' && purManifest ? { pur_manifest: purManifest } : {}),
+        ...(activeRanking ? { ranking: activeRanking } : {}),
+        ...(activeReveal ? { reveal: activeReveal } : {}),
+      },
+    };
     const merged = {
       ...(codex || {}),
       session,
-      clips: codex?.clips
-        ? [clip, ...(codex.clips || []).slice(1)]
-        : [clip],
+      clips: codex?.clips?.length
+        ? [firstClip, ...(codex.clips || []).slice(1)]
+        : [firstClip],
     };
     const finalCodex = {
       ...merged,
+      review_mode: activeReviewMode,
       session: {
         ...session,
-        review_mode: activeRanking ? 'ranking_compilation' : activeReveal ? 'reveal_compilation' : reviewMode === 'pur_pack' ? 'pur_pack' : session.review_mode,
+        review_mode: activeReviewMode,
         ...(activeRanking ? { ranking: activeRanking } : {}),
         ...(activeReveal ? { reveal: activeReveal } : {}),
         ...(reviewMode === 'pur_pack' && purManifest ? { pur_manifest: purManifest } : {}),
       },
       reveal_manifest: activeReveal || revealManifest || null,
       ranking_manifest: activeRanking || rankingManifest || null,
-      pur_manifest: reviewMode === 'pur_pack' ? purManifest : null,
+      pur_manifest: reviewMode === 'pur_pack' && purManifest ? purManifest : (merged.pur_manifest || null),
       virtual_sequences: sequences || null,
       validated_by_magos: validated,
     };

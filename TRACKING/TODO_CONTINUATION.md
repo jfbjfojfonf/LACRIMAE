@@ -39,13 +39,17 @@ overlay, style blur/split/reframing, anti-détection) — voir
    padding, preset « Référence TikTok » (boîte blanche, texte noir,
    Montserrat, casse mixte), curseur position verticale de la vidéo nette
    (blur). Boutons +/− lignes dans le panneau. Miroir F04 synchronisé.
-4. **Validation visuelle P1** par le Warsmith sur le preview (le preset
-   TikTok est appliqué par défaut dans pur_manifest.json) — GO obligatoire
+4. ✅ **Codex de base PUR propre (2026-09-10)** : `public/codex.json`
+   régénéré (racine pur_pack, manifeste = réglages opérateur validés,
+   archive Spider-Man dans clips[0]) + exportCodex corrigé (review_mode
+   racine synchronisé, pur_manifest racine rempli) + Montserrat ExtraBold
+   embarquée F03/F04 (parité police preview/CI).
+5. **Validation visuelle P1** par le Warsmith sur le preview — GO obligatoire
    avant tout run CI (règle du 2026-09-09)
-5. Puis E2E PUR réel : GitHub Actions → "DEV10 PUR — Bras armé PERTURABO"
+6. Puis E2E PUR réel : GitHub Actions → "DEV10 PUR — Bras armé PERTURABO"
    (workflow_dispatch, inputs : pack_filter=pur_A01, canvas=9:16), vérifier
    G0-G3 + P2, contrôle visuel MP4, journaliser dans PUR_CAMPAIGN_LOG.md
-6. Tag canonique à la validation : pur-canon-v1
+7. Tag canonique à la validation : pur-canon-v1
 
 ## Contrats à préserver
 
