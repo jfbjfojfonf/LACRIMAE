@@ -41,13 +41,26 @@ function ensurePurFont() {
   face.load().then((f) => document.fonts.add(f)).catch(() => {});
 }
 
-export function PurPackComposition({ purManifest: rawManifest }) {
+export function PurPackComposition({ purManifest: rawManifest, entryIndex = 0 }) {
   ensurePurFont();
   const frame = useCurrentFrame();
   const { fps, durationInFrames, width: canvasWidth } = useVideoConfig();
   const manifest = normalizePurManifest(rawManifest, fps);
-  const entry = manifest.entries?.[0] || {};
-  const overlayRaw = manifest.narrative?.overlay || {};
+  // MULTI-VIDÉOS : chaque entrée = 1 vidéo finale. Le rendu matrix reçoit un
+  // manifeste à entrée unique (extraction), entryIndex reste pour la parité.
+  const entries = Array.isArray(manifest.entries) ? manifest.entries : [];
+  const safeIndex = Math.max(0, Math.min(Number(entryIndex) || 0, Math.max(0, entries.length - 1)));
+  const entry = entries[safeIndex] || {};
+  // Overlay : GLOBAL prioritaire (édité en preview), copie par entrée en repli
+  // — MIROIR exact du composant F03 Preview (parité par construction).
+  const globalOverlay = manifest.narrative?.overlay || {};
+  const entryOverlay = entry.overlay || {};
+  const overlayRaw = {
+    ...entryOverlay,
+    ...globalOverlay,
+    lines: (globalOverlay.lines?.length ? globalOverlay.lines : entryOverlay.lines) || [],
+    style_params: { ...(entryOverlay.style_params || {}), ...(globalOverlay.style_params || {}) },
+  };
   const overlay = { ...overlayRaw, ...normalizePurOverlayParams(overlayRaw.style_params) };
   const pur = manifest.pur || {};
 

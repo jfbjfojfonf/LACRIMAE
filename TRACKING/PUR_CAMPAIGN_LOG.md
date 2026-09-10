@@ -93,3 +93,20 @@ seconde (fade_to_black).
 
 Chaque ligne doit renseigner : pack, angle, segment, canvas, gates G0-G3,
 P1 (preview validée), P2 (rendu CI), run GitHub Actions, décision.
+
+## 2026-09-10 — Architecture MULTI-VIDÉOS livrée (1 codex = N vidéos = 1 run = 1 zip)
+
+- Doctrine Warsmith appliquée au bras armé PUR : un seul codex décrit TOUTES
+  les vidéos finales ; le rendu déclenche UN run (matrix, max 20) ; le
+  bundle (zip, zéro concat) part vers F05 pour camouflage/nettoyage.
+- F00-PUR : `--append` multi-vidéos (pur_sources.json cumulatif).
+- F03 Preview : chargeur multi-packs (sélection multiple), `parsePurPackMulti`
+  (style + texte GLOBAUX appliqués à toutes les entrées), sélecteur ◀▶.
+- F04 : `extractPurEntryManifest` (1 runner = 1 vidéo), porte de style ouverte
+  aux 4 styles PUR, overlay global prioritaire (miroir preview).
+- Workflow `dev10_pur_render.yml` réécrit : prepare (fetch + G0 dry-run +
+  matrix) → render (N runners) → aggregate strict (`tools/pur_aggregate.py`).
+- F05 : mode `--batch` (N MP4 → mêmes traitements 1:1 + rapport consolidé).
+- Vérifié : conversion multi 3 packs (90 s, 2571 frames), extraction A02
+  (857 frames), agrégateur 3/3 OK + 2/3 refus, F05 batch H.264 confirmé.
+- **Aucun run CI lancé** — GO opérateur requis (règle du 2026-09-09).

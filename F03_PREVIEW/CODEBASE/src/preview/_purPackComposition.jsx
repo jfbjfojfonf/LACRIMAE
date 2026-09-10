@@ -80,13 +80,27 @@ function ensurePurFont() {
   face.load().then((f) => document.fonts.add(f)).catch(() => {});
 }
 
-export function PurPackComposition({ purManifest, session: sessionProp }) {
+export function PurPackComposition({ purManifest, session: sessionProp, entryIndex = 0 }) {
   ensurePurFont();
   const frame = useCurrentFrame();
   const { fps, durationInFrames, width: canvasWidth } = useVideoConfig();
   const manifest = purManifest || sessionProp?.pur || {};
-  const entry = manifest.entries?.[0] || {};
-  const overlayRaw = manifest.narrative?.overlay || {};
+  // MULTI-VIDÉOS : chaque entrée = 1 vidéo finale (A01, A02…). L'aperçu
+  // affiche l'entrée sélectionnée ; le style/texte sont GLOBAUX.
+  const entries = Array.isArray(manifest.entries) ? manifest.entries : [];
+  const safeIndex = Math.max(0, Math.min(Number(entryIndex) || 0, Math.max(0, entries.length - 1)));
+  const entry = entries[safeIndex] || {};
+  const isMulti = entries.length > 1;
+  // Overlay : GLOBAL prioritaire (édité en live) ; copie par entrée en repli
+  // (rendu standalone d'un manifeste par pack sans bloc global).
+  const globalOverlay = manifest.narrative?.overlay || {};
+  const entryOverlay = entry.overlay || {};
+  const overlayRaw = {
+    ...entryOverlay,
+    ...globalOverlay,
+    lines: (globalOverlay.lines?.length ? globalOverlay.lines : entryOverlay.lines) || [],
+    style_params: { ...(entryOverlay.style_params || {}), ...(globalOverlay.style_params || {}) },
+  };
   const overlay = { ...overlayRaw, ...normalizePurOverlayParams(overlayRaw.style_params) };
   const pur = manifest.pur || {};
 
@@ -157,6 +171,12 @@ export function PurPackComposition({ purManifest, session: sessionProp }) {
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#050505', overflow: 'hidden' }}>
+      {/* MULTI-VIDÉOS : bannière discrète « vidéo X/N » pendant l'aperçu */}
+      {isMulti && (
+        <div style={{ position: 'absolute', right: 14, bottom: 14, zIndex: 50, pointerEvents: 'none', padding: '4px 10px', borderRadius: 6, background: 'rgba(0,0,0,0.55)', color: '#00ff88', fontSize: 13, fontWeight: 800, letterSpacing: '0.06em' }}>
+          VIDÉO {safeIndex + 1}/{entries.length} · {entry.angle_id || entry.source_id || '?'}
+        </div>
+      )}
       {/* SFX des zooms (volume 50-60% sous la voix) */}
       {(manifest.sfx_available === true ? entry.sfx_list || [] : []).map((sfx, index) => (
         Math.abs(frame - Number(sfx.moment_frame || 0)) < 1 && sfx.type ? (

@@ -44,9 +44,16 @@ overlay, style blur/split/reframing, anti-détection) — voir
    archive Spider-Man dans clips[0]) + exportCodex corrigé (review_mode
    racine synchronisé, pur_manifest racine rempli) + Montserrat ExtraBold
    embarquée F03/F04 (parité police preview/CI).
-5. **Validation visuelle P1** par le Warsmith sur le preview — GO obligatoire
+5. ✅ **Architecture MULTI-VIDÉOS IMPLÉMENTÉE (2026-09-10)** — voir
+   `TRACKING/PUR_MULTI_VIDEOS.md` : 1 codex = N vidéos = 1 run = 1 zip.
+   Chargeur multi-packs F03 (sélection multiple), `parsePurPackMulti`
+   (style + texte GLOBAUX appliqués à toutes les vidéos), sélecteur ◀▶
+   « VIDÉO X/N », workflow matrix (prepare → N renders parallèles 1-20 →
+   aggregate strict), `tools/pur_aggregate.py` (refus de publier si un MP4
+   manque), `convert_pur_pack.mjs --packs`, F05 `--batch`.
+6. **Validation visuelle P1** par le Warsmith sur le preview — GO obligatoire
    avant tout run CI (règle du 2026-09-09)
-6. Puis E2E PUR réel : GitHub Actions → "DEV10 PUR — Bras armé PERTURABO"
+7. Puis E2E PUR réel : GitHub Actions → "DEV10 PUR Matrix" (workflow_dispatch, pack_filter vide = TOUS les packs, style blur, max_parallel 6)
    (workflow_dispatch, inputs : pack_filter=pur_A01, canvas=9:16), vérifier
    G0-G3 + P2, contrôle visuel MP4, journaliser dans PUR_CAMPAIGN_LOG.md
 7. Tag canonique à la validation : pur-canon-v1

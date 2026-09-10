@@ -202,7 +202,11 @@ export const OmniComposition = ({ codex, videoSrc, session: sessionProp, sequenc
     // Règle du 2026-09-09 : SEULS le style déclaré par le pack (source: pack)
     // ou le choix explicite de l'opérateur (source: operator) rendent.
     // Style inféré/inconnu → BLOQUÉ, jamais de rendu en silence.
-    const styleAuthorized = purStyle === 'ranking' && (styleSource === 'pack' || styleSource === 'operator');
+    // MULTI-VIDÉOS (2026-09-10) : la porte s'ouvre aux 4 styles PUR — le
+    // rendu par style (blur/split/reframing) est piloté par le codex
+    // validé par l'opérateur (dev10.pur.v2), miroir du preview F03.
+    const styleAuthorized = ['ranking', 'blur', 'split_scene', 'reframing'].includes(purStyle)
+      && (styleSource === 'pack' || styleSource === 'operator');
     if (rawPur && !styleAuthorized) {
       return (
         <AbsoluteFill style={{ backgroundColor: '#0a0a0a', justifyContent: 'center', alignItems: 'center', padding: 60 }}>

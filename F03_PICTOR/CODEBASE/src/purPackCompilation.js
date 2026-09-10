@@ -63,6 +63,8 @@ export function normalizePurManifest(raw, fps = 30) {
     const style = PUR_STYLE_VALUES.includes(rawStyle) ? rawStyle
       : PUR_STYLE_VALUES.includes(String(manifest.pur?.montage_style || '')) ? String(manifest.pur.montage_style)
       : '';
+    // MULTI-VIDÉOS (dev10.pur.v2) : style GLOBAL + copie par entrée (overlay,
+    // pack_label, angle_id) produite par parsePurPackMulti — rien à recalculer.
     return {
       ...manifest,
       fps: Number(manifest.fps || fps),
@@ -73,6 +75,29 @@ export function normalizePurManifest(raw, fps = 30) {
     };
   }
   return { ...emptyPurManifest(fps), ...manifest };
+}
+
+/**
+ * MULTI-VIDÉOS : extrait UNE entrée du manifeste global sous forme de
+ * manifeste autonome (1 entrée, mêmes style/style_params/overlay globaux).
+ * Utilisé par le rendu matrix CI — 1 runner = 1 vidéo finale.
+ */
+export function extractPurEntryManifest(manifest, index = 0) {
+  const entries = Array.isArray(manifest?.entries) ? manifest.entries : [];
+  const safeIndex = Math.max(0, Math.min(Number(index) || 0, Math.max(0, entries.length - 1)));
+  const entry = entries[safeIndex];
+  if (!entry) return manifest;
+  const speed = Number(entry.anti_detection?.speed || 1);
+  const fps = Number(manifest.fps || 30);
+  return {
+    ...manifest,
+    entries: [entry],
+    rank_count: 1,
+    final_rank: entry,
+    duration_seconds: Number(entry.duration_seconds || 0),
+    total_frames: Math.max(1, Math.round((Number(entry.duration_seconds || 0) / speed) * fps)),
+    pur: { ...(manifest.pur || {}), pack_id: entry.pack_label || manifest.pur?.pack_id || '', angle_id: entry.angle_id || '' },
+  };
 }
 
 /** Zoom ponctuel à un frame donné — identique au preview (_purPackComposition). */

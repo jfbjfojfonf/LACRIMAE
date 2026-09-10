@@ -134,6 +134,7 @@ def main() -> int:
     parser.add_argument("--pack", type=Path, required=True, help="production_pack_pur_*.json")
     parser.add_argument("--out", type=Path, required=True, help="Dossier de sortie (clips + manifeste)")
     parser.add_argument("--clip-name", default=None, help="Nom du clip (défaut: pur_<angle_id>.mp4)")
+    parser.add_argument("--append", action="store_true", help="Ajoute l'entrée à pur_sources.json au lieu de la remplacer (multi-vidéos)")
     parser.add_argument("--dry-run", action="store_true", help="Valide G0 et affiche la commande sans télécharger")
     args = parser.parse_args()
 
@@ -218,9 +219,10 @@ def main() -> int:
     print(f"  [✓] G3 CODEC : {meta['codec']} {meta['width']}x{meta['height']}")
 
     # ── Manifeste pur_sources.json ──
-    sources = {
-        "schema_version": "dev10.pur-sources.v1",
-        "generated_at": now(),
+    # MULTI-VIDÉOS (--append) : chaque pack ajoute son entrée à la liste
+    # segments[] — le workflow agrège le tout et le convertisseur consomme
+    # la liste complète. Sans --append : comportement mono (compatibilité).
+    entry = {
         "pack_id": pack.get("pack_id"),
         "angle_id": angle_id,
         "vod_url": vod_url,
@@ -231,7 +233,32 @@ def main() -> int:
         "probe": meta,
         "gates": {"G0": "PASSED", "G1": "PASSED", "G2": "PASSED", "G3": "PASSED"},
     }
-    (args.out / "pur_sources.json").write_text(json.dumps(sources, indent=2), encoding="utf-8")
+    sources_path = args.out / "pur_sources.json"
+    if args.append and sources_path.exists():
+        try:
+            existing = json.loads(sources_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            existing = None
+        if existing and isinstance(existing.get("segments"), list):
+            existing["segments"] = [s for s in existing["segments"] if s.get("angle_id") != angle_id]
+            existing["segments"].append(entry)
+            existing["generated_at"] = now()
+            existing["segment_count"] = len(existing["segments"])
+            sources = existing
+        else:
+            sources = {
+                "schema_version": "dev10.pur-sources.v2",
+                "generated_at": now(),
+                "segments": [existing, entry] if existing else [entry],
+                "segment_count": 1 if not existing else 2,
+            }
+    else:
+        sources = {
+            "schema_version": "dev10.pur-sources.v1",
+            "generated_at": now(),
+            **entry,
+        }
+    sources_path.write_text(json.dumps(sources, indent=2), encoding="utf-8")
     print(f"\n═══ F00-PUR : ✓ MISSION ACCOMPLIE — {clip_path} ═══")
     return 0
 

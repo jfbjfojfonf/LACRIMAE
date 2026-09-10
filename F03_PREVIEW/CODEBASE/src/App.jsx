@@ -6,7 +6,7 @@ import { normalizeHybridManifest } from './preview/hybridNarrative';
 import { normalizeMusicTimeline, musicWaveformPoints } from './preview/audioTimeline';
 import { normalizeRevealManifest } from './preview/revealCompilation';
 import { normalizeRankingManifest } from './preview/rankingCompilation';
-import { parsePurPack, normalizePurOverlayParams, normalizePurStyleParams } from './preview/bridgeClipper';
+import { parsePurPack, parsePurPackMulti, normalizePurOverlayParams, normalizePurStyleParams } from './preview/bridgeClipper';
 
 /**
  * App — F03 PREVIEW (v4.0 — session + clips)
@@ -48,7 +48,9 @@ export default function App() {
   const [revealManifest, setRevealManifest] = useState(null);
   const [rankingManifest, setRankingManifest] = useState(null);
   const [purPackRaw, setPurPackRaw] = useState(null);      // production_pack_pur_*.json brut (PERTURABO)
-  const [purManifest, setPurManifest] = useState(null);    // manifeste dev10.pur.v1 converti
+  const [purPacksRaw, setPurPacksRaw] = useState([]);      // MULTI-VIDÉOS : liste de packs (1 pack = 1 vidéo finale)
+  const [purManifest, setPurManifest] = useState(null);    // manifeste dev10.pur.v1/v2 converti (multi-entrées)
+  const [purEntryIndex, setPurEntryIndex] = useState(0);   // MULTI-VIDÉOS : vidéo affichée dans l'aperçu
   const [purCanvas, setPurCanvas] = useState('9:16');      // 9:16 | 16:9 | 1:1
   const [audioSrc, setAudioSrc] = useState('');
   const [audioPosition, setAudioPosition] = useState(0);
@@ -217,6 +219,8 @@ export default function App() {
   const activeReveal = reviewMode === 'reveal_compilation' ? normalizeRevealManifest(revealManifest || session.reveal || {}, fps, baseTotalFrames) : null;
   const activeRanking = reviewMode === 'ranking_compilation' ? normalizeRankingManifest(rankingManifest || session.ranking || {}, fps, baseTotalFrames) : null;
   const totalFrames = activeRanking?.total_frames || activeReveal?.total_frames || activeHybrid?.total_frames || baseTotalFrames;
+  // PUR : durée = manifeste (multi-vidéos = somme des entrées) sinon défaut
+  const purTotalFrames = Number(purManifest?.total_frames || 0);
   const composition = getCompositionConfig(clip, session);
   const music = normalizeMusicTimeline(musicTimeline || session.music || {}, fps, totalFrames);
   const waveformWidth = 600;
@@ -247,6 +251,8 @@ export default function App() {
   const updateRankingNarrative = (key, value) => updateRanking({ narrative: { ...(rankingManifest?.narrative || {}), [key]: value } });
   // PUR : convertit un pack PERTURABO brut en manifeste dev10.pur.v1 côté navigateur
   // (les réglages opérateur déjà faits sont préservés — seul le canvas/clip change)
+  // MULTI-VIDÉOS : liste de packs → parsePurPackMulti (1 pack = 1 vidéo finale,
+  // style + texte GLOBAUX validés par l'opérateur, appliqués à toutes).
   const convertPurPack = (pack, canvas) => {
     if (!pack) return;
     const prev = purManifest;
@@ -258,6 +264,23 @@ export default function App() {
       overlayParams: prev?.narrative?.overlay?.style_params,
     });
     setPurManifest(manifest);
+    setSession((s) => ({ ...s, review_mode: 'pur_pack', pur_manifest: manifest }));
+    setActiveTab('pur');
+  };
+  const convertPurPacks = (packs, canvas) => {
+    const list = (Array.isArray(packs) ? packs : [packs]).filter(Boolean);
+    if (list.length === 0) return;
+    const prev = purManifest;
+    const clipFiles = list.map((pack, i) => `clips/pur_${pack.identite?.angle_id || pack.pack_id || `clip${i + 1}`}.mp4`);
+    const manifest = parsePurPackMulti(list, {
+      fps,
+      canvas: canvas || purCanvas,
+      clipFiles,
+      styleParams: prev?.style_params,
+      overlayParams: prev?.narrative?.overlay?.style_params,
+    });
+    setPurManifest(manifest);
+    setPurEntryIndex(0);
     setSession((s) => ({ ...s, review_mode: 'pur_pack', pur_manifest: manifest }));
     setActiveTab('pur');
   };
@@ -651,8 +674,8 @@ export default function App() {
             <Player
               ref={playerRef}
               component={OmniComposition}
-              inputProps={{ codex: clip, videoSrc, session, sequences, hybridManifest: activeHybrid, hybridIntroSrc, musicTimeline: music, revealManifest: activeReveal || activeRanking, purManifest: reviewMode === 'pur_pack' ? purManifest : null }}
-              durationInFrames={totalFrames}
+              inputProps={{ codex: clip, videoSrc, session, sequences, hybridManifest: activeHybrid, hybridIntroSrc, musicTimeline: music, revealManifest: activeReveal || activeRanking, purManifest: reviewMode === 'pur_pack' ? purManifest : null, purEntryIndex: reviewMode === 'pur_pack' ? purEntryIndex : 0 }}
+              durationInFrames={reviewMode === 'pur_pack' && purTotalFrames > 0 ? purTotalFrames : totalFrames}
               fps={fps}
               compositionWidth={vidWidth}
               compositionHeight={vidHeight}
@@ -1003,31 +1026,50 @@ export default function App() {
               <div style={styles.panelContent}>
                 <label style={{ ...styles.label, color: '#66ddff', fontSize: '14px' }}>⚡ MODE PUR — PERTURABO → LACRIMAE</label>
                 <div style={{ color: '#aaa', fontSize: 12, lineHeight: 1.45 }}>
-                  Pack PUR (production_pack_pur_*.json) → manifeste dev10.pur.v1 → rendu selon style
-                  ({styleName || 'non défini'}), hook 0-3s (visage, pas de texte), overlay 2 lignes après le hook, zooms frame-exacts, anti-détection.
+                  Pack(s) PUR (production_pack_pur_*.json) → manifeste dev10.pur.v2 MULTI-VIDÉOS → rendu selon style
+                  global ({styleName || 'non défini'}). Tout ce que tu valides ici (texte, style, anti-détection)
+                  s'applique À TOUTES les vidéos finales. Texte statique début→fin, zooms frame-exacts, anti-détection.
                 </div>
 
                 <div style={{ marginTop: 10, padding: 8, border: '1px solid #1a4a5a', borderRadius: 7, background: '#081820' }}>
-                  <label style={{ ...styles.label, color: '#66ddff', fontSize: 12 }}>📥 CHARGER UN PACK PUR</label>
+                  <label style={{ ...styles.label, color: '#66ddff', fontSize: 12 }}>📥 CHARGER LES PACKS PUR (1 pack = 1 vidéo finale)</label>
                   <label style={{ ...styles.uploadLabel, marginTop: 8 }}>
-                    {purPackRaw ? `Pack chargé : ${purPackRaw.pack_id || '?'} (${purPackRaw.identite?.angle_id || '—'})` : 'Déposer production_pack_pur_*.json (EXPORT PERTURABO)'}
-                    <input type="file" accept=".json" style={{ display: 'none' }} onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      const reader = new FileReader();
-                      reader.onload = () => {
-                        try {
-                          const pack = JSON.parse(String(reader.result));
-                          setPurPackRaw(pack);
-                          convertPurPack(pack, purCanvas);
-                        } catch (err) {
-                          setError('Pack PUR invalide : ' + err.message);
-                        }
-                      };
-                      reader.readAsText(file);
+                    {purPacksRaw.length > 0
+                      ? `${purPacksRaw.length} pack(s) chargé(s) : ${purPacksRaw.map((p) => p.identite?.angle_id || p.pack_id || '?').join(', ')}`
+                      : purPackRaw
+                        ? `Pack chargé : ${purPackRaw.pack_id || '?'} (${purPackRaw.identite?.angle_id || '—'})`
+                        : 'Déposer production_pack_pur_*.json — SÉLECTION MULTIPLE possible (EXPORT PERTURABO)'}
+                    <input type="file" accept=".json" multiple style={{ display: 'none' }} onChange={(e) => {
+                      const files = Array.from(e.target.files || []);
+                      if (!files.length) return;
+                      const packs = [];
+                      let pending = files.length;
+                      for (const file of files) {
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          try {
+                            packs.push(JSON.parse(String(reader.result)));
+                          } catch (err) {
+                            setError(`Pack PUR invalide (${file.name}) : ` + err.message);
+                          }
+                          pending -= 1;
+                          if (pending === 0) {
+                            packs.sort((a, b) => String(a.identite?.angle_id || a.pack_id || '').localeCompare(String(b.identite?.angle_id || b.pack_id || '')));
+                            setPurPacksRaw(packs);
+                            setPurPackRaw(packs[0] || null);
+                            convertPurPacks(packs, purCanvas);
+                          }
+                        };
+                        reader.readAsText(file);
+                      }
                     }} />
                   </label>
-                  {purPackRaw && (
+                  {purPacksRaw.length > 0 && (
+                    <button style={{ ...styles.button, marginTop: 6 }} onClick={() => convertPurPacks(purPacksRaw, purCanvas)}>
+                      ↻ Reconvertir les {purPacksRaw.length} packs ({purCanvas})
+                    </button>
+                  )}
+                  {purPacksRaw.length === 0 && purPackRaw && (
                     <button style={{ ...styles.button, marginTop: 6 }} onClick={() => convertPurPack(purPackRaw, purCanvas)}>
                       ↻ Reconvertir le pack ({purCanvas})
                     </button>
@@ -1039,12 +1081,41 @@ export default function App() {
                   <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
                     {['9:16', '16:9', '1:1'].map((fmt) => (
                       <button key={fmt} style={{ ...(purCanvas === fmt ? styles.tabActive : styles.tab), flex: 1 }}
-                        onClick={() => { setPurCanvas(fmt); if (purPackRaw) convertPurPack(purPackRaw, fmt); }}>
+                        onClick={() => { setPurCanvas(fmt); if (purPacksRaw.length) convertPurPacks(purPacksRaw, fmt); else if (purPackRaw) convertPurPack(purPackRaw, fmt); }}>
                         {fmt}
                       </button>
                     ))}
                   </div>
                 </div>
+
+                {purManifest?.entries?.length > 1 && (
+                  <div style={{ marginTop: 10, padding: 8, border: '1px solid #1a4a5a', borderRadius: 7, background: '#081820' }}>
+                    <label style={{ ...styles.label, color: '#66ddff', fontSize: 12 }}>
+                      🎬 VIDÉOS DU CODEX — {purManifest.entries.length} rendus en parallèle → 1 zip
+                    </label>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 6 }}>
+                      <button style={styles.button} disabled={purEntryIndex <= 0}
+                        onClick={() => setPurEntryIndex((i) => Math.max(0, i - 1))}>◀</button>
+                      <div style={{ flex: 1, textAlign: 'center', color: '#ffd400', fontSize: 13, fontWeight: 800 }}>
+                        VIDÉO {purEntryIndex + 1} / {purManifest.entries.length}
+                      </div>
+                      <button style={styles.button} disabled={purEntryIndex >= purManifest.entries.length - 1}
+                        onClick={() => setPurEntryIndex((i) => Math.min(purManifest.entries.length - 1, i + 1))}>▶</button>
+                    </div>
+                    <div style={{ display: 'flex', gap: 4, marginTop: 6, flexWrap: 'wrap' }}>
+                      {purManifest.entries.map((en, i) => (
+                        <button key={`pur_vid_${i}`}
+                          style={{ ...(i === purEntryIndex ? styles.tabActive : styles.tab), flex: 1, fontSize: 11 }}
+                          onClick={() => setPurEntryIndex(i)}>
+                          {i + 1}·{en.angle_id || en.pack_label || '?'}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ color: '#8ac', fontSize: 11, marginTop: 4 }}>
+                      Clip : {purManifest.entries[purEntryIndex]?.clip_file || '—'} · {purManifest.entries[purEntryIndex]?.duration_seconds || 0}s
+                    </div>
+                  </div>
+                )}
 
                 {hasPack && (
                   <>

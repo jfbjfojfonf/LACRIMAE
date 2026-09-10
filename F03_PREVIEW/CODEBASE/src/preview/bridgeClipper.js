@@ -624,4 +624,79 @@ function createEmptyPurManifest(fps) {
   };
 }
 
+/**
+ * MULTI-VIDÉOS (architecture 2026-09-10 — « 1 codex = N vidéos = 1 run = 1 zip ») :
+ * parse une LISTE de packs PUR et produit UN manifeste multi-entrées.
+ *
+ * - entries[] = un clip par pack (A01, A02, A03…), chacun garde ses zooms,
+ *   anti-détection, sfx et duration du pack PERTURABO (jamais modifiés).
+ * - Le style + style_params + overlay éditorial sont GLOBAUX : ce que
+ *   l'opérateur valide sur l'aperçu s'applique à TOUTES les vidéos finales.
+ * - Chaque entrée porte un overlay éditorial résolu (hérité du global) pour
+ *   que le rendu F04 puisse consommer l'entrée sans recalcul.
+ *
+ * @param {object[]} packs - Les production_pack_pur_*.json (1+)
+ * @param {object} options - { fps, canvas, clipFiles: ['clips/pur_A01.mp4', ...], style, styleParams, overlayParams }
+ * @returns {object} manifeste dev10.pur.v2 multi-vidéos
+ */
+export function parsePurPackMulti(packs, options = {}) {
+  const list = (Array.isArray(packs) ? packs : [packs]).filter((p) => p && typeof p === 'object');
+  if (list.length === 0) return createEmptyPurManifest(options.fps || 30);
+  if (list.length === 1) return parsePurPack(list[0], options);
+
+  const fps = options.fps || 30;
+  const clipFiles = options.clipFiles || [];
+  const first = list[0];
+
+  // Style GLOBAL : premier pack déclaré → sinon option opérateur → sinon inférence.
+  const operatorStyle = String(options.style || '').toLowerCase();
+  const declared = String(first.montage_style || first.montage_instructions?.metadata?.style || '').toLowerCase();
+  const resolvedStyle = operatorStyle || declared || inferPurStyle(first.montage_instructions || {});
+  const styleKnown = PUR_STYLE_VALUES.includes(resolvedStyle);
+
+  // Un seul clip_file par entrée : clips/pur_<angle>.mp4 (1 segment VOD par pack).
+  const entries = list.map((pack, index) => {
+    const single = parsePurPack(pack, {
+      fps,
+      canvas: options.canvas,
+      clipFiles: [clipFiles[index] || clipFiles[0] || ''],
+      style: operatorStyle || undefined,
+    });
+    const entry = single.entries[0] || null;
+    if (!entry) return null;
+    // Copie de l'overlay éditorial GLOBAL résolu sur chaque entrée (parité F04).
+    entry.overlay = JSON.parse(JSON.stringify(single.narrative?.overlay || {}));
+    entry.pack_label = pack.pack_id || `pack_${index + 1}`;
+    entry.angle_id = pack.identite?.angle_id || single.pur?.angle_id || `A${String(index + 1).padStart(2, '0')}`;
+    return entry;
+  }).filter(Boolean);
+
+  const durationSeconds = entries.reduce((sum, e) => sum + Number(e.duration_seconds || 0), 0);
+  const speed = Number(entries[0]?.anti_detection?.speed || 1);
+  const base = parsePurPack(first, { fps, canvas: options.canvas, clipFiles: [], style: operatorStyle || undefined });
+
+  return {
+    ...base,
+    style: styleKnown ? resolvedStyle : '',
+    style_source: operatorStyle ? 'operator' : declared ? 'pack' : styleKnown ? 'inferred' : 'none',
+    style_unknown: !styleKnown,
+    style_params: options.styleParams || base.style_params,
+    entries,
+    rank_count: entries.length,
+    final_rank: entries[entries.length - 1] || null,
+    duration_seconds: durationSeconds,
+    total_frames: Math.max(1, entries.reduce((sum, e) => {
+      const s = Number(e.anti_detection?.speed || 1);
+      return sum + Math.round((Number(e.duration_seconds || 0) / s) * fps);
+    }, 0) || Math.max(1, Math.round((durationSeconds / speed) * fps))),
+    pur: {
+      ...base.pur,
+      pack_ids: list.map((p) => p.pack_id || ''),
+      angle_ids: entries.map((e) => e.angle_id),
+      pack_count: entries.length,
+      multi: true,
+    },
+  };
+}
+
 export default parseMontageInstructions;

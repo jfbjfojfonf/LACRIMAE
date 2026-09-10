@@ -116,6 +116,20 @@ Lancer F03 Preview (Vite), ouvrir l'onglet **⚡ PUR** :
 
 ---
 
+## Étape 3-bis — MULTI-VIDÉOS (2026-09-10) : plusieurs packs = plusieurs vidéos
+
+Depuis le 2026-09-10, l'architecture est **multi-vidéos** : 1 codex = N vidéos
+= 1 run = 1 zip.
+
+1. Dans le preview ⚡ PUR, dépose **plusieurs packs d'un coup** (sélection
+   multiple dans le chargeur). Chaque pack = 1 vidéo finale (A01, A02…).
+2. Le sélecteur **◀ ▶ « VIDÉO X/N »** montre chaque vidéo dans l'aperçu.
+3. **Tout ce que tu valides s'applique à TOUTES les vidéos** : style, texte,
+   boîte, positions, anti-détection — rien n'est réglé par vidéo.
+4. Au rendu : UN run CI rend les N vidéos en parallèle (matrix, max 20) et
+   publie le bundle `lac-pur-final` — **refusé si un seul rendu manque**.
+5. F05 camoufle tout le bundle d'un coup (`--batch`).
+
 ## Étape 4 — Rendu CI (gate P2)
 
 GitHub Actions → **DEV10 PUR — Bras armé PERTURABO** → Run workflow :

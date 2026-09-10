@@ -123,7 +123,7 @@ function RevealCompilationComposition({ codex, session: sessionProp, revealManif
   );
 }
 
-export const OmniComposition = ({ codex, videoSrc, session: sessionProp, sequences, hybridManifest, hybridIntroSrc, musicTimeline, revealManifest, purManifest }) => {
+export const OmniComposition = ({ codex, videoSrc, session: sessionProp, sequences, hybridManifest, hybridIntroSrc, musicTimeline, revealManifest, purManifest, purEntryIndex }) => {
   // REFRAMING mode — zoom to fill 9:16 with slow push in
   const reframingCfg = sessionProp.reframing || codex?.reframing || {};
   if (reframingCfg.enabled || sessionProp?.review_mode === 'reframing' || revealManifest?.mode === 'reframing') {
@@ -137,9 +137,9 @@ export const OmniComposition = ({ codex, videoSrc, session: sessionProp, sequenc
     return <BlurComposition session={sessionProp} codex={codex} />;
   }
 
-  // PUR mode — packs PERTURABO convertis (manifeste dev10.pur.v1)
+  // PUR mode — packs PERTURABO convertis (manifeste dev10.pur.v1/v2 multi-vidéos)
   if (sessionProp?.review_mode === 'pur_pack' || purManifest?.mode === 'pur_pack') {
-    return <PurPackComposition purManifest={purManifest} session={sessionProp} />;
+    return <PurPackComposition purManifest={purManifest} session={sessionProp} entryIndex={purEntryIndex} />;
   }
 
   if (sessionProp?.review_mode === 'ranking_compilation' || revealManifest?.mode === 'ranking_compilation') {

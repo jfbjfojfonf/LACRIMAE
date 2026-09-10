@@ -1,15 +1,19 @@
-name: DEV10 PUR — Bras armé PERTURABO (pack → MP4)
+name: DEV10 PUR Matrix — 1 codex = N vidéos = 1 run = 1 zip
 
-# Pattern éprouvé dev9_ranking_render.yml — zéro Modal, tout en CI.
-# PERTURABO EXPORT → F00-PUR (yt-dlp sections) → bridgeClipper → Remotion → MP4.
+# Architecture MULTI-VIDÉOS (2026-09-10, décision Warsmith) :
+#   1 codex PUR multi-entrées → N rendus PARALLÈLES (matrix GitHub, max 20)
+#   → agrégation stricte (publication refusée si 1 seul rendu manque)
+#   → artifact final lac-pur-final = N MP4 + manifestes + rapport.
+# Zéro concat : le zip part vers F05_CAMOUFLAGE (batch camouflage/nettoyage).
+# Pattern éprouvé : lacrimae_f04_matrix.yml (dev9) + dev10_pur_render.yml.
 
 on:
   workflow_dispatch:
     inputs:
       pack_filter:
-        description: 'Filtre du pack dans EXPORT PERTURABO (ex: pur_A01, vide = plus récent)'
+        description: 'Filtre des packs (ex: pur_A = tous les angles A, vide = TOUS les packs PUR)'
         required: false
-        default: 'pur_A01'
+        default: ''
         type: string
       canvas:
         description: 'Format de sortie (9:16, 16:9 ou 1:1)'
@@ -22,12 +26,17 @@ on:
         default: 'main'
         type: string
       style:
-        description: 'Style PUR — requis si le pack ne le déclare pas (ranking/reframing/blur/split_scene). Ton choix.'
+        description: 'Style PUR GLOBAL appliqué à toutes les vidéos (ranking/reframing/blur/split_scene) — ton choix'
         required: false
-        default: ''
+        default: 'blur'
+        type: string
+      max_parallel:
+        description: 'Concurrence maximale de la matrix (1-20)'
+        required: false
+        default: '6'
         type: string
       max_duration:
-        description: 'Durée max du rendu en secondes (0 = durée complète)'
+        description: 'Durée max PAR vidéo en secondes (0 = durée complète)'
         required: false
         default: '0'
         type: string
@@ -41,83 +50,150 @@ env:
   PERTURABO_EXPORT: MONDES_FORGES/CLIPPING/EXPORT
 
 jobs:
-  pur-render:
-    name: F00-PUR + BridgeClipper + F04 Render
+  prepare:
+    name: PUR prepare — fetch packs + matrix
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      expected_count: ${{ steps.matrix.outputs.expected_count }}
+    timeout-minutes: 20
     steps:
       - name: Checkout LACRIMAE dev10
         uses: actions/checkout@v4
         with:
           ref: dev10
 
-      - name: Récupérer le pack PUR depuis PERTURABO EXPORT
+      - name: Récupérer TOUS les packs PUR filtrés depuis PERTURABO EXPORT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FILTER: ${{ inputs.pack_filter }}
           BRANCH: ${{ inputs.perturabo_branch }}
         run: |
-          mkdir -p BRIDGE_PERTURABO/IN
+          mkdir -p "$RUNNER_TEMP/pur-packs"
           PACKS=$(gh api "repos/${PERTURABO_REPO}/contents/${PERTURABO_EXPORT}?ref=${BRANCH}" \
             --jq '[.[] | select(.name | startswith("production_pack_pur_")) | .name]')
           echo "Packs PUR disponibles : ${PACKS}"
-          if [ "${FILTER}" != "" ]; then
-            PACK=$(echo "${PACKS}" | jq -r --arg f "${FILTER}" '[.[] | select(contains($f))] | sort | .[-1] // empty')
+          if [ -n "${FILTER}" ]; then
+            SELECTED=$(echo "${PACKS}" | jq -r --arg f "${FILTER}" '[.[] | select(contains($f))] | sort | .[]')
+          else
+            SELECTED=$(echo "${PACKS}" | jq -r 'sort | .[]')
           fi
-          if [ "${PACK:-}" = "" ]; then
-            PACK=$(echo "${PACKS}" | jq -r 'sort | .[-1]')
-          fi
-          echo "Pack sélectionné : ${PACK}"
-          gh api "repos/${PERTURABO_REPO}/contents/${PERTURABO_EXPORT}/${PACK}?ref=${BRANCH}" \
-            --jq .content | base64 -d > "BRIDGE_PERTURABO/IN/${PACK}"
-          echo "PACK_PATH=BRIDGE_PERTURABO/IN/${PACK}" >> "$GITHUB_ENV"
-          echo "PACK_NAME=${PACK}" >> "$GITHUB_ENV"
+          COUNT=$(echo "${SELECTED}" | grep -c . || true)
+          echo "Packs sélectionnés : ${COUNT}"
+          [ "${COUNT}" -ge 1 ] || { echo "✗ aucun pack PUR trouvé"; exit 1; }
+          while IFS= read -r PACK; do
+            gh api "repos/${PERTURABO_REPO}/contents/${PERTURABO_EXPORT}/${PACK}?ref=${BRANCH}" \
+              --jq .content | base64 -d > "$RUNNER_TEMP/pur-packs/${PACK}"
+            echo "  ▸ ${PACK}"
+          done <<< "${SELECTED}"
+
+      - name: Installer ffmpeg + yt-dlp (validation G0 sans télécharger)
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          pipx install yt-dlp || pip install --user yt-dlp
+
+      - name: F00-PUR dry-run G0 sur chaque pack (échec = stop avant tout rendu)
+        run: |
+          set -e
+          for PACK in "$RUNNER_TEMP"/pur-packs/production_pack_pur_*.json; do
+            echo "── G0 : $(basename "${PACK}")"
+            python3 F00_INGEST/CODEBASE/f00_pur.py --pack "${PACK}" --out "$RUNNER_TEMP/g0" --dry-run
+          done
+
+      - name: Construire la matrix (1 entrée = 1 vidéo finale)
+        id: matrix
+        run: |
+          python3 - << 'PYEOF'
+          import json, glob, os
+          packs = sorted(glob.glob(os.environ['RUNNER_TEMP'] + '/pur-packs/production_pack_pur_*.json'))
+          entries = []
+          for p in packs:
+              pack = json.load(open(p))
+              angle = (pack.get('identite') or {}).get('angle_id') or pack.get('pack_id') or 'clip'
+              entries.append({'angle_id': angle, 'pack_path': p, 'pack_name': os.path.basename(p)})
+          matrix = {'include': entries}
+          print(json.dumps(matrix))
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
+              fh.write(f"matrix={json.dumps(matrix)}\n")
+              fh.write(f"expected_count={len(entries)}\n")
+          PYEOF
+
+      - name: Publier le bundle d'entrée (packs + métadonnées)
+        uses: actions/upload-artifact@v4
+        with:
+          name: pur-inputs-${{ github.run_id }}
+          path: ${{ runner.temp }}/pur-packs/
+          if-no-files-found: error
+          retention-days: 14
+
+  render:
+    name: PUR render — ${{ matrix.angle_id }}
+    needs: prepare
+    if: needs.prepare.result == 'success'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(inputs.max_parallel) }}
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    timeout-minutes: 45
+    steps:
+      - name: Checkout LACRIMAE dev10
+        uses: actions/checkout@v4
+        with:
+          ref: dev10
+
+      - name: Télécharger le bundle d'entrée exact
+        uses: actions/download-artifact@v4
+        with:
+          name: pur-inputs-${{ github.run_id }}
+          path: ${{ runner.temp }}/pur-packs
 
       - name: Installer ffmpeg + yt-dlp
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
           pipx install yt-dlp || pip install --user yt-dlp
           yt-dlp --version
 
-      - name: F00-PUR — Télécharger le segment VOD (gates G0-G3)
+      - name: F00-PUR — télécharger le segment VOD de ${{ matrix.angle_id }} (gates G0-G3)
         run: |
           python3 F00_INGEST/CODEBASE/f00_pur.py \
-            --pack "${{ env.PACK_PATH }}" \
+            --pack "${{ matrix.pack_path }}" \
             --out F03_PICTOR/CODEBASE/public/clips \
-            --clip-name "pur_$(echo "${{ env.PACK_NAME }}" | grep -oE 'A0[0-9]+' | head -1 || echo clip).mp4"
+            --clip-name "pur_${{ matrix.angle_id }}.mp4"
 
-      - name: BridgeClipper — pack PUR → pur_manifest.json
-        working-directory: F03_PREVIEW/CODEBASE
+      - name: BridgeClipper — pack PUR → manifeste mono-entrée (réglages opérateur du codex)
         run: |
-          node ../../tools/convert_pur_pack.mjs \
-            --pack "../../${{ env.PACK_PATH }}" \
-            --out public/pur_manifest.json \
+          mkdir -p F03_PICTOR/OUT/${{ matrix.angle_id }}
+          node tools/convert_pur_pack.mjs \
+            --pack "${{ matrix.pack_path }}" \
+            --out F03_PICTOR/OUT/${{ matrix.angle_id }}/pur_manifest.json \
             --canvas "${{ inputs.canvas }}" \
-            ${{ inputs.style != '' && format('--style {0}', inputs.style) || '' }} \
-            --clip "clips/pur_$(echo "${{ env.PACK_NAME }}" | grep -oE 'A0[0-9]+' | head -1 || echo clip).mp4"
+            --style "${{ inputs.style }}" \
+            --style-params F03_PICTOR/CODEBASE/src/data/pur_manifest.json \
+            --clip "clips/pur_${{ matrix.angle_id }}.mp4"
 
-      - name: Injecter pur_manifest dans codex.json
+      - name: Injecter pur_manifest dans codex.json (session pur_pack)
         run: |
           python3 - << 'PYEOF'
           import json
           from pathlib import Path
           codex_path = Path('F03_PICTOR/CODEBASE/src/data/codex.json')
           d = json.loads(codex_path.read_text()) if codex_path.exists() else {}
-          manifest = json.loads(Path('F03_PREVIEW/CODEBASE/public/pur_manifest.json').read_text())
+          manifest = json.loads(Path('F03_PICTOR/OUT/${{ matrix.angle_id }}/pur_manifest.json').read_text())
           d['pur_manifest'] = manifest
+          d['review_mode'] = 'pur_pack'
           d.setdefault('session', {})['review_mode'] = 'pur_pack'
+          d['session']['pur_manifest'] = manifest
           clips = d.setdefault('clips', [])
           if not isinstance(clips, list) or len(clips) == 0:
               d['clips'] = [{}]
           d['clips'][0].setdefault('video', {})['fps'] = manifest.get('fps', 30)
-          codex_path.parent.mkdir(parents=True, exist_ok=True)
           codex_path.write_text(json.dumps(d, indent=2) + '\n')
-          print(f"codex.json : pur_manifest injecté ({manifest['total_frames']} frames, mode pur_pack)")
+          print(f"codex.json : pur_manifest injecté ({manifest['total_frames']} frames, angle ${{ matrix.angle_id }})")
           PYEOF
-          cp F03_PREVIEW/CODEBASE/public/pur_manifest.json F03_PICTOR/CODEBASE/src/data/pur_manifest.json
+          cp F03_PICTOR/OUT/${{ matrix.angle_id }}/pur_manifest.json F03_PICTOR/CODEBASE/src/data/pur_manifest.json
 
-      - name: Rendre le MP4 F04 (Remotion)
+      - name: Rendre le MP4 F04 (Remotion) — ${{ matrix.angle_id }}
         working-directory: F03_PICTOR/CODEBASE
         env:
           MAX_DURATION: ${{ inputs.max_duration }}
@@ -125,25 +201,77 @@ jobs:
           npm ci
           npm run build:pur 2>/dev/null || true
           if [ "${MAX_DURATION}" != "0" ] && [ -n "${MAX_DURATION}" ]; then
-            npx remotion render src/index.jsx LacrimaeShort out/lac_pur_final.mp4 \
+            npx remotion render src/index.jsx LacrimaeShort ../OUT/${{ matrix.angle_id }}/pur_${{ matrix.angle_id }}_finale.mp4 \
               --frames=0-$(python3 -c "print(int(${MAX_DURATION} * 30))") --concurrency=1
           else
-            npx remotion render src/index.jsx LacrimaeShort out/lac_pur_final.mp4 --concurrency=1
+            npx remotion render src/index.jsx LacrimaeShort ../OUT/${{ matrix.angle_id }}/pur_${{ matrix.angle_id }}_finale.mp4 --concurrency=1
           fi
-          ls -lh out/
+          test -s "../OUT/${{ matrix.angle_id }}/pur_${{ matrix.angle_id }}_finale.mp4"
+          ls -lh ../OUT/${{ matrix.angle_id }}/
 
-      - name: Upload artifact MP4
+      - name: Upload artifact du runner (${{ matrix.angle_id }})
         uses: actions/upload-artifact@v4
         with:
-          name: lac-pur-final-${{ inputs.pack_filter || 'latest' }}
-          path: F03_PICTOR/CODEBASE/out/lac_pur_final.mp4
+          name: pur-clip-${{ matrix.angle_id }}
+          path: F03_PICTOR/OUT/${{ matrix.angle_id }}/
+          if-no-files-found: error
           retention-days: 14
 
-      - name: Upload manifestes (traçabilité)
+  aggregate:
+    name: PUR aggregate — bundle final (refus si incomplet)
+    needs: [prepare, render]
+    if: always() && needs.prepare.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout LACRIMAE dev10
+        uses: actions/checkout@v4
+        with:
+          ref: dev10
+
+      - name: Télécharger les artifacts des N runners
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: pur-clip-*
+          path: ${{ runner.temp }}/pur-results
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: pur-inputs-${{ github.run_id }}
+          path: ${{ runner.temp }}/pur-packs
+
+      - name: Installer ffmpeg (contrôle des MP4)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+
+      - name: Agréger — publication UNIQUEMENT si toutes les vidéos sont là
+        id: aggregate
+        run: |
+          # Manifeste multi-entrées reconstruit depuis les packs (mêmes règles)
+          node tools/convert_pur_pack.mjs \
+            --packs "$(ls ${{ runner.temp }}/pur-packs/production_pack_pur_*.json | tr '\n' ',' | sed 's/,$//')" \
+            --out "${{ runner.temp }}/pur_manifest_full.json" \
+            --canvas "${{ inputs.canvas }}" \
+            --style "${{ inputs.style }}" \
+            --style-params F03_PICTOR/CODEBASE/src/data/pur_manifest.json
+          python3 tools/pur_aggregate.py \
+            --manifest "${{ runner.temp }}/pur_manifest_full.json" \
+            --results "${{ runner.temp }}/pur-results" \
+            --out F03_PICTOR/OUT
+
+      - name: Résumé d'échec sans publication
+        if: steps.aggregate.outcome != 'success'
+        run: |
+          echo 'PUR incomplet : aucun artifact final lac-pur-final ne sera publié.'
+          cat F03_PICTOR/OUT/pur_aggregate_report.json || true
+          exit 1
+
+      - name: Upload bundle final lac-pur-final (N MP4 + manifestes + rapport)
+        if: steps.aggregate.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: lac-pur-manifests-${{ inputs.pack_filter || 'latest' }}
-          path: |
-            F03_PREVIEW/CODEBASE/public/pur_manifest.json
-            F03_PICTOR/CODEBASE/public/clips/pur_sources.json
+          name: lac-pur-final
+          path: F03_PICTOR/OUT/
+          if-no-files-found: error
           retention-days: 30
