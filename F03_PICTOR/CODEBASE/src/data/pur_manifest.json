@@ -16,7 +16,8 @@
     "overlay": {
       "lines": [
         "VOLUME MAXED. STILL SILENT.",
-        "Then he asked the most random question ever"
+        "Then he asked the most random",
+        "question ever"
       ],
       "font": "Montserrat ExtraBold / Bebas Neue (800-900)",
       "fallback_font": "Arial Black, Impact",
@@ -40,11 +41,11 @@
         "outline_width": 0,
         "size": 44,
         "x_pct": 50,
-        "y_pct": 6,
+        "y_pct": 11,
         "static_text": true,
         "uppercase": false,
         "box_radius": 10,
-        "box_padding": 14,
+        "box_padding": 20,
         "auto_fit": true,
         "min_size": 28
       }
@@ -220,7 +221,7 @@
   "style_params": {
     "degree": 24,
     "bg_scale": 118,
-    "fg_scale": 72,
-    "fg_y_pct": 62
+    "fg_scale": 46,
+    "fg_y_pct": 52
   }
 }

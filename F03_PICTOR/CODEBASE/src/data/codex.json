@@ -1,105 +1,236 @@
 {
   "version": "4.0",
   "pipeline": "LACRIMAE_DEV",
-  "mode": "forge",
+  "mode": "pur_pack",
   "profile": "background",
   "session": {
-    "composition": {
-      "preset": "vertical",
-      "width": 1080,
-      "height": 1920,
-      "fit": "contain",
-      "background_fill": "static",
-      "rotation_mode": "static",
-      "rotation_deg": 0,
-      "rotation_step_deg": 1,
-      "rotation_total_deg": 360,
-      "rotation_direction": 1,
-      "rotation_layer": "video",
-      "video_scale": 1
-    },
-    "background": {
-      "image": null,
-      "color": "transparent",
-      "scale": 1
-    },
-    "logo": {
-      "src": "logo.png",
-      "width_pct": 20,
-      "position": "top_right",
-      "opacity": 1
-    },
-    "texts_style": {
-      "font": "Impact, Arial Black, sans-serif",
-      "size_title": 96,
-      "size_paragraph": 44,
-      "color": "#FFFFFF",
-      "stroke_color": "#000000",
-      "stroke_width": 4,
-      "shadow": "2px 4px 8px rgba(0,0,0,0.9)",
-      "glow_intensity": 0,
-      "letter_spacing": "0em"
-    },
-    "presets": {
-      "color_preset": "none",
-      "color_css_filter": "",
-      "contrast": 1,
-      "brightness": 1,
-      "enhance_4k": false,
-      "sharpening": 0,
-      "denoising": 0,
-      "vignette": 0,
-      "grain_intensity": 0
-    },
-    "review_mode": "ranking_compilation",
-    "hybrid": {
-      "intro": {},
-      "intro_text": {
-        "text": "",
-        "duration_mode": "until_match_cut",
+    "review_mode": "pur_pack",
+    "pur_manifest": {
+      "schema_version": "dev10.pur.v1",
+      "mode": "pur_pack",
+      "fps": 30,
+      "style": "blur",
+      "style_source": "operator",
+      "style_unknown": false,
+      "canvas": {
+        "width": 1080,
+        "height": 1920,
+        "aspect": "9:16"
+      },
+      "narrative": {
+        "category": "fast",
+        "energy_level": "high",
+        "overlay": {
+          "lines": [
+            "VOLUME MAXED. STILL SILENT.",
+            "Then he asked the most random",
+            "question ever"
+          ],
+          "font": "Montserrat ExtraBold / Bebas Neue (800-900)",
+          "fallback_font": "Arial Black, Impact",
+          "color": "#FFFFFF",
+          "accent": "#FFD700 (jaune) ou #00FF88 (vert)",
+          "outline": "#000000 (3-4px)",
+          "position": "haut vers le centre",
+          "font_size": 68,
+          "animation": "pop_in (scale 0 -> 110% -> 100% en 0.2s)",
+          "animation_frames": 6,
+          "visible_from_frame": 90,
+          "visible": "toute la duree",
+          "style_params": {
+            "line1_color": "#111111",
+            "line2_color": "#111111",
+            "font_family": "Montserrat",
+            "bg_enabled": true,
+            "bg_color": "#FFFFFF",
+            "bg_opacity": 0.95,
+            "outline_color": "#000000",
+            "outline_width": 0,
+            "size": 44,
+            "x_pct": 50,
+            "y_pct": 11,
+            "static_text": true,
+            "uppercase": false,
+            "box_radius": 10,
+            "box_padding": 20,
+            "auto_fit": true,
+            "min_size": 28
+          }
+        }
+      },
+      "entries": [
+        {
+          "rank": 1,
+          "source_id": "pur_A01",
+          "clip_file": "clips/pur_A01.mp4",
+          "duration_seconds": 30,
+          "start_frame": 0,
+          "role": "pur_clip",
+          "anti_detection": {
+            "mirror": true,
+            "speed": 1.05,
+            "breathing_zoom": {
+              "enabled": true,
+              "min_scale": 1.02,
+              "max_scale": 1.08,
+              "cycle_seconds": 8
+            },
+            "crop_pct": 2.5,
+            "principle": ""
+          },
+          "zooms": [
+            {
+              "moment_sec": 8.62,
+              "moment_frame": 259,
+              "type": "brutal_impact",
+              "scale_from": 1.08,
+              "scale_to": 1.15,
+              "frames": 3,
+              "easing": "NONE",
+              "sfx_sync": "impact (50-60%) synchronise frame-exacte"
+            },
+            {
+              "moment_sec": 24.43,
+              "moment_frame": 733,
+              "type": "snap_zoom",
+              "scale_from": 1.15,
+              "scale_to": 1.3,
+              "frames": 3,
+              "easing": "NONE",
+              "sfx_sync": "boom (60%) + flash blanc subtil (1-2 frames)"
+            }
+          ],
+          "sfx_list": [
+            {
+              "moment_frame": 259,
+              "type": "impact",
+              "volume": 0.6
+            },
+            {
+              "moment_frame": 733,
+              "type": "boom",
+              "volume": 0.6
+            }
+          ]
+        }
+      ],
+      "rank_count": 1,
+      "final_rank": {
+        "rank": 1,
+        "source_id": "pur_A01",
+        "clip_file": "clips/pur_A01.mp4",
+        "duration_seconds": 30,
         "start_frame": 0,
-        "font_family": "Impact",
-        "color": "#FFFFFF",
-        "scale": 1,
-        "rotation_deg": 0,
-        "position_x": 50,
-        "position_y": 78,
-        "blur_frames": 0
+        "role": "pur_clip",
+        "anti_detection": {
+          "mirror": true,
+          "speed": 1.05,
+          "breathing_zoom": {
+            "enabled": true,
+            "min_scale": 1.02,
+            "max_scale": 1.08,
+            "cycle_seconds": 8
+          },
+          "crop_pct": 2.5,
+          "principle": ""
+        },
+        "zooms": [
+          {
+            "moment_sec": 8.62,
+            "moment_frame": 259,
+            "type": "brutal_impact",
+            "scale_from": 1.08,
+            "scale_to": 1.15,
+            "frames": 3,
+            "easing": "NONE",
+            "sfx_sync": "impact (50-60%) synchronise frame-exacte"
+          },
+          {
+            "moment_sec": 24.43,
+            "moment_frame": 733,
+            "type": "snap_zoom",
+            "scale_from": 1.15,
+            "scale_to": 1.3,
+            "frames": 3,
+            "easing": "NONE",
+            "sfx_sync": "boom (60%) + flash blanc subtil (1-2 frames)"
+          }
+        ],
+        "sfx_list": [
+          {
+            "moment_frame": 259,
+            "type": "impact",
+            "volume": 0.6
+          },
+          {
+            "moment_frame": 733,
+            "type": "boom",
+            "volume": 0.6
+          }
+        ]
       },
-      "ego": {
-        "scale": 1,
-        "color": "#FFFFFF"
+      "duration_seconds": 30,
+      "total_frames": 857,
+      "pur": {
+        "pack_id": "pur-A01",
+        "angle_id": "A01",
+        "generated_at": "2026-09-09T02:51:16Z",
+        "generator": "F06_DIRECTOR",
+        "source": "https://www.twitch.tv/videos/2864600351",
+        "start_sec": 737.48,
+        "end_sec": 767.48,
+        "platform": "youtube_shorts",
+        "hook": {
+          "duration_sec": 3,
+          "philosophy": "0-3s : visage speaker, PAS de B-roll, voix claire",
+          "zoom": {
+            "type": "brutal_impact",
+            "intensity": "108-115%",
+            "easing": "NONE"
+          }
+        },
+        "body": {
+          "duration_sec": 27,
+          "energy_curve": [
+            {
+              "moment": "0:00",
+              "energy": 100
+            },
+            {
+              "moment": "0:06",
+              "energy": 70
+            },
+            {
+              "moment": "0:15",
+              "energy": 90
+            },
+            {
+              "moment": "0:25",
+              "energy": 100
+            },
+            {
+              "moment": "0:30",
+              "energy": 60
+            }
+          ]
+        },
+        "outro": {
+          "duration_sec": 1,
+          "type": "fade_to_black",
+          "note": "PAS de CTA 'Follow for more' en PUR \u2014 finir sur la chute"
+        },
+        "compliance": {
+          "disclosure": "#ad",
+          "submit_deadline_min": 60,
+          "platform": "youtube_shorts"
+        }
+      },
+      "style_params": {
+        "degree": 24,
+        "bg_scale": 118,
+        "fg_scale": 46,
+        "fg_y_pct": 52
       }
-    },
-    "music": {
-      "enabled": false,
-      "audio_file": null,
-      "audio_src": null,
-      "duration_seconds": 0,
-      "sample_rate": 48000,
-      "bpm": 0,
-      "sync_mode": "manual",
-      "offset_frames": 0,
-      "beats": [],
-      "intro": {
-        "in_seconds": 0,
-        "out_seconds": 1,
-        "loop_count": 1,
-        "speed": 1,
-        "volume": 1
-      },
-      "match_cut": {
-        "in_seconds": 0,
-        "out_seconds": 1,
-        "speed": 1,
-        "volume": 1
-      },
-      "transition": {
-        "type": "beat_cut",
-        "duration_ms": 30,
-        "alignment": "nearest_beat"
-      },
-      "total_frames": 0
     }
   },
   "clips": []

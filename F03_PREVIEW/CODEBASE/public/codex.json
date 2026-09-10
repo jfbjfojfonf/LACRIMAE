@@ -20,7 +20,8 @@
         "overlay": {
           "lines": [
             "VOLUME MAXED. STILL SILENT.",
-            "Then he asked the most random question ever"
+            "Then he asked the most random",
+            "question ever"
           ],
           "font": "Montserrat ExtraBold / Bebas Neue (800-900)",
           "fallback_font": "Arial Black, Impact",
@@ -42,13 +43,13 @@
             "bg_opacity": 0.95,
             "outline_color": "#000000",
             "outline_width": 0,
-            "size": 39,
+            "size": 44,
             "x_pct": 50,
-            "y_pct": 14,
+            "y_pct": 11,
             "static_text": true,
             "uppercase": false,
             "box_radius": 10,
-            "box_padding": 25,
+            "box_padding": 20,
             "auto_fit": true,
             "min_size": 28
           }
@@ -213,7 +214,7 @@
         "outro": {
           "duration_sec": 1,
           "type": "fade_to_black",
-          "note": "PAS de CTA 'Follow for more' en PUR — finir sur la chute"
+          "note": "PAS de CTA 'Follow for more' en PUR \u2014 finir sur la chute"
         },
         "compliance": {
           "disclosure": "#ad",
@@ -224,8 +225,8 @@
       "style_params": {
         "degree": 24,
         "bg_scale": 118,
-        "fg_scale": 49,
-        "fg_y_pct": 54
+        "fg_scale": 46,
+        "fg_y_pct": 52
       }
     },
     "ranking": {
@@ -321,7 +322,7 @@
               "color": "#FFFFFF"
             },
             {
-              "text": "💀",
+              "text": "\ud83d\udc80",
               "color": "#FFFFFF"
             }
           ],
@@ -350,7 +351,7 @@
               "color": "#FF4444"
             },
             {
-              "text": "😎",
+              "text": "\ud83d\ude0e",
               "color": "#FFD400"
             }
           ],
@@ -387,7 +388,8 @@
       "overlay": {
         "lines": [
           "VOLUME MAXED. STILL SILENT.",
-          "Then he asked the most random question ever"
+          "Then he asked the most random",
+          "question ever"
         ],
         "font": "Montserrat ExtraBold / Bebas Neue (800-900)",
         "fallback_font": "Arial Black, Impact",
@@ -409,13 +411,13 @@
           "bg_opacity": 0.95,
           "outline_color": "#000000",
           "outline_width": 0,
-          "size": 39,
+          "size": 44,
           "x_pct": 50,
-          "y_pct": 14,
+          "y_pct": 11,
           "static_text": true,
           "uppercase": false,
           "box_radius": 10,
-          "box_padding": 25,
+          "box_padding": 20,
           "auto_fit": true,
           "min_size": 28
         }
@@ -580,7 +582,7 @@
       "outro": {
         "duration_sec": 1,
         "type": "fade_to_black",
-        "note": "PAS de CTA 'Follow for more' en PUR — finir sur la chute"
+        "note": "PAS de CTA 'Follow for more' en PUR \u2014 finir sur la chute"
       },
       "compliance": {
         "disclosure": "#ad",
@@ -591,8 +593,8 @@
     "style_params": {
       "degree": 24,
       "bg_scale": 118,
-      "fg_scale": 49,
-      "fg_y_pct": 54
+      "fg_scale": 46,
+      "fg_y_pct": 52
     }
   },
   "clips": [
@@ -618,7 +620,8 @@
             "overlay": {
               "lines": [
                 "VOLUME MAXED. STILL SILENT.",
-                "Then he asked the most random question ever"
+                "Then he asked the most random",
+                "question ever"
               ],
               "font": "Montserrat ExtraBold / Bebas Neue (800-900)",
               "fallback_font": "Arial Black, Impact",
@@ -640,13 +643,13 @@
                 "bg_opacity": 0.95,
                 "outline_color": "#000000",
                 "outline_width": 0,
-                "size": 39,
+                "size": 44,
                 "x_pct": 50,
-                "y_pct": 14,
+                "y_pct": 11,
                 "static_text": true,
                 "uppercase": false,
                 "box_radius": 10,
-                "box_padding": 25,
+                "box_padding": 20,
                 "auto_fit": true,
                 "min_size": 28
               }
@@ -811,7 +814,7 @@
             "outro": {
               "duration_sec": 1,
               "type": "fade_to_black",
-              "note": "PAS de CTA 'Follow for more' en PUR — finir sur la chute"
+              "note": "PAS de CTA 'Follow for more' en PUR \u2014 finir sur la chute"
             },
             "compliance": {
               "disclosure": "#ad",
@@ -822,8 +825,8 @@
           "style_params": {
             "degree": 24,
             "bg_scale": 118,
-            "fg_scale": 49,
-            "fg_y_pct": 54
+            "fg_scale": 46,
+            "fg_y_pct": 52
           }
         },
         "ranking": {
@@ -919,7 +922,7 @@
                   "color": "#FFFFFF"
                 },
                 {
-                  "text": "💀",
+                  "text": "\ud83d\udc80",
                   "color": "#FFFFFF"
                 }
               ],
@@ -948,7 +951,7 @@
                   "color": "#FF4444"
                 },
                 {
-                  "text": "😎",
+                  "text": "\ud83d\ude0e",
                   "color": "#FFD400"
                 }
               ],
@@ -1060,7 +1063,7 @@
                 "color": "#FFFFFF"
               },
               {
-                "text": "💀",
+                "text": "\ud83d\udc80",
                 "color": "#FFFFFF"
               }
             ],
@@ -1089,7 +1092,7 @@
                 "color": "#FF4444"
               },
               {
-                "text": "😎",
+                "text": "\ud83d\ude0e",
                 "color": "#FFD400"
               }
             ],
@@ -1200,7 +1203,7 @@
             "color": "#FFFFFF"
           },
           {
-            "text": "💀",
+            "text": "\ud83d\udc80",
             "color": "#FFFFFF"
           }
         ],
@@ -1229,7 +1232,7 @@
             "color": "#FF4444"
           },
           {
-            "text": "😎",
+            "text": "\ud83d\ude0e",
             "color": "#FFD400"
           }
         ],
