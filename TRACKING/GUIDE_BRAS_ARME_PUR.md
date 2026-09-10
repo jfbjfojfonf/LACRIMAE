@@ -43,9 +43,18 @@ node tools/convert_pur_pack.mjs --pack ... --style blur ...
 
 Jamais de rendu en silence. Un style inféré par le code ne compte pas.
 
-Routing actuel par style : `ranking` → mécanique ranking éprouvée dev9 ;
-`reframing` / `blur` / `split_scene` → rendu **bloqué en attente du portage
-de leurs compositions dédiées** (l'écran le dit clairement).
+Routing par style (depuis le 2026-09-10) : les 4 styles ont leur mise en page
+ET leur panneau de réglage dans le preview :
+
+| Style | Rendu | Panneau opérateur (onglet ⚡ PUR) |
+|---|---|---|
+| `blur` | couche arrière floutée + couche avant nette | degré de flou, taille vidéo floue (fond), taille vidéo nette (devant) |
+| `split_scene` | vidéo en haut + élément bas | taille vidéo du HAUT, taille élément du BAS, taille/position X/Y du texte du haut |
+| `reframing` | recadrage du clip | échelle, décalage X, décalage Y |
+| `ranking` | clip plein écran (mécanique dev9) | — (plein écran) |
+
+Les réglages sont écrits dans `style_params` du manifeste `dev10.pur.v1` et
+consommés à l'identique par le rendu CI F04 — parité par construction.
 
 ## Étape 1 — Bridge : récupérer + convertir le pack
 
@@ -87,8 +96,18 @@ Lancer F03 Preview (Vite), ouvrir l'onglet **⚡ PUR** :
 - Vérifier : hook 0-3 s (visage du speaker, PAS de texte), overlay
   2 lignes après le hook, zooms frame-exacts, mirror/speed/crop.
 - Le canvas 9:16 / 16:9 / 1:1 est switchable en direct.
-- L'overlay est éditable avant validation (corrections mineures OK ;
-  corrections de fond → retour PERTURABO).
+- **Panneaux de configuration** (tous éditables en direct, écrits dans le
+  manifeste `style_params` — le pack PERTURABO n'est jamais modifié) :
+  - 🎨 **TEXTE OVERLAY** : texte des 2 lignes, couleur ligne 1 / ligne 2,
+    police (Arial Black, Montserrat, Bebas Neue, Impact, Anton, Archivo Black),
+    case à cocher fond + couleur/opacité du fond, couleur et épaisseur du
+    contour, taille du texte, position X % / Y %.
+  - 🌫️ **STYLE BLUR** / ✂️ **STYLE SPLIT** / 🎯 **STYLE REFRAMING** : le
+    panneau du style actif apparaît seul (voir table ci-dessus).
+  - 🛡️ **ANTI-DÉTECTION** : miroir on/off, vitesse, zoom respiration
+    (min/max/cycle), crop %.
+- Ces réglages survivent à la reconversion d'un pack et partent au rendu CI
+  avec l'export du manifeste.
 
 ---
 
@@ -132,7 +151,11 @@ codex → Remotion render → artefacts `lac-pur-final-*` (MP4) et
 
 ## Rappels doctrine PUR (à ne jamais violer)
 
-- Jamais de texte pendant le hook (0-3 s) — visage du speaker uniquement.
+- ~~Jamais de texte pendant le hook (0-3 s)~~ **ABROGÉE par le Warsmith le
+  2026-09-10** : le texte overlay est désormais présent du début à la fin de
+  la vidéo, au même endroit, dès la première frame (référence : capture
+  TikTok Aishah Sofey — boîte blanche, 3 lignes, statique). Voir
+  `TRACKING/PUR_TEXT_IMPLEMENTATION.md`.
 - Jamais de clip sans anti-détection (mirror + 1 SFX minimum).
 - SFX toujours sous la voix (−6 à −20 dB).
 - Pas de CTA — finir sur la chute (fade_to_black).

@@ -36,7 +36,7 @@ PERTURABO EXPORT/production_pack_pur_*.json
 | **G2 DUREE** | Après download | Durée du clip | `duration == end_sec − start_sec ± 0.5 s` |
 | **G3 CODEC** | Après download | Lisibilité | codec ∈ {h264, vp9, hevc, av1}, dimensions > 0 |
 | **P0 MANIFESTE** | Après conversion | `pur_manifest.json` valide | `schema_version=dev10.pur.v1`, ≥ 1 entrée, overlay non vide, `style` ∈ les 4 valeurs avec `style_source` ∈ {pack, operator} |
-| **P1 PREVIEW** | Avant rendu | Validation visuelle F03 | Hook 0-3 s sans texte, overlay lisible, anti-détection conforme au pack |
+| **P1 PREVIEW** | Avant rendu | Validation visuelle F03 | Overlay lisible (1 ligne = 1 ligne visuelle, max 3), texte statique du début à la fin (règle « hook sans texte » ABROGÉE le 2026-09-10 — voir `PUR_TEXT_IMPLEMENTATION.md`), anti-détection conforme au pack. Panneaux opérateur (texte, style, anti-détection) — réglages dans `style_params` |
 | **P2 RENDU** | CI | MP4 produit | Résolution du canvas choisi, durée ≈ manifeste, artefact uploadé |
 
 ## Politique d'échec
@@ -54,3 +54,4 @@ PERTURABO EXPORT/production_pack_pur_*.json
 | Manifeste dev10.pur.v1 | `BRIDGE_PERTURABO/OUT/pur_manifest.json` → `F03_PREVIEW/CODEBASE/public/` + `F03_PICTOR/CODEBASE/public/` | dev10 bridgeClipper.js |
 | Sources segment | `F03_PICTOR/CODEBASE/public/clips/pur_sources.json` | F00-PUR |
 | Parité preview/render | `_purPackComposition.jsx` (F03) ↔ `_purPackComposition.jsx` (F04) | dev10 |
+| Paramètres opérateur | `style_params` (racine = style, `narrative.overlay.style_params` = texte) dans `dev10.pur.v1` | dev10 — défauts dans `PUR_STYLE_PARAMS_DEFAULTS` / `PUR_OVERLAY_DEFAULTS` (miroir F03 `bridgeClipper.js` ↔ F04 `purPackCompilation.js`) |

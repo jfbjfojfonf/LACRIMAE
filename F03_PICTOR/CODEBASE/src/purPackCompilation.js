@@ -14,6 +14,38 @@ export const PUR_CANVAS = {
 
 export const PUR_STYLE_VALUES = ['ranking', 'reframing', 'blur', 'split_scene'];
 
+/** Défauts style_params (opérateur) — MIROIR de bridgeClipper.js (F03 Preview). */
+export const PUR_STYLE_PARAMS_DEFAULTS = {
+  blur: { degree: 24, bg_scale: 118, fg_scale: 72 },
+  split_scene: { top_scale: 62, bottom_scale: 38, text_size: 56, text_x_pct: 50, text_y_pct: 8 },
+  reframing: { scale: 130, offset_x_pct: 0, offset_y_pct: -6 },
+  ranking: {},
+};
+
+/** Défauts overlay éditorial — MIROIR de bridgeClipper.js (F03 Preview). */
+export const PUR_OVERLAY_DEFAULTS = {
+  line1_color: '#FFFFFF',
+  line2_color: '#FFD700',
+  font_family: 'Arial Black, Impact',
+  bg_enabled: false,
+  bg_color: '#000000',
+  bg_opacity: 0.65,
+  outline_color: '#000000',
+  outline_width: 3,
+  size: 68,
+  x_pct: 50,
+  y_pct: 22,
+};
+
+export function normalizePurStyleParams(styleParams, style) {
+  const base = PUR_STYLE_PARAMS_DEFAULTS[style] || PUR_STYLE_PARAMS_DEFAULTS.blur;
+  return { ...base, ...(styleParams && typeof styleParams === 'object' ? styleParams : {}) };
+}
+
+export function normalizePurOverlayParams(styleParams) {
+  return { ...PUR_OVERLAY_DEFAULTS, ...(styleParams && typeof styleParams === 'object' ? styleParams : {}) };
+}
+
 export function normalizePurManifest(raw, fps = 30) {
   const manifest = raw && typeof raw === 'object' ? raw : {};
   if (manifest.schema_version === 'dev10.pur.v1' && Array.isArray(manifest.entries)) {

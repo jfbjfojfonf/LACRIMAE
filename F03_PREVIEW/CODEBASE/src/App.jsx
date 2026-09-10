@@ -6,7 +6,7 @@ import { normalizeHybridManifest } from './preview/hybridNarrative';
 import { normalizeMusicTimeline, musicWaveformPoints } from './preview/audioTimeline';
 import { normalizeRevealManifest } from './preview/revealCompilation';
 import { normalizeRankingManifest } from './preview/rankingCompilation';
-import { parsePurPack } from './preview/bridgeClipper';
+import { parsePurPack, normalizePurOverlayParams, normalizePurStyleParams } from './preview/bridgeClipper';
 
 /**
  * App — F03 PREVIEW (v4.0 — session + clips)
@@ -246,9 +246,17 @@ export default function App() {
   };
   const updateRankingNarrative = (key, value) => updateRanking({ narrative: { ...(rankingManifest?.narrative || {}), [key]: value } });
   // PUR : convertit un pack PERTURABO brut en manifeste dev10.pur.v1 côté navigateur
+  // (les réglages opérateur déjà faits sont préservés — seul le canvas/clip change)
   const convertPurPack = (pack, canvas) => {
     if (!pack) return;
-    const manifest = parsePurPack(pack, { fps, canvas: canvas || purCanvas, clipFiles: [`clips/pur_${pack.identite?.angle_id || pack.pack_id || 'clip'}.mp4`] });
+    const prev = purManifest;
+    const manifest = parsePurPack(pack, {
+      fps,
+      canvas: canvas || purCanvas,
+      clipFiles: [`clips/pur_${pack.identite?.angle_id || pack.pack_id || 'clip'}.mp4`],
+      styleParams: prev?.style_params,
+      overlayParams: prev?.narrative?.overlay?.style_params,
+    });
     setPurManifest(manifest);
     setSession((s) => ({ ...s, review_mode: 'pur_pack', pur_manifest: manifest }));
     setActiveTab('pur');
@@ -259,6 +267,52 @@ export default function App() {
       const lines = [...(current.narrative?.overlay?.lines || [])];
       lines[lineIndex] = text;
       const next = { ...current, narrative: { ...current.narrative, overlay: { ...current.narrative?.overlay, lines } } };
+      setSession((s) => ({ ...s, pur_manifest: next }));
+      return next;
+    });
+  };
+  // PUR : met à jour narrative.overlay.style_params (paramètres éditoriaux du texte)
+  const updatePurOverlayParams = (key, value) => {
+    setPurManifest((current) => {
+      if (!current) return current;
+      const overlay = current.narrative?.overlay || {};
+      const next = { ...current, narrative: { ...current.narrative, overlay: { ...overlay, style_params: { ...normalizePurOverlayParams(overlay.style_params), [key]: value } } } };
+      setSession((s) => ({ ...s, pur_manifest: next }));
+      return next;
+    });
+  };
+  // PUR : met à jour manifest.style_params (paramètres du style blur/split/reframing)
+  const updatePurStyleParams = (key, value) => {
+    setPurManifest((current) => {
+      if (!current) return current;
+      const next = { ...current, style_params: { ...normalizePurStyleParams(current.style_params, current.style || 'blur'), [key]: value } };
+      setSession((s) => ({ ...s, pur_manifest: next }));
+      return next;
+    });
+  };
+  // PUR : met à jour entries[0].anti_detection (panneau anti-détection opérateur)
+  const updatePurAnti = (key, value) => {
+    setPurManifest((current) => {
+      if (!current) return current;
+      const entry = current.entries?.[0] || {};
+      const anti = { mirror: false, speed: 1, breathing_zoom: { enabled: true, min_scale: 1.02, max_scale: 1.08, cycle_seconds: 8 }, crop_pct: 0, ...(entry.anti_detection || {}) };
+      anti[key] = value;
+      const entries = [...(current.entries || [])];
+      entries[0] = { ...entry, anti_detection: anti };
+      const next = { ...current, entries };
+      setSession((s) => ({ ...s, pur_manifest: next }));
+      return next;
+    });
+  };
+  const updatePurAntiBreathing = (key, value) => {
+    setPurManifest((current) => {
+      if (!current) return current;
+      const entry = current.entries?.[0] || {};
+      const anti = { mirror: false, speed: 1, breathing_zoom: { enabled: true, min_scale: 1.02, max_scale: 1.08, cycle_seconds: 8 }, crop_pct: 0, ...(entry.anti_detection || {}) };
+      anti.breathing_zoom = { ...anti.breathing_zoom, [key]: value };
+      const entries = [...(current.entries || [])];
+      entries[0] = { ...entry, anti_detection: anti };
+      const next = { ...current, entries };
       setSession((s) => ({ ...s, pur_manifest: next }));
       return next;
     });
@@ -913,12 +967,15 @@ export default function App() {
             const anti = purManifest?.entries?.[0]?.anti_detection || {};
             const overlayLines = purManifest?.narrative?.overlay?.lines || [];
             const hasPack = Boolean(purManifest?.entries?.length);
+            const styleName = String(purManifest?.style || '');
+            const op = normalizePurOverlayParams(purManifest?.narrative?.overlay?.style_params);
+            const sp = normalizePurStyleParams(purManifest?.style_params, styleName || 'blur');
             return (
               <div style={styles.panelContent}>
                 <label style={{ ...styles.label, color: '#66ddff', fontSize: '14px' }}>⚡ MODE PUR — PERTURABO → LACRIMAE</label>
                 <div style={{ color: '#aaa', fontSize: 12, lineHeight: 1.45 }}>
-                  Pack PUR (production_pack_pur_*.json) → manifeste dev10.pur.v1 → clip plein écran,
-                  hook 0-3s (visage, pas de texte), overlay 2 lignes après le hook, zooms frame-exacts, anti-détection.
+                  Pack PUR (production_pack_pur_*.json) → manifeste dev10.pur.v1 → rendu selon style
+                  ({styleName || 'non défini'}), hook 0-3s (visage, pas de texte), overlay 2 lignes après le hook, zooms frame-exacts, anti-détection.
                 </div>
 
                 <div style={{ marginTop: 10, padding: 8, border: '1px solid #1a4a5a', borderRadius: 7, background: '#081820' }}>
@@ -972,11 +1029,114 @@ export default function App() {
                     </div>
 
                     <div style={{ marginTop: 10, padding: 8, border: '1px solid #1a4a5a', borderRadius: 7, background: '#081820' }}>
-                      <label style={{ ...styles.label, color: '#66ddff', fontSize: 12 }}>🛡️ ANTI-DÉTECTION (pack)</label>
-                      <div style={{ color: '#ccc', fontSize: 12, marginTop: 4, lineHeight: 1.6 }}>
-                        Mirror : {anti.mirror ? '✅ activé' : '—'} · Speed : {anti.speed || 1}x · Crop : {anti.crop_pct || 0}%<br />
-                        Hook : {purInfo.hook?.duration_sec ?? 3}s · Zooms : {purManifest?.entries?.[0]?.zooms?.length || 0} · SFX : {purManifest?.entries?.[0]?.sfx_list?.length || 0}<br />
-                        Source : {purInfo.platform || '—'} · {purInfo.angle_id || '—'} · {purInfo.generator || '—'}
+                      <label style={{ ...styles.label, color: '#66ddff', fontSize: 12 }}>🎨 TEXTE OVERLAY</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                        <span style={{ color: '#ccc', fontSize: 12 }}>Ligne 1</span>
+                        <input type="color" value={op.line1_color} onChange={(e) => updatePurOverlayParams('line1_color', e.target.value)} style={{ width: 28, height: 22, border: '1px solid #555', borderRadius: 3, background: 'transparent', cursor: 'pointer' }} />
+                        <span style={{ color: '#ccc', fontSize: 12, marginLeft: 8 }}>Ligne 2</span>
+                        <input type="color" value={op.line2_color} onChange={(e) => updatePurOverlayParams('line2_color', e.target.value)} style={{ width: 28, height: 22, border: '1px solid #555', borderRadius: 3, background: 'transparent', cursor: 'pointer' }} />
+                      </div>
+                      <label style={{ ...styles.label, marginTop: 8 }}>Police</label>
+                      <select style={styles.select} value={op.font_family} onChange={(e) => updatePurOverlayParams('font_family', e.target.value)}>
+                        <option value="Arial Black, Impact">Arial Black / Impact</option>
+                        <option value="Montserrat">Montserrat ExtraBold</option>
+                        <option value="Bebas Neue">Bebas Neue</option>
+                        <option value="Impact">Impact</option>
+                        <option value="Anton">Anton</option>
+                        <option value="Archivo Black">Archivo Black</option>
+                      </select>
+                      <label style={styles.label}>
+                        <input type="checkbox" style={{ marginRight: 8, accentColor: '#00ff88' }} checked={op.bg_enabled === true} onChange={(e) => updatePurOverlayParams('bg_enabled', e.target.checked)} />
+                        Fond derrière le texte
+                      </label>
+                      {op.bg_enabled && (
+                        <>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ color: '#ccc', fontSize: 12 }}>Couleur du fond</span>
+                            <input type="color" value={op.bg_color} onChange={(e) => updatePurOverlayParams('bg_color', e.target.value)} style={{ width: 28, height: 22, border: '1px solid #555', borderRadius: 3, background: 'transparent', cursor: 'pointer' }} />
+                          </div>
+                          <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Opacité du fond</span><span style={{ color: '#ffd400' }}>{Math.round((op.bg_opacity ?? 0.65) * 100)}%</span></label>
+                          <input style={styles.slider} type="range" min="0" max="1" step="0.05" value={op.bg_opacity ?? 0.65} onChange={(e) => updatePurOverlayParams('bg_opacity', parseFloat(e.target.value))} />
+                        </>
+                      )}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                        <span style={{ color: '#ccc', fontSize: 12 }}>Contour</span>
+                        <input type="color" value={op.outline_color} onChange={(e) => updatePurOverlayParams('outline_color', e.target.value)} style={{ width: 28, height: 22, border: '1px solid #555', borderRadius: 3, background: 'transparent', cursor: 'pointer' }} />
+                      </div>
+                      <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Épaisseur contour</span><span style={{ color: '#ffd400' }}>{op.outline_width}px</span></label>
+                      <input style={styles.slider} type="range" min="0" max="8" step="0.5" value={op.outline_width} onChange={(e) => updatePurOverlayParams('outline_width', parseFloat(e.target.value))} />
+                      <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Taille du texte</span><span style={{ color: '#ffd400' }}>{op.size}</span></label>
+                      <input style={styles.slider} type="range" min="30" max="140" step="1" value={op.size} onChange={(e) => updatePurOverlayParams('size', parseInt(e.target.value, 10))} />
+                      <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Position X (gauche ↔ droite)</span><span style={{ color: '#ffd400' }}>{op.x_pct}%</span></label>
+                      <input style={styles.slider} type="range" min="0" max="100" step="1" value={op.x_pct} onChange={(e) => updatePurOverlayParams('x_pct', parseInt(e.target.value, 10))} />
+                      <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Position Y (haut ↕ bas)</span><span style={{ color: '#ffd400' }}>{op.y_pct}%</span></label>
+                      <input style={styles.slider} type="range" min="0" max="100" step="1" value={op.y_pct} onChange={(e) => updatePurOverlayParams('y_pct', parseInt(e.target.value, 10))} />
+                    </div>
+
+                    {styleName === 'blur' && (
+                      <div style={{ marginTop: 10, padding: 8, border: '1px solid #1a4a5a', borderRadius: 7, background: '#081820' }}>
+                        <label style={{ ...styles.label, color: '#66ddff', fontSize: 12 }}>🌫 STYLE BLUR</label>
+                        <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Degré de flou</span><span style={{ color: '#ffd400' }}>{sp.degree}px</span></label>
+                        <input style={styles.slider} type="range" min="0" max="40" step="1" value={sp.degree} onChange={(e) => updatePurStyleParams('degree', parseInt(e.target.value, 10))} />
+                        <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Taille vidéo floue (fond)</span><span style={{ color: '#ffd400' }}>{sp.bg_scale}%</span></label>
+                        <input style={styles.slider} type="range" min="100" max="180" step="1" value={sp.bg_scale} onChange={(e) => updatePurStyleParams('bg_scale', parseInt(e.target.value, 10))} />
+                        <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Taille vidéo nette (devant)</span><span style={{ color: '#ffd400' }}>{sp.fg_scale}%</span></label>
+                        <input style={styles.slider} type="range" min="30" max="100" step="1" value={sp.fg_scale} onChange={(e) => updatePurStyleParams('fg_scale', parseInt(e.target.value, 10))} />
+                      </div>
+                    )}
+                    {styleName === 'split_scene' && (
+                      <div style={{ marginTop: 10, padding: 8, border: '1px solid #1a4a5a', borderRadius: 7, background: '#081820' }}>
+                        <label style={{ ...styles.label, color: '#66ddff', fontSize: 12 }}>✂ STYLE SPLIT</label>
+                        <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Taille vidéo du HAUT</span><span style={{ color: '#ffd400' }}>{sp.top_scale}%</span></label>
+                        <input style={styles.slider} type="range" min="20" max="85" step="1" value={sp.top_scale} onChange={(e) => updatePurStyleParams('top_scale', parseInt(e.target.value, 10))} />
+                        <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Taille élément du BAS</span><span style={{ color: '#ffd400' }}>{sp.bottom_scale}%</span></label>
+                        <input style={styles.slider} type="range" min="15" max="80" step="1" value={sp.bottom_scale} onChange={(e) => updatePurStyleParams('bottom_scale', parseInt(e.target.value, 10))} />
+                        <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Taille texte du haut</span><span style={{ color: '#ffd400' }}>{sp.text_size}</span></label>
+                        <input style={styles.slider} type="range" min="20" max="120" step="1" value={sp.text_size} onChange={(e) => updatePurStyleParams('text_size', parseInt(e.target.value, 10))} />
+                        <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Texte X %</span><span style={{ color: '#ffd400' }}>{sp.text_x_pct}%</span></label>
+                        <input style={styles.slider} type="range" min="0" max="100" step="1" value={sp.text_x_pct} onChange={(e) => updatePurStyleParams('text_x_pct', parseInt(e.target.value, 10))} />
+                        <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Texte Y %</span><span style={{ color: '#ffd400' }}>{sp.text_y_pct}%</span></label>
+                        <input style={styles.slider} type="range" min="0" max="100" step="1" value={sp.text_y_pct} onChange={(e) => updatePurStyleParams('text_y_pct', parseInt(e.target.value, 10))} />
+                      </div>
+                    )}
+                    {styleName === 'reframing' && (
+                      <div style={{ marginTop: 10, padding: 8, border: '1px solid #1a4a5a', borderRadius: 7, background: '#081820' }}>
+                        <label style={{ ...styles.label, color: '#66ddff', fontSize: 12 }}>🎯 STYLE REFRAMING</label>
+                        <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Échelle du recadrage</span><span style={{ color: '#ffd400' }}>{sp.scale}%</span></label>
+                        <input style={styles.slider} type="range" min="100" max="200" step="1" value={sp.scale} onChange={(e) => updatePurStyleParams('scale', parseInt(e.target.value, 10))} />
+                        <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Décalage X</span><span style={{ color: '#ffd400' }}>{sp.offset_x_pct}%</span></label>
+                        <input style={styles.slider} type="range" min="-50" max="50" step="1" value={sp.offset_x_pct} onChange={(e) => updatePurStyleParams('offset_x_pct', parseInt(e.target.value, 10))} />
+                        <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Décalage Y</span><span style={{ color: '#ffd400' }}>{sp.offset_y_pct}%</span></label>
+                        <input style={styles.slider} type="range" min="-50" max="50" step="1" value={sp.offset_y_pct} onChange={(e) => updatePurStyleParams('offset_y_pct', parseInt(e.target.value, 10))} />
+                      </div>
+                    )}
+
+                    <div style={{ marginTop: 10, padding: 8, border: '1px solid #1a4a5a', borderRadius: 7, background: '#081820' }}>
+                      <label style={{ ...styles.label, color: '#66ddff', fontSize: 12 }}>🛡️ ANTI-DÉTECTION (opérateur)</label>
+                      <label style={styles.label}>
+                        <input type="checkbox" style={{ marginRight: 8, accentColor: '#00ff88' }} checked={anti.mirror === true} onChange={(e) => updatePurAnti('mirror', e.target.checked)} />
+                        Miroir horizontal
+                      </label>
+                      <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Vitesse</span><span style={{ color: '#ffd400' }}>{anti.speed || 1}x</span></label>
+                      <input style={styles.slider} type="range" min="0.5" max="2" step="0.05" value={Number(anti.speed || 1)} onChange={(e) => updatePurAnti('speed', parseFloat(e.target.value))} />
+                      <label style={styles.label}>
+                        <input type="checkbox" style={{ marginRight: 8, accentColor: '#00ff88' }} checked={(anti.breathing_zoom?.enabled) !== false} onChange={(e) => updatePurAntiBreathing('enabled', e.target.checked)} />
+                        Zoom respiration
+                      </label>
+                      {(anti.breathing_zoom?.enabled) !== false && (
+                        <>
+                          <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Zoom min</span><span style={{ color: '#ffd400' }}>{anti.breathing_zoom?.min_scale ?? 1.02}x</span></label>
+                          <input style={styles.slider} type="range" min="1" max="1.2" step="0.01" value={Number(anti.breathing_zoom?.min_scale ?? 1.02)} onChange={(e) => updatePurAntiBreathing('min_scale', parseFloat(e.target.value))} />
+                          <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Zoom max</span><span style={{ color: '#ffd400' }}>{anti.breathing_zoom?.max_scale ?? 1.08}x</span></label>
+                          <input style={styles.slider} type="range" min="1" max="1.4" step="0.01" value={Number(anti.breathing_zoom?.max_scale ?? 1.08)} onChange={(e) => updatePurAntiBreathing('max_scale', parseFloat(e.target.value))} />
+                          <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Cycle (secondes)</span><span style={{ color: '#ffd400' }}>{anti.breathing_zoom?.cycle_seconds ?? 8}s</span></label>
+                          <input style={styles.slider} type="range" min="2" max="20" step="1" value={Number(anti.breathing_zoom?.cycle_seconds ?? 8)} onChange={(e) => updatePurAntiBreathing('cycle_seconds', parseInt(e.target.value, 10))} />
+                        </>
+                      )}
+                      <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Crop (anti-détection)</span><span style={{ color: '#ffd400' }}>{anti.crop_pct || 0}%</span></label>
+                      <input style={styles.slider} type="range" min="0" max="15" step="0.5" value={Number(anti.crop_pct || 0)} onChange={(e) => updatePurAnti('crop_pct', parseFloat(e.target.value))} />
+                      <div style={{ color: '#8ac', fontSize: 11, marginTop: 6, lineHeight: 1.5 }}>
+                        Hook : {purInfo.hook?.duration_sec ?? 3}s · Zooms : {purManifest?.entries?.[0]?.zooms?.length || 0} · SFX : {purManifest?.entries?.[0]?.sfx_list?.length || 0}
                       </div>
                     </div>
 

@@ -5,6 +5,29 @@
 | 2026-09-09 | pur-A01 | A01 | 737.48 → 767.48 | 9:16 | G0 ✓ G1 ✓ G2 ✓ G3 ✓ (automatiques, script) | ❌ NON VALIDÉE | ⚠️ brouillon technique — lac_pur_final.mp4 12.6 Mo, 857/857 frames | [34340044745](https://github.com/kioka8877-ux/LACRIMAE/actions/runs/34340044745) | **TEST TECHNIQUE LANCÉ SANS AUTORISATION OPÉRATEUR — NON VALIDÉ.** Artefact à considérer comme brouillon jusqu'à visualisation et décision du Warsmith |
 | — | — | — | — | — | — | — | — | — | — |
 
+### Journal technique (2026-09-10)
+
+- **Fix récupération clips (`f00_pur.py`)** : `find_downloaded_file()` ne
+  considère plus que le fichier au stem exact téléchargé + purge des
+  fichiers périmés au même stem avant chaque G1 (bug du 2026-09-10 :
+  `reveal_02.mp4` périmé retenu à la place du segment frais ; ancien
+  `pur_A01.mp4` de 4-6 s faisant échouer G2).
+- **Fix clip tronqué** : `pur_A01.mp4` (2,88 Mo) était une copie interrompue
+  (moov atom absent → vidéo invisible en preview) ; re-copié depuis le fichier
+  complet `pur_A01` (5,33 Mo, h264 1920×1080 30,2 s @60fps).
+- **Panneaux de configuration F03 (style_params)** : nouveau bloc
+  `style_params` dans `dev10.pur.v1` (racine = réglages du style,
+  `narrative.overlay.style_params` = réglages du texte). Panneaux éditeur :
+  🎨 TEXTE OVERLAY (couleurs par ligne, police, fond case à cocher + couleur
+  + opacité, contour couleur + épaisseur, taille, position X/Y), 🌫️ BLUR
+  (degré, tailles fond/devant), ✂️ SPLIT (taille vidéo HAUT, taille élément
+  BAS, taille/position du texte), 🎯 REFRAMING (échelle, décalage X/Y),
+  🛡️ ANTI-DÉTECTION (miroir, vitesse, zoom respiration, crop).
+- **Rendu par style** : `_purPackComposition.jsx` implémente les 4 mises en
+  page (blur dual-layer, split top/bottom, reframing scale+offset, fullscreen)
+  — miroir F04 synchronisé (`purPackCompilation.js` + `_purPackComposition.jsx`).
+  Les réglages opérateur survivent à la reconversion d'un pack.
+
 ### Historique des runs CI (2026-09-09)
 
 | Run | Résultat | Cause échec / note |
@@ -14,6 +37,17 @@
 | [34340044745](https://github.com/kioka8877-ux/LACRIMAE/actions/runs/34340044745) | ✅ success (technique) | Pack pur_A01 → yt-dlp → BridgeClipper → Remotion → 12.6 Mo. **⚠️ Déclenché par l'agent sans GO explicite de l'opérateur — procédure à ne pas reproduire : tout run CI réel exige l'autorisation préalable du Warsmith** |
 
 Fixes notés pendant la mise en service : input `canvas` en string (le type choice avec « : » bloque le dispatch API), SFX désactivés par défaut (`sfx_available`, fichiers sfx/*.mp3 pas encore embarqués).
+
+### Décisions Warsmith (2026-09-10) — texte overlay v2
+
+- **ABROGATION** de la règle « jamais de texte pendant le hook 0-3 s » :
+  le texte overlay sera statique du début à la fin, au même endroit
+  (référence visuelle : capture TikTok Aishah Sofey — boîte blanche, 3
+  lignes, casse mixte). Plan d'implémentation :
+  `TRACKING/PUR_TEXT_IMPLEMENTATION.md` (phases A-E, non implémenté à ce
+  jour — constat du bug « 6 lignes » : débordement des 2 lignes du pack à
+  taille fixe). La position de la vidéo nette (blur) sera un curseur
+  opérateur, pas un placement automatique.
 
 ## Règle d'exploitation (ajoutée après incident du 2026-09-09)
 

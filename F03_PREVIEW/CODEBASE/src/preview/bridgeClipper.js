@@ -396,10 +396,11 @@ export function parsePurPack(pack, options = {}) {
     style_source: operatorStyle ? 'operator' : declared ? 'pack' : styleKnown ? 'inferred' : 'none',
     style_unknown: !styleKnown,
     canvas: { ...canvas, aspect },
+    style_params: options.styleParams || (styleKnown ? { ...PUR_STYLE_PARAMS_DEFAULTS[resolvedStyle] } : { ...PUR_STYLE_PARAMS_DEFAULTS.blur }),
     narrative: {
       category: style.pacing || '',
       energy_level: style.energy_level || 'high',
-      overlay: buildPurOverlay(overlayLines, mainTitle, hookDuration, fps),
+      overlay: buildPurOverlay(overlayLines, mainTitle, hookDuration, fps, options.overlayParams),
     },
     entries: [entry],
     rank_count: 1,
@@ -499,6 +500,45 @@ export function normalizePurZooms(zooms = [], cuts = [], fps = 30) {
 export const PUR_STYLE_VALUES = ['ranking', 'reframing', 'blur', 'split_scene'];
 
 /**
+ * Défauts du bloc style_params (paramètres opérateur par style) — dev10.pur.v1.
+ * Les panneaux F03 éditent ces valeurs ; le rendu F04 consomme le même fichier
+ * (parité par construction). Aucune valeur inventée : tout a un fallback dans
+ * les deux composants (preview + render).
+ */
+export const PUR_STYLE_PARAMS_DEFAULTS = {
+  blur: { degree: 24, bg_scale: 118, fg_scale: 72 },
+  split_scene: { top_scale: 62, bottom_scale: 38, text_size: 56, text_x_pct: 50, text_y_pct: 8 },
+  reframing: { scale: 130, offset_x_pct: 0, offset_y_pct: -6 },
+  ranking: {},
+};
+
+/** Overlay PUR : défauts éditoriaux (texte, couleurs, police, fond, contour, position). */
+export const PUR_OVERLAY_DEFAULTS = {
+  line1_color: '#FFFFFF',
+  line2_color: '#FFD700',
+  font_family: 'Arial Black, Impact',
+  bg_enabled: false,
+  bg_color: '#000000',
+  bg_opacity: 0.65,
+  outline_color: '#000000',
+  outline_width: 3,
+  size: 68,
+  x_pct: 50,
+  y_pct: 22,
+};
+
+/** Fusionne les style_params du manifeste (opérateur) avec les défauts du style. */
+export function normalizePurStyleParams(styleParams, style) {
+  const base = PUR_STYLE_PARAMS_DEFAULTS[style] || PUR_STYLE_PARAMS_DEFAULTS.blur;
+  return { ...base, ...(styleParams && typeof styleParams === 'object' ? styleParams : {}) };
+}
+
+/** Fusionne l'overlay éditorial (narrative.overlay.style_params) avec les défauts. */
+export function normalizePurOverlayParams(styleParams) {
+  return { ...PUR_OVERLAY_DEFAULTS, ...(styleParams && typeof styleParams === 'object' ? styleParams : {}) };
+}
+
+/**
  * Inférence du style par signature du montage_instructions — filet de sécurité
  * pour les packs antérieurs au stamp montage_style. Aucune invention : on ne
  * devine QUE sur des marqueurs structurels non ambigus, sinon '' (inconnu).
@@ -540,7 +580,7 @@ export function normalizePurSfx(mi = {}) {
   return list;
 }
 
-function buildPurOverlay(lines, mainTitle = {}, hookDuration, fps) {
+function buildPurOverlay(lines, mainTitle = {}, hookDuration, fps, overlayParams) {
   return {
     lines,
     font: mainTitle.font || 'Montserrat ExtraBold / Bebas Neue (800-900)',
@@ -550,6 +590,8 @@ function buildPurOverlay(lines, mainTitle = {}, hookDuration, fps) {
     outline: mainTitle.outline || '#000000',
     position: mainTitle.position || 'haut vers le centre',
     font_size: 68,
+    // Paramètres éditoriaux opérateur (panneaux F03) — préservés à la reconversion
+    style_params: { ...PUR_OVERLAY_DEFAULTS, ...(overlayParams && typeof overlayParams === 'object' ? overlayParams : {}) },
     animation: mainTitle.animation || 'pop_in',
     animation_frames: Math.max(2, Math.round(0.2 * fps)),
     visible_from_frame: Math.round(hookDuration * fps),

@@ -109,9 +109,19 @@ def probe_clip(path: Path) -> dict:
     }
 
 
-def find_downloaded_file(out_dir: Path) -> Path | None:
-    """yt-dlp choisit l'extension (mp4/mkv/webm) — retrouve le fichier produit."""
-    candidates = [p for p in out_dir.iterdir() if p.is_file()] if out_dir.exists() else []
+def find_downloaded_file(out_dir: Path, stem: str) -> Path | None:
+    """yt-dlp choisit l'extension (mp4/mkv/webm) — retrouve le fichier produit.
+
+    On ne considère QUE les fichiers correspondant au motif de sortie
+    (stem + extension). Jamais les autres clips déjà présents dans le
+    dossier — bug 2026-09-10 : reveal_02.mp4 périmé (4-6 s, autre mode)
+    était retenu à la place du segment fraîchement téléchargé.
+    """
+    candidates = (
+        [p for p in out_dir.iterdir() if p.is_file() and p.stem == stem]
+        if out_dir.exists()
+        else []
+    )
     for ext_priority in (".mp4", ".mkv", ".webm"):
         for c in candidates:
             if c.suffix.lower() == ext_priority:
@@ -163,6 +173,12 @@ def main() -> int:
         return 1
     args.out.mkdir(parents=True, exist_ok=True)
     out_pattern = args.out / clip_name.replace(".mp4", "")
+    # Purge des fichiers périmés au même stem (bug 2026-09-10 : un ancien
+    # pur_A01.mp4 de 4-6 s faisait échouer G2 alors que le download était bon)
+    if out_dir_stale := [p for p in args.out.iterdir() if p.is_file() and p.stem == out_pattern.stem]:
+        for stale in out_dir_stale:
+            stale.unlink()
+        print(f"  [..] G1 VOD : purge de {len(out_dir_stale)} fichier(s) périmé(s) {out_pattern.stem}*")
     cmd = build_ytdlp_command(vod_url, start, end, out_pattern)
     print("  [..] G1 VOD : téléchargement du segment…")
     try:
@@ -170,7 +186,7 @@ def main() -> int:
     except subprocess.CalledProcessError as exc:
         print(f"  [✗] G1 VOD : échec yt-dlp\n{exc.stderr[-800:] if exc.stderr else exc}")
         return 1
-    downloaded = find_downloaded_file(args.out)
+    downloaded = find_downloaded_file(args.out, out_pattern.stem)
     if downloaded is None:
         print("  [✗] G1 VOD : aucun fichier produit par yt-dlp")
         return 1

@@ -139,7 +139,7 @@
     ]
   },
   "session": {
-    "review_mode": "ranking_compilation",
+    "review_mode": "pur_pack",
     "ranking": {
       "schema_version": "dev9.ranking.v4",
       "mode": "ranking_compilation",

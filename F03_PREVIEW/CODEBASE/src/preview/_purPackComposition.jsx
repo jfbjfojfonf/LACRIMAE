@@ -2,15 +2,24 @@
    PurPackComposition — Mode PUR (packs PERTURABO → dev10.pur.v1)
 
    Consomme le manifeste produit par parsePurPack() (bridgeClipper.js) :
-     - clip plein écran (fit cover)
+     - style_params (opérateur, édité via panneaux F03) :
+         blur       → degree, bg_scale, fg_scale
+         split_scene→ top_scale, bottom_scale, text_size, text_x_pct, text_y_pct
+         reframing  → scale, offset_x_pct, offset_y_pct
+         ranking    → clip plein écran (comportement historique)
      - hook 0-3s : visage speaker, PAS de texte, zoom brutal_impact
-     - overlay titre 2 lignes après le hook (copywriting v2)
+     - overlay titre 2 lignes après le hook (copywriting v2) :
+         couleurs par ligne, police, fond (case à cocher + couleur),
+         contour (couleur + épaisseur), taille, position X/Y %
      - zooms frame-exacts depuis body.zooms
      - anti-détection : mirror + speed + breathing zoom + crop
+   Toute valeur manquante retombe sur les défauts (normalizePur*Params) —
+   parité F03/F04 : le rendu consomme le même manifeste.
    ═══════════════════════════════════════════════════════════════════ */
 import React from 'react';
 import { AbsoluteFill, Audio, Sequence, staticFile, useCurrentFrame, useVideoConfig, Video } from 'remotion';
 import { antiDetectionTransform, antiDetectionSpeed } from './antiDetection';
+import { normalizePurOverlayParams, normalizePurStyleParams } from './bridgeClipper';
 
 /** Zoom ponctuel actif à ce frame ? → scale multipliant. */
 function purZoomAtFrame(zooms, frame) {
@@ -34,13 +43,29 @@ function purCropTransform(cropPct) {
   return `scale(${s.toFixed(4)})`;
 }
 
+/** '#RRGGBB' + opacité 0-1 → 'rgba(r,g,b,a)'. */
+function withAlpha(hex, alpha) {
+  const m = String(hex || '').match(/^#?([0-9a-f]{6})$/i);
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${Number(alpha ?? 1).toFixed(3)})`;
+}
+
 export function PurPackComposition({ purManifest, session: sessionProp }) {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
   const manifest = purManifest || sessionProp?.pur || {};
   const entry = manifest.entries?.[0] || {};
-  const overlay = manifest.narrative?.overlay || {};
+  const overlayRaw = manifest.narrative?.overlay || {};
+  const overlay = { ...overlayRaw, ...normalizePurOverlayParams(overlayRaw.style_params) };
   const pur = manifest.pur || {};
+
+  const styleName = String(manifest.style || '');
+  const styleLayout = styleName === 'blur' ? 'blur'
+    : styleName === 'split_scene' ? 'split'
+    : styleName === 'reframing' ? 'reframing'
+    : 'fullscreen';
+  const sp = normalizePurStyleParams(manifest.style_params, styleName || 'blur');
 
   const localFrame = frame;
   const videoUrl = entry.clip_file ? entry.clip_file.replace(/^\.?\//, '') : null;
@@ -55,11 +80,35 @@ export function PurPackComposition({ purManifest, session: sessionProp }) {
   const zoomScale = purZoomAtFrame(entry.zooms, localFrame);
 
   // Overlay visible après le hook
-  const overlayFrom = Number(overlay.visible_from_frame ?? Math.round(3 * fps));
-  const popFrames = Number(overlay.animation_frames ?? 6);
+  const overlayFrom = Number(overlayRaw.visible_from_frame ?? Math.round(3 * fps));
+  const popFrames = Number(overlayRaw.animation_frames ?? 6);
   const popProgress = Math.min(1, (frame - overlayFrom) / Math.max(1, popFrames));
-  const overlayVisible = frame >= overlayFrom && overlay.lines?.length > 0;
+  const overlayVisible = frame >= overlayFrom && overlayRaw.lines?.length > 0;
   const popScale = overlayVisible ? (0.9 + 0.2 * Math.min(1, popProgress) - 0.1 * Math.max(0, popProgress - 0.55)) : 1;
+
+  // Texte overlay : valeurs éditoriales (avec fallback legacy color/accent/font_size/outline)
+  const lineColors = [overlay.line1_color || overlayRaw.color || '#FFFFFF', overlay.line2_color || overlayRaw.accent || '#FFD700'];
+  const fontFamily = `${overlay.font_family || overlayRaw.fallback_font || 'Arial Black, Impact'}, sans-serif`;
+  const fontSize = Number(overlay.size ?? overlayRaw.font_size ?? 68);
+  const outlineWidth = Number(overlay.outline_width ?? 3);
+  const outlineColor = overlay.outline_color || overlayRaw.outline || '#000000';
+  const textX = Number(overlay.x_pct ?? 50);
+  const textY = Number(overlay.y_pct ?? 22);
+  // En split_scene, le texte du haut suit text_size/text_x_pct/text_y_pct du style
+  const splitTextSize = styleLayout === 'split' ? Number(sp.text_size ?? fontSize) : fontSize;
+  const splitTextX = styleLayout === 'split' ? Number(sp.text_x_pct ?? textX) : textX;
+  const splitTextY = styleLayout === 'split' ? Number(sp.text_y_pct ?? textY) : textY;
+  const bgEnabled = overlay.bg_enabled === true;
+  const bgStyle = bgEnabled
+    ? { background: withAlpha(overlay.bg_color || '#000000', overlay.bg_opacity ?? 0.65), padding: '4px 14px', borderRadius: 6 }
+    : {};
+
+  const videoProps = {
+    src: videoUrl,
+    startFrom: Math.round(localFrame * speed),
+    muted: true,
+    playbackRate: speed,
+  };
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#050505', overflow: 'hidden' }}>
@@ -79,13 +128,34 @@ export function PurPackComposition({ purManifest, session: sessionProp }) {
         }}
       >
         {videoUrl ? (
-          <Video
-            src={videoUrl}
-            startFrom={Math.round(localFrame * speed)}
-            muted
-            playbackRate={speed}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
+          styleLayout === 'blur' ? (
+            /* ── BLUR : couche arrière floutée + couche avant nette ── */
+            <>
+              <Video {...videoProps}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', filter: `blur(${Number(sp.degree || 24)}px) brightness(0.6)`, transform: `scale(${(Number(sp.bg_scale || 118) / 100).toFixed(4)})` }} />
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Video {...videoProps}
+                  style={{ width: '100%', height: `${Number(sp.fg_scale || 72)}%`, objectFit: 'cover', boxShadow: '0 12px 48px rgba(0,0,0,0.65)' }} />
+              </div>
+            </>
+          ) : styleLayout === 'split' ? (
+            /* ── SPLIT : vidéo en haut (top_scale%) + élément bas (bottom_scale%) ── */
+            <>
+              <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: `${Number(sp.top_scale || 62)}%`, overflow: 'hidden' }}>
+                <Video {...videoProps}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+              <div style={{ position: 'absolute', left: 0, top: `${Number(sp.top_scale || 62)}%`, width: '100%', height: `${Number(sp.bottom_scale || 38)}%`, background: 'linear-gradient(180deg, #0a0a12 0%, #050505 100%)', borderTop: '2px solid rgba(255,255,255,0.12)' }} />
+            </>
+          ) : styleLayout === 'reframing' ? (
+            /* ── REFRAMING : recadrage scale + offset X/Y ── */
+            <Video {...videoProps}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${(Number(sp.scale || 130) / 100).toFixed(4)}) translate(${Number(sp.offset_x_pct || 0)}%, ${Number(sp.offset_y_pct || 0)}%)` }} />
+          ) : (
+            /* ── FULLSCREEN (ranking / style inconnu) : clip plein écran ── */
+            <Video {...videoProps}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          )
         ) : (
           <div style={{ color: '#ff8866', fontSize: 40, textAlign: 'center', alignSelf: 'center' }}>
             CLIP PUR MANQUANT — lance F00-PUR (f00_pur.py)
@@ -99,28 +169,30 @@ export function PurPackComposition({ purManifest, session: sessionProp }) {
           <div
             style={{
               position: 'absolute',
-              left: '6%',
-              right: '6%',
-              top: '22%',
+              left: `${splitTextX}%`,
+              top: `${splitTextY}%`,
+              maxWidth: '88%',
               display: 'flex',
               flexDirection: 'column',
+              alignItems: 'flex-start',
               gap: 6,
-              transform: `scale(${popScale.toFixed(3)})`,
+              transform: `translateX(-50%) scale(${popScale.toFixed(3)})`,
               transformOrigin: 'center top',
             }}
           >
-            {overlay.lines.map((line, index) => (
+            {overlayRaw.lines.map((line, index) => (
               <div
                 key={`pur_line_${index}`}
                 style={{
-                  fontFamily: `${overlay.fallback_font || 'Arial Black, Impact'}, sans-serif`,
-                  fontSize: Number(overlay.font_size || 68),
+                  fontFamily,
+                  fontSize: splitTextSize,
                   fontWeight: 900,
                   lineHeight: 1.04,
                   textTransform: 'uppercase',
-                  color: index === 0 ? (overlay.color || '#FFFFFF') : (overlay.accent || '#FFD700'),
-                  WebkitTextStroke: `3px ${overlay.outline || '#000000'}`,
+                  color: lineColors[index] || lineColors[0],
+                  WebkitTextStroke: `${outlineWidth}px ${outlineColor}`,
                   textShadow: '0 4px 18px rgba(0,0,0,0.85)',
+                  ...bgStyle,
                 }}
               >
                 {line}
