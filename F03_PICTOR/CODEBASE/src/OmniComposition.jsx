@@ -223,7 +223,10 @@ export const OmniComposition = ({ codex, videoSrc, session: sessionProp, sequenc
       );
     }
     if (styleAuthorized) {
-      return <RankingCompilationComposition session={sessionProp} rankingManifest={buildRankingFromPur(rawPur)} musicTimeline={musicTimeline} />;
+      // PUR : PAS de musique de fond (music_timeline.json = héritage dev8/dev9,
+      // mp3 absent du codebase de rendu — crash 404 au run 34574052207).
+      // Parité avec le preview validé P1 : overlay seul, sans musique.
+      return <RankingCompilationComposition session={sessionProp} rankingManifest={buildRankingFromPur(rawPur)} musicTimeline={null} />;
     }
     return <PurPackComposition purManifest={rawPur} />;
   }
