@@ -6,7 +6,7 @@
 ## État confirmé
 
 Le dépôt est `https://github.com/kioka8877-ux/LACRIMAE`, branche `dev10`
-(commit de référence `704800b`). dev10 est canonisé **bras armé du mode PUR**
+(commit de référence `ba979c2` — 2026-09-11, fix agrégateur). dev10 est canonisé **bras armé du mode PUR**
 de PERTURABO (`kioka8877-ux/PERTURABO`, `MONDES_FORGES/CLIPPING`) : le pack
 PUR entre, le MP4 final sort, 100 % GitHub Actions.
 
@@ -51,12 +51,20 @@ overlay, style blur/split/reframing, anti-détection) — voir
    « VIDÉO X/N », workflow matrix (prepare → N renders parallèles 1-20 →
    aggregate strict), `tools/pur_aggregate.py` (refus de publier si un MP4
    manque), `convert_pur_pack.mjs --packs`, F05 `--batch`.
-6. **Validation visuelle P1** par le Warsmith sur le preview — GO obligatoire
+6. ✅ **Fix agrégateur (2026-09-11, commit `ba979c2`)** — le rendu matrix
+   A01 réussissait (run 34575463702) mais l'agrégat refusait le bundle :
+   identifiants d'entrée déjà préfixés (`pur_A01`) re-préfixés →
+   `pur_pur_a01_finale.mp4` introuvable. `normalize_angle()` + 7 tests
+   (`F00_INGEST/tests/test_pur_aggregate.py`). Doctrine de refus INTACTE.
+   Récit complet des 2 runs du 11/09 : `TRACKING/PUR_CAMPAIGN_LOG.md`.
+7. **Validation visuelle P1** par le Warsmith sur le preview — GO obligatoire
    avant tout run CI (règle du 2026-09-09)
-7. Puis E2E PUR réel : GitHub Actions → "DEV10 PUR Matrix" (workflow_dispatch, pack_filter vide = TOUS les packs, style blur, max_parallel 6)
-   (workflow_dispatch, inputs : pack_filter=pur_A01, canvas=9:16), vérifier
-   G0-G3 + P2, contrôle visuel MP4, journaliser dans PUR_CAMPAIGN_LOG.md
-7. Tag canonique à la validation : pur-canon-v1
+8. E2E PUR réel post-fix : GitHub Actions → « DEV10 PUR Matrix »
+   (workflow_dispatch — premier run conseillé : pack_filter=pur_A01,
+   canvas=9:16, style=blur, max_parallel=6 ; puis TOUS les packs), vérifier
+   G0-G3 + P2 + P-AGG, contrôle visuel MP4, journaliser dans
+   PUR_CAMPAIGN_LOG.md
+9. Tag canonique à la validation : pur-canon-v1
 
 ## Contrats à préserver
 

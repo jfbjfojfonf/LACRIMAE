@@ -104,9 +104,7 @@ if (packsList) {
   }
   console.log(`  style GLOBAL: ${manifest.style} (source: ${manifest.style_source}) — appliqué à ${manifest.entries.length} vidéos`);
   for (const e of manifest.entries) {
-    // Fix 2026-09-11 : la clé d'identité est source_id (angle_id n'existe pas
-    // dans dev10.pur.v1) — le log affichait « ▸ undefined → … ».
-    console.log(`  ▸ ${e.source_id || e.angle_id || e.pack_label} → ${e.clip_file} (${e.duration_seconds}s, zooms: ${e.zooms?.length || 0}, mirror: ${e.anti_detection?.mirror})`);
+    console.log(`  ▸ ${e.angle_id || e.pack_label} → ${e.clip_file} (${e.duration_seconds}s, zooms: ${e.zooms?.length || 0}, mirror: ${e.anti_detection?.mirror})`);
   }
 } else {
   // ── MONO-VIDÉO (compatibilité) ──

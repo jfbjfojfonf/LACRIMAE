@@ -110,3 +110,17 @@ P1 (preview validée), P2 (rendu CI), run GitHub Actions, décision.
 - Vérifié : conversion multi 3 packs (90 s, 2571 frames), extraction A02
   (857 frames), agrégateur 3/3 OK + 2/3 refus, F05 batch H.264 confirmé.
 - **Aucun run CI lancé** — GO opérateur requis (règle du 2026-09-09).
+
+## 2026-09-11 — Runs matrix E2E : 2 échecs, 2 fixes, le rendu A01 passe
+
+| Run | Résultat | Cause / fix |
+|---|---|---|
+| [34574052207](https://github.com/kioka8877-ux/LACRIMAE/actions/runs/34574052207) | ❌ failure | 404 `sia_elastic_heart.mp3` : la machinerie ranking (héritage dev8/dev9, réutilisée par la voie PUR multi-styles) jouait `music_timeline.json` alors que le mp3 est absent du codebase de rendu. Fix `a59351f` — `musicTimeline=null` pour la voie PUR uniquement (parité avec le preview P1 : pas de musique de fond). Modes ranking/reveal inchangés. |
+| [34575463702](https://github.com/kioka8877-ux/LACRIMAE/actions/runs/34575463702) | ❌ failure | **Rendu A01 ✅** — `pur_A01_finale.mp4` (2,5 Mo) bien présent dans l'artefact `pur-clip-A01`. Mais agrégat ❌ : `pur_aggregate.py` cherchait `pur_pur_a01_finale.mp4` — le manifeste `dev10.pur.v1` porte un `source_id` déjà préfixé (`pur_A01`) et la recherche re-préfixait → doctrine stricte = refus de publier. Fix `ba979c2` : `normalize_angle()` avant `find_result()` + log `▸` de `convert_pur_pack.mjs` (source_id) + 7 tests de non-régression (`F00_INGEST/tests/test_pur_aggregate.py`). Doctrine « refus si incomplet » INTACTE. |
+
+- Fix vérifié en local sur les données RÉELLES du run 34575463702 (artefact
+  + manifeste) → `BUNDLE COMPLET : 1/1` ✅.
+- Les MP4 des runs du 11/09 restent des **brouillons techniques** jusqu'au
+  contrôle visuel du Warsmith (règle du 2026-09-09).
+- Prochain run : post-fix `ba979c2`, sur GO explicite de l'opérateur —
+  plan et périmètre dans `TRACKING/TODO_CONTINUATION.md`.
