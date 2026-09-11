@@ -95,3 +95,14 @@ git fetch origin --prune
 git checkout dev10            # ou dev10-pur pour le travail PUR
 cat TRACKING/TODO_CONTINUATION.md
 ```
+
+## Mise à jour 2026-09-11 (après-midi) — moteur unique posé
+
+- ✅ Cause racine identifiée : re-routage ranking (`buildRankingFromPur`) qui masquait
+  le moteur PUR en CI — supprimé (commit `4f1598ce`).
+- ✅ PICTOR rend désormais avec le composant preview validé (voix ON, mapping boom→impact
+  provisoire, portes assets `sfx_available` + P-AUD).
+- ⏭ Prochaine étape : run A01 post-moteur-unique (GO Warsmith) → contrôle visuel
+  (blur/zooms/SFX/voix) → tag `pur-canon-v1`.
+- ⏭ En attente du Warsmith : fichier `boom.mp3` (pour lever le mapping provisoire) ;
+  purge éventuelle du codex preview (héritages dev4/dev9).

@@ -156,3 +156,43 @@ P1 (preview validée), P2 (rendu CI), run GitHub Actions, décision.
   (857 frames @ 30 fps), `BUNDLE COMPLET : 1/1`, artefact `lac-pur-final` publié.
   Reste avant tag `pur-canon-v1` : contrôle visuel Warsmith (hook 0 s, zoom 8,62 s,
   fade final, texte, aucune accélération).
+
+## 2026-09-11 (après-midi) — MOTEUR UNIQUE : la fin de la divergence preview/rendu
+
+### Cause racine découverte des rendus non conformes au codex
+
+`OmniComposition.jsx` (PICTOR) re-routait le rendu PUR vers le **moteur RANKING de dev9**
+(`buildRankingFromPur` → `RankingCompilationComposition`) dès que le style était autorisé :
+le composant PUR de PICTOR n'a **jamais tourné** en CI. Blur, zooms, overlay boxé, SFX —
+tout ce qui avait été validé en preview était contourné (les « rendus d'ancienne branche »
+constatés par le Warsmith). La copie `_purPackComposition.jsx` de PICTOR (zooms non
+appliqués) n'était que la moitié du problème : elle était de toute façon morte.
+
+### Décision Warsmith (11/09) : moteur unique
+
+- PICTOR rend avec **le composant validé en preview** : `purPackComposition.jsx`
+  (source de vérité `F03_PREVIEW/CODEBASE/src/preview/_purPackComposition.jsx`,
+  identique hors 2 adaptations ci-dessous — vérifié par diff), + `bridgeClipper.js`
+  et `antiDetection.js` copiés octet pour octet.
+- Suppression du re-routage ranking (`buildRankingFromPur` éradiqué) et du doublon
+  `_purPackComposition.jsx` — la dérive preview/rendu devient structurellement impossible.
+- **Voix du clip ON** (`muted: false`) — le codex dit « voix claire » hook ; musique de
+  fond : reste coupée (décision du jour : pas besoin).
+- **Mapping provisoire boom→impact** — `boom.mp3` n'existe dans aucun codebase ; à
+  remplacer quand le Warsmith fournit le fichier.
+- **Portes assets anti-404** : `sfx_available` calculé par `convert_pur_pack.mjs`
+  (existance réelle des fichiers, jamais déclarée à la main) ; SFX validés copiés de la
+  preview par une étape dédiée du workflow ; **porte P-AUD** dans `pur_aggregate.py` :
+  un MP4 sans piste audio est refusé comme un rendu manquant.
+
+### Commits
+
+- `4f1598ce` — feat(pur): MOTEUR UNIQUE (composant preview, portes assets, P-AUD, SFX copiés)
+- `e1561f27` — docs(pur): PUR_GATES P-AUD + P-ENGIN ; README : mission réelle de F04 SIGNUM
+
+### Prochaine étape
+
+Run A01 post-moteur-unique (GO Warsmith requis, règle du 09-09) → contrôle visuel →
+tag `pur-canon-v1`. Attendu cette fois : blur codex (24px, bande 46% à y 52%), zooms
+1,15×/1,30× à 8,62 s et 24,43 s, SFX impact aux 2 zooms, voix du clip audible,
+overlay boxé unique 44px à y 11%.
