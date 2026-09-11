@@ -32,6 +32,11 @@ const purManifest = purActive
 const durationInFrames = purManifest?.total_frames || rankingManifest?.total_frames || revealManifest?.total_frames || (hybridActive
   ? Number(hybridManifest.total_frames || sequences.total_frames || video.total_frames || 300)
   : Number(sequences.total_frames || video.total_frames || 300));
+// PIÈGE fps (run 34605484040) : sequences.json hérité de dev7 porte fps=59.94 →
+// composition rendue à 59.94 fps, vidéo 2× trop rapide (14.36s au lieu de 28.57s).
+// La voie PUR impose le fps du manifeste dev10.pur.v1 (source de vérité = 30) ;
+// les autres modes (hybrid/reveal/ranking) gardent la chaîne sequences.fps inchangée.
+const compositionFps = Number(purManifest?.fps || fps);
 const composition = getCompositionConfig(codex, codex.session || {});
 const width = composition.width;
 const height = composition.height;
@@ -41,7 +46,7 @@ export const LacrimaeRoot = () => (
     id="LacrimaeShort"
     component={OmniComposition}
     durationInFrames={durationInFrames}
-    fps={fps}
+    fps={compositionFps}
     width={width}
     height={height}
       defaultProps={{
