@@ -52,7 +52,7 @@
             "static_text": true,
             "uppercase": false,
             "box_radius": 10,
-            "box_padding": 20,
+            "box_padding": 29,
             "auto_fit": true,
             "min_size": 28
           }
@@ -217,7 +217,7 @@
         "outro": {
           "duration_sec": 1,
           "type": "fade_to_black",
-          "note": "PAS de CTA 'Follow for more' en PUR \u2014 finir sur la chute"
+          "note": "PAS de CTA 'Follow for more' en PUR — finir sur la chute"
         },
         "compliance": {
           "disclosure": "#ad",
