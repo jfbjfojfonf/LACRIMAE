@@ -14,6 +14,11 @@ Usage :
     [--report F03_PICTOR/OUT/pur_aggregate_report.json]
 
 Code de sortie 0 = bundle complet publié ; 1 = incomplet, RIEN n'est publié.
+
+Fix 2026-09-11 (run 34575463702) : les identifiants d'entrée déjà préfixés
+('pur_A01' via source_id) sont normalisés AVANT la recherche du MP4 — sinon
+l'agrégateur cherchait pur_pur_a01_finale.mp4 (double préfixe) et refusait
+un bundle pourtant complet. Le rendu, lui, était déjà bon.
 """
 from __future__ import annotations
 
@@ -27,6 +32,19 @@ from pathlib import Path
 
 def now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def normalize_angle(raw) -> str:
+    """Normalise l'identifiant d'entrée : 'pur_A01' et 'A01' désignent le même angle.
+
+    Les manifestes dev10.pur.v1 portent un source_id déjà préfixé ('pur_A01')
+    tandis que les runners produisent pur_<angle>_finale.mp4. Sans
+    normalisation, la recherche devient pur_pur_a01_finale.mp4 → introuvable.
+    """
+    angle = str(raw if raw is not None else "?").strip()
+    if len(angle) > 4 and angle.lower().startswith("pur_"):
+        angle = angle[4:]
+    return angle
 
 
 def probe(path: Path) -> dict:
@@ -81,7 +99,7 @@ def main() -> int:
     args.out.mkdir(parents=True, exist_ok=True)
 
     for entry in entries:
-        angle = str(entry.get("angle_id") or entry.get("source_id") or entry.get("rank") or "?")
+        angle = normalize_angle(entry.get("angle_id") or entry.get("source_id") or entry.get("rank") or "?")
         found = find_result(args.results, angle)
         if found is None or found.stat().st_size < 1024:
             missing.append(angle)
