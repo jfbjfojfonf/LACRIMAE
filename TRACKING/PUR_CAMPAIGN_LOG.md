@@ -143,3 +143,16 @@ P1 (preview validée), P2 (rendu CI), run GitHub Actions, décision.
 - **Piste de fix (à valider Warsmith)** : dans Root.jsx, voie PUR → fps depuis le manifeste PUR
   (ou : le workflow injecte aussi sequences.json fps=30 par run). Puis re-run A01, contrôle
   visuel, et seulement ensuite tag `pur-canon-v1`.
+
+### Fix P2 — fps de composition imposé par le manifeste PUR (`727b131`)
+
+- `F03_PICTOR/CODEBASE/src/Root.jsx` : la voie PUR utilise désormais
+  `compositionFps = purManifest?.fps || fps` (le manifeste dev10.pur.v1, fps 30,
+  est la source de vérité) ; les modes hybrid/reveal/ranking conservent la chaîne
+  `sequences.fps` inchangée. Commit `727b131` construit sur l'arbre courant
+  (leçon de l'incident `6b30e38` appliquée), syntaxe JSX vérifiée avant push.
+- [34616549605](https://github.com/kioka8877-ux/LACRIMAE/actions/runs/34616549605) | 🟢 VERT — **P2 VALIDÉE** | prepare ✅ render ✅ aggregate ✅ ;
+  `[✓] A01 : pur_A01_finale.mp4 (3.3 Mo, 28.629s)` — durée conforme au manifeste
+  (857 frames @ 30 fps), `BUNDLE COMPLET : 1/1`, artefact `lac-pur-final` publié.
+  Reste avant tag `pur-canon-v1` : contrôle visuel Warsmith (hook 0 s, zoom 8,62 s,
+  fade final, texte, aucune accélération).

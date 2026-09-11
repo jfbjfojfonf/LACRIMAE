@@ -59,12 +59,15 @@ overlay, style blur/split/reframing, anti-détection) — voir
    Récit complet des 2 runs du 11/09 : `TRACKING/PUR_CAMPAIGN_LOG.md`.
 7. **Validation visuelle P1** par le Warsmith sur le preview — GO obligatoire
    avant tout run CI (règle du 2026-09-09)
-8. E2E PUR réel post-fix : GitHub Actions → « DEV10 PUR Matrix »
-   (workflow_dispatch — premier run conseillé : pack_filter=pur_A01,
-   canvas=9:16, style=blur, max_parallel=6 ; puis TOUS les packs), vérifier
-   G0-G3 + P2 + P-AGG, contrôle visuel MP4, journaliser dans
-   PUR_CAMPAIGN_LOG.md
-9. Tag canonique à la validation : pur-canon-v1
+8. ✅ E2E PUR réel post-fix RÉALISÉ (11/09) : run 34605484040 (jobs verts
+   mais P2 échouée : fps écrasé par sequences.json hérité dev7 → 14,36 s),
+   puis run 34616549605 après fix fps (`727b131` — Root.jsx voie PUR lit le
+   fps du manifeste dev10.pur.v1) → **28,629 s mesurées, BUNDLE COMPLET
+   1/1, P2 techniquement validée**. Récit : PUR_CAMPAIGN_LOG.md.
+9. **Contrôle visuel du MP4 A01 (28,6 s)** par le Warsmith — artefact
+   `lac-pur-final` du run 34616549605 : hook à 0 s, zoom 8,62 s, fade final,
+   texte lisible, aucune accélération perceptible.
+10. Tag canonique à la validation : pur-canon-v1
 
 ## Contrats à préserver
 
