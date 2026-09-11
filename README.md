@@ -35,7 +35,10 @@ découpe les clips H.264         analyse la musique
     F03 PREVIEW (validation interactive)
         │
         ▼
-    F04 SIGNUM (render Remotion → short_final.mp4)
+    F03_PICTOR (render Remotion → short_final.mp4)  [bras de rendu CI]
+        |
+        v
+    F04 SIGNUM (sceau final FFmpeg : remux, faststart, Loi Duree)
         │
         ▼
     F05 CAMOUFLAGE → F06 LUTHER
@@ -52,7 +55,7 @@ découpe les clips H.264         analyse la musique
 | **F00-F** | Ranking Prep | Classe les clips en rangs | `ranking_manifest.json` |
 | **F00-MUSIC** | Audio Analysis | Analyse la musique (optionnel) | `music.mp3` |
 | **F03** | Preview | Visualisation interactive du ranking | `codex.json` validé |
-| **F04** | Signum | Rendu Remotion → MP4 | `short_final.mp4` |
+| **F04** | Signum | Sceau final FFmpeg (remux, metadonnees, Loi Duree) | `short_master.mp4` |
 | **F05** | Camouflage | Réencodage H.264 yuv420p, faststart | `short_camouflaged.mp4` |
 | **F06** | Luther | Nettoyage métadonnées | `short_master.mp4` |
 
