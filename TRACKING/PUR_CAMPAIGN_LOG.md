@@ -124,3 +124,22 @@ P1 (preview validée), P2 (rendu CI), run GitHub Actions, décision.
   contrôle visuel du Warsmith (règle du 2026-09-09).
 - Prochain run : post-fix `ba979c2`, sur GO explicite de l'opérateur —
   plan et périmètre dans `TRACKING/TODO_CONTINUATION.md`.
+
+## 2026-09-11 (après-midi) — Restauration du fix, puis PREMIER E2E MATRIX VERT (avec réserve P2)
+
+| Run | Résultat | Détail |
+|---|---|---|
+| [34603785939](https://github.com/kioka8877-ux/LACRIMAE/actions/runs/34603785939) | ❌ failure | **Incident de restauration** : le commit docs 6b30e38 avait reconstruit son arbre depuis l'arbre d'avant le fix ba979c2 (piège API REST : `base_tree` doit être l'arbre du HEAD courant, pas un vieil arbre) → l'ancien agrégateur est reparti (log `▸ undefined`, `pur_pur_a01_finale` introuvable). Rendu A01 ✅, aggregate ❌. Leçon enregistrée ; fix restauré par `b57a6a3` (blobs identiques, arbre courant). |
+| [34605484040](https://github.com/kioka8877-ux/LACRIMAE/actions/runs/34605484040) | 🟢 jobs verts — **P2 NON VALIDÉ** | prepare ✅ render ✅ **aggregate ✅** — `▸ pur_A01` (log corrigé), `[✓] A01 : pur_A01_finale.mp4`, `BUNDLE COMPLET : 1/1`, artefact `lac-pur-final` publié. **MAIS** durée mesurée 14,357 s ≠ ~28,6 s attendues (857 frames @ 30 fps) → porte P2 « durée ≈ manifeste » **échouée**. Pas de tag canonique tant que P2 n'est pas levée. |
+
+### Diagnostic P2 — fps de composition écrasé par un héritage dev7
+
+- `F03_PICTOR/CODEBASE/src/Root.jsx` : `fps = sequences.fps || video.fps || 30`.
+- `src/data/sequences.json` (héritage dev7, committé) porte `fps: 59.94006`, `total_frames: 0` →
+  la composition PUR tourne à **59,94 fps** : 857 frames rendues mais 14,36 s de vidéo
+  (2× trop rapide / moitié du segment). Le comptage « 857/857 frames ✓ » masquait le problème
+  depuis le run du 09-09 : les frames sont là, c'est le TEMPS qui est comprimé.
+- Manifeste PUR correct : fps 30, total_frames 857, 28,57 s — parité preview/rendu rompue par Root.jsx.
+- **Piste de fix (à valider Warsmith)** : dans Root.jsx, voie PUR → fps depuis le manifeste PUR
+  (ou : le workflow injecte aussi sequences.json fps=30 par run). Puis re-run A01, contrôle
+  visuel, et seulement ensuite tag `pur-canon-v1`.
