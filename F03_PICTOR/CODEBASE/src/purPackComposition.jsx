@@ -1,12 +1,41 @@
 /* ═══════════════════════════════════════════════════════════════════
-   PurPackComposition — Mode PUR côté RENDU (F04 PICTOR)
-   Miroir exact du composant F03 Preview : mêmes calques, mêmes valeurs.
-   v2 TEXTE (2026-09-10) : statique début→fin, auto-fit, boîte arrondie,
-   casse mixte, blur positionnable — identique au preview.
+   PurPackComposition — Mode PUR (packs PERTURABO → dev10.pur.v1)
+
+   v2 TEXTE (décision Warsmith 2026-09-10 — PUR_TEXT_IMPLEMENTATION.md) :
+     - texte STATIQUE du début à la fin, au même endroit (plus de hook
+       sans texte, plus de pop_in) — règle hook ABROGÉE
+     - auto-fit : chaque ligne tient sur UNE ligne visuelle (taille
+       réduite si débordement, min lisible), max 3 lignes
+     - casse mixte (uppercase forcé supprimé, toggle opérateur)
+     - boîte à coins arrondis + padding (fond existant)
+     - blur : position verticale de la vidéo nette = curseur opérateur
+   Miroir exact dans F03_PICTOR (F04) — parité par construction.
    ═══════════════════════════════════════════════════════════════════ */
-import React from 'react';
+import React, { useMemo } from 'react';
 import { AbsoluteFill, Audio, Sequence, staticFile, useCurrentFrame, useVideoConfig, Video } from 'remotion';
-import { normalizePurManifest, purZoomAtFrame, purAntiTransform, normalizePurStyleParams, normalizePurOverlayParams } from './purPackCompilation';
+import { antiDetectionTransform, antiDetectionSpeed } from './antiDetection';
+import { normalizePurOverlayParams, normalizePurStyleParams } from './bridgeClipper';
+
+/** Zoom ponctuel actif à ce frame ? → scale multipliant. */
+function purZoomAtFrame(zooms, frame) {
+  let scale = 1;
+  for (const z of zooms || []) {
+    const start = Number(z.moment_frame || 0);
+    const end = start + Number(z.frames || 3);
+    if (frame >= start && frame < end) {
+      const p = (frame - start) / Math.max(1, end - start);
+      scale *= z.easing === 'NONE' ? z.scale_to : (z.scale_from + (z.scale_to - z.scale_from) * p);
+    }
+  }
+  return scale;
+}
+
+/** Crop offset depuis anti_detection.crop_pct (2.5% des bords). */
+function purCropTransform(cropPct) {
+  if (!cropPct) return '';
+  const s = 1 + 2 * (cropPct / 100);
+  return `scale(${s.toFixed(4)})`;
+}
 
 /** '#RRGGBB' + opacité 0-1 → 'rgba(r,g,b,a)'. */
 function withAlpha(hex, alpha) {
@@ -16,17 +45,27 @@ function withAlpha(hex, alpha) {
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${Number(alpha ?? 1).toFixed(3)})`;
 }
 
+/** Mesure la largeur d'un texte en px pour une police/taille donnée. */
+const measureCtx = typeof document !== 'undefined'
+  ? document.createElement('canvas').getContext('2d')
+  : null;
+function measureTextWidth(text, font) {
+  if (!measureCtx) return 0;
+  measureCtx.font = font;
+  return measureCtx.measureText(text).width;
+}
+
 /**
- * Auto-fit SANS Canvas API (rendu Node) : ratio de largeur moyenne d'un
- * glyphe en ExtraBold ≈ 0.62 × taille. Même formule que le preview ne
- * peut pas être garanti au pixel — on reste conservateur (0.62) pour ne
- * JAMAIS dépasser la largeur utile. Le preview reste la référence visuelle.
+ * Auto-fit : taille uniforme pour toutes les lignes afin que la PLUS LONGUE
+ * tienne dans la largeur utile (92 % du canvas). Ne fait que réduire,
+ * jamais agrandir. Max 3 lignes affichées.
  */
-function fitOverlayLinesNode(lines, baseSize, canvasWidth, minSize) {
+function fitOverlayLines(lines, baseSize, fontFamily, canvasWidth, minSize) {
   const list = (lines || []).slice(0, 3).map((l) => String(l));
-  if (!canvasWidth || list.length === 0) return { lines: list, size: baseSize };
+  if (!measureCtx || !canvasWidth || list.length === 0) return { lines: list, size: baseSize };
   const usable = canvasWidth * 0.92;
-  const widest = Math.max(...list.map((l) => l.length * baseSize * 0.62));
+  const font = `900 ${baseSize}px ${fontFamily}`;
+  const widest = Math.max(...list.map((l) => measureTextWidth(l, font)));
   if (widest <= usable) return { lines: list, size: baseSize };
   const fitted = Math.max(Number(minSize || 28), Math.floor(baseSize * (usable / widest)));
   return { lines: list, size: fitted };
@@ -41,18 +80,19 @@ function ensurePurFont() {
   face.load().then((f) => document.fonts.add(f)).catch(() => {});
 }
 
-export function PurPackComposition({ purManifest: rawManifest, entryIndex = 0 }) {
+export function PurPackComposition({ purManifest, session: sessionProp, entryIndex = 0 }) {
   ensurePurFont();
   const frame = useCurrentFrame();
   const { fps, durationInFrames, width: canvasWidth } = useVideoConfig();
-  const manifest = normalizePurManifest(rawManifest, fps);
-  // MULTI-VIDÉOS : chaque entrée = 1 vidéo finale. Le rendu matrix reçoit un
-  // manifeste à entrée unique (extraction), entryIndex reste pour la parité.
+  const manifest = purManifest || sessionProp?.pur || {};
+  // MULTI-VIDÉOS : chaque entrée = 1 vidéo finale (A01, A02…). L'aperçu
+  // affiche l'entrée sélectionnée ; le style/texte sont GLOBAUX.
   const entries = Array.isArray(manifest.entries) ? manifest.entries : [];
   const safeIndex = Math.max(0, Math.min(Number(entryIndex) || 0, Math.max(0, entries.length - 1)));
   const entry = entries[safeIndex] || {};
-  // Overlay : GLOBAL prioritaire (édité en preview), copie par entrée en repli
-  // — MIROIR exact du composant F03 Preview (parité par construction).
+  const isMulti = entries.length > 1;
+  // Overlay : GLOBAL prioritaire (édité en live) ; copie par entrée en repli
+  // (rendu standalone d'un manifeste par pack sans bloc global).
   const globalOverlay = manifest.narrative?.overlay || {};
   const entryOverlay = entry.overlay || {};
   const overlayRaw = {
@@ -71,19 +111,26 @@ export function PurPackComposition({ purManifest: rawManifest, entryIndex = 0 })
     : 'fullscreen';
   const sp = normalizePurStyleParams(manifest.style_params, styleName || 'blur');
 
-  const videoUrl = entry.clip_file ? staticFile(entry.clip_file.replace(/^\.?\//, '')) : null;
+  const localFrame = frame;
+  const videoUrl = entry.clip_file ? entry.clip_file.replace(/^\.?\//, '') : null;
 
+  // Anti-detection
   const anti = entry.anti_detection || {};
   const speed = Number(anti.speed || 1);
-  const antiTransform = purAntiTransform(anti, frame, fps);
-  const zoomScale = purZoomAtFrame(entry.zooms, frame);
+  const antiTransform = [antiDetectionTransform(anti, frame, fps), purCropTransform(anti.crop_pct)]
+    .filter(Boolean).join(' ');
 
-  // v2 : texte STATIQUE — visible du début à la fin, pas d'animation
+  // Zooms ponctuels (brutal_impact / snap_zoom)
+  const zoomScale = purZoomAtFrame(entry.zooms, localFrame);
+
+  // v2 : texte STATIQUE — visible du début à la fin (static_text !== false),
+  // sinon comportement legacy (après le hook). Pas d'animation.
   const staticText = overlay.static_text !== false;
   const overlayVisible = staticText
     ? overlayRaw.lines?.length > 0
     : frame >= Number(overlayRaw.visible_from_frame ?? Math.round(3 * fps)) && overlayRaw.lines?.length > 0;
 
+  // Texte overlay : valeurs éditoriales (fallback legacy color/accent/font_size/outline)
   const lineColors = [overlay.line1_color || overlayRaw.color || '#FFFFFF', overlay.line2_color || overlayRaw.accent || '#FFD700'];
   const fontFamilyBase = overlay.font_family || overlayRaw.fallback_font || 'Arial Black, Impact';
   const uppercase = overlay.uppercase === true;
@@ -95,10 +142,15 @@ export function PurPackComposition({ purManifest: rawManifest, entryIndex = 0 })
   const splitTextX = styleLayout === 'split' ? Number(sp.text_x_pct ?? textX) : textX;
   const splitTextY = styleLayout === 'split' ? Number(sp.text_y_pct ?? textY) : textY;
 
-  const fitted = fitOverlayLinesNode(overlayRaw.lines, splitTextSize, canvasWidth || 1080, overlay.min_size);
+  // Auto-fit (1 ligne = 1 ligne visuelle)
+  const fitted = useMemo(() => fitOverlayLines(
+    overlayRaw.lines, splitTextSize, `900 ${splitTextSize}px "${fontFamilyBase}"`,
+    canvasWidth || 1080, overlay.min_size,
+  ), [overlayRaw.lines, splitTextSize, fontFamilyBase, canvasWidth, overlay.min_size]);
   const renderLines = overlay.auto_fit === false ? (overlayRaw.lines || []).slice(0, 3) : fitted.lines;
   const renderSize = overlay.auto_fit === false ? splitTextSize : fitted.size;
 
+  // Boîte (coins arrondis + padding)
   const bgEnabled = overlay.bg_enabled === true;
   const boxRadius = Number(overlay.box_radius ?? 10);
   const boxPadding = Number(overlay.box_padding ?? 14);
@@ -112,22 +164,34 @@ export function PurPackComposition({ purManifest: rawManifest, entryIndex = 0 })
 
   const videoProps = {
     src: videoUrl,
-    startFrom: Math.round(frame * speed),
-    muted: true,
+    startFrom: Math.round(localFrame * speed),
+    muted: false, // VOIX DU CLIP ON — décision Warsmith 2026-09-11 (codex : « voix claire » hook)
     playbackRate: speed,
   };
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#050505', overflow: 'hidden' }}>
+      {/* MULTI-VIDÉOS : bannière discrète « vidéo X/N » pendant l'aperçu */}
+      {isMulti && (
+        <div style={{ position: 'absolute', right: 14, bottom: 14, zIndex: 50, pointerEvents: 'none', padding: '4px 10px', borderRadius: 6, background: 'rgba(0,0,0,0.55)', color: '#00ff88', fontSize: 13, fontWeight: 800, letterSpacing: '0.06em' }}>
+          VIDÉO {safeIndex + 1}/{entries.length} · {entry.angle_id || entry.source_id || '?'}
+        </div>
+      )}
+      {/* SFX des zooms (volume 50-60% sous la voix) */}
       {(manifest.sfx_available === true ? entry.sfx_list || [] : []).map((sfx, index) => (
         Math.abs(frame - Number(sfx.moment_frame || 0)) < 1 && sfx.type ? (
           <Sequence key={`pur_sfx_${index}`} from={Number(sfx.moment_frame || 0)} durationInFrames={Math.max(1, durationInFrames - Number(sfx.moment_frame || 0))}>
-            <Audio src={staticFile(`sfx/${sfx.type}.mp3`)} volume={Number(sfx.volume ?? 0.55)} />
+            <Audio src={staticFile(`sfx/${String(sfx.type) === 'boom' ? 'impact' : sfx.type}.mp3`)} volume={Number(sfx.volume ?? 0.55)} />
           </Sequence>
         ) : null
       ))}
 
-      <AbsoluteFill style={{ transform: antiTransform, transformOrigin: 'center center' }}>
+      <AbsoluteFill
+        style={{
+          transform: [antiTransform, `scale(${zoomScale.toFixed(4)})`].filter((t) => !t.includes('scale(1)') || t !== 'scale(1.0000)').join(' '),
+          transformOrigin: 'center center',
+        }}
+      >
         {videoUrl ? (
           styleLayout === 'blur' ? (
             /* ── BLUR : couche arrière floutée + couche avant nette positionnable ── */
@@ -159,7 +223,7 @@ export function PurPackComposition({ purManifest: rawManifest, entryIndex = 0 })
           )
         ) : (
           <div style={{ color: '#ff8866', fontSize: 40, textAlign: 'center', alignSelf: 'center' }}>
-            CLIP PUR MANQUANT — F00-PUR doit télécharger le segment
+            CLIP PUR MANQUANT — lance F00-PUR (f00_pur.py)
           </div>
         )}
       </AbsoluteFill>
@@ -204,6 +268,7 @@ export function PurPackComposition({ purManifest: rawManifest, entryIndex = 0 })
         </AbsoluteFill>
       )}
 
+      {/* Outro : fade_to_black final */}
       {pur.outro?.type === 'fade_to_black' && (() => {
         const outroFrames = Math.round(Number(pur.outro.duration_sec || 1) * fps);
         const outroStart = durationInFrames - outroFrames;

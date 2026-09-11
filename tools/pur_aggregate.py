@@ -54,11 +54,13 @@ def probe(path: Path) -> dict:
              "stream=codec_name,codec_type,width,height:format=duration",
              "-of", "json", str(path)], text=True))
         video = next((s for s in data.get("streams", []) if s.get("codec_type") == "video"), None)
+        audio = next((s for s in data.get("streams", []) if s.get("codec_type") == "audio"), None)
         return {
             "codec": video.get("codec_name") if video else None,
             "width": int(video.get("width") or 0) if video else 0,
             "height": int(video.get("height") or 0) if video else 0,
             "duration_seconds": round(float(data.get("format", {}).get("duration") or 0), 3),
+            "audio_codec": audio.get("codec_name") if audio else None,
         }
     except (subprocess.CalledProcessError, json.JSONDecodeError, OSError) as exc:
         return {"error": str(exc)[-200:]}
@@ -107,6 +109,14 @@ def main() -> int:
             print(f"  [✗] {angle} : rendu absent ou vide")
             continue
         meta = probe(found)
+        # Porte P-AUD (2026-09-11, décision Warsmith) : la voix du clip est
+        # obligatoire (codex : « voix claire » hook) — un rendu sans piste
+        # audio est un rendu muet, refusé comme un rendu manquant.
+        if not meta.get("audio_codec"):
+            missing.append(angle)
+            results.append({"angle_id": angle, "status": "NO_AUDIO", "probe": meta, "expected_clip": entry.get("clip_file")})
+            print(f"  [✗] {angle} : piste audio ABSENTE — rendu muet refusé (porte P-AUD)")
+            continue
         dest = args.out / f"pur_{angle}_finale.mp4"
         dest.write_bytes(found.read_bytes())
         sha = None

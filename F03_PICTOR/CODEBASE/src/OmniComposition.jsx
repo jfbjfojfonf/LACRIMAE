@@ -19,7 +19,7 @@ import { hybridTimelineFrame, hybridEgoStyle, hybridTextStyle } from './hybridNa
 import { normalizeMusicTimeline, buildAudioSegments } from './audioTimeline';
 import { normalizeRevealManifest, revealSceneAtFrame, revealSourceForScene, revealMotionTransform } from './revealCompilation';
 import { normalizeRankingManifest, rankingEntryAtFrame, rankingActiveRows, rankingMotionTransform } from './rankingCompilation';
-import { PurPackComposition } from './_purPackComposition';
+import { PurPackComposition } from './purPackComposition'; // MOTEUR UNIQUE — source de vérité = preview
 
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
  * OmniComposition (F03 PREVIEW) â€” mÃªmes 6 calques que F04 RENDER :
@@ -154,46 +154,6 @@ function RevealCompilationComposition({ codex, session: sessionProp, revealManif
   );
 }
 
-/**
- * PUR style=ranking → manifeste dev9.ranking.v1 équivalent.
- * Réutilise la mécanique ranking éprouvée (dev9) : hook 0-3s sans overlay,
- * rangs affichés, final #1 en gros, anti-détection portée par l'entry.
- */
-function buildRankingFromPur(purManifest) {
-  if (!purManifest) return null;
-  const entry = purManifest.entries?.[0] || {};
-  const fps = Number(purManifest.fps || 30);
-  const hookSec = Number(purManifest.pur?.hook?.duration_sec || 3);
-  const label = String(purManifest.narrative?.overlay?.lines?.[0] || purManifest.pur?.angle_id || '').slice(0, 24);
-  return {
-    schema_version: 'dev9.ranking.v1',
-    mode: 'ranking_compilation',
-    fps,
-    narrative: {
-      title: String(purManifest.pur?.angle_id || 'PUR').toUpperCase(),
-      category: label,
-      header_label: '',
-      final_label: label,
-    },
-    entries: [{
-      rank: 1,
-      source_id: entry.source_id || 'pur_rank_1',
-      clip_file: entry.clip_file || '',
-      duration_seconds: Number(entry.duration_seconds || 30),
-      label,
-      position: { x_pct: 50, y_pct: 50, scale: 1.15, rotation: 0 },
-      motion: { preset: 'none', intensity: 0.2 },
-      sfx: { enabled: false, file: '', volume: 0.6 },
-      text_style: { font_size: 54, color: '#FFFFFF', accent_color: '#FFD400', x_pct: 8, y_pct: 34 },
-      role: 'final_rank',
-      pur_anti_detection: entry.anti_detection || {},
-      pur_hook_sec: hookSec,
-    }],
-    total_frames: Number(purManifest.total_frames || 0),
-    duration_seconds: Number(purManifest.duration_seconds || 0),
-  };
-}
-
 export const OmniComposition = ({ codex, videoSrc, session: sessionProp, sequences, hybridManifest, hybridIntroSrc, musicTimeline, revealManifest, purManifest }) => {
   if (sessionProp?.review_mode === 'pur_pack' || purManifest?.mode === 'pur_pack') {
     const rawPur = purManifest || sessionProp?.pur_manifest;
@@ -222,12 +182,10 @@ export const OmniComposition = ({ codex, videoSrc, session: sessionProp, sequenc
         </AbsoluteFill>
       );
     }
-    if (styleAuthorized) {
-      // PUR : PAS de musique de fond (music_timeline.json = héritage dev8/dev9,
-      // mp3 absent du codebase de rendu — crash 404 au run 34574052207).
-      // Parité avec le preview validé P1 : overlay seul, sans musique.
-      return <RankingCompilationComposition session={sessionProp} rankingManifest={buildRankingFromPur(rawPur)} musicTimeline={null} />;
-    }
+    // MOTEUR UNIQUE (2026-09-11, décision Warsmith) : le rendu PUR utilise le
+    // composant validé en preview (zooms appliqués, blur codex, overlay boxé,
+    // SFX si sfx_available, voix du clip ON). Plus aucun re-routage ranking.
+    // Musique de fond : coupée (décision Warsmith 11/09 — pas besoin).
     return <PurPackComposition purManifest={rawPur} />;
   }
   if (sessionProp?.review_mode === 'ranking_compilation' || revealManifest?.mode === 'ranking_compilation') {

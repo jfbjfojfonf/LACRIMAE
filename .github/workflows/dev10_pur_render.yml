@@ -154,6 +154,14 @@ jobs:
           pipx install yt-dlp || pip install --user yt-dlp
           yt-dlp --version
 
+      - name: Assets moteur unique — SFX validés preview → codebase de rendu
+        run: |
+          mkdir -p F03_PICTOR/CODEBASE/public/sfx
+          cp F03_PREVIEW/CODEBASE/public/sfx/impact.mp3 F03_PICTOR/CODEBASE/public/sfx/
+          cp F03_PREVIEW/CODEBASE/public/sfx/king_reveal.mp3 F03_PICTOR/CODEBASE/public/sfx/
+          echo "SFX copiés depuis la source de vérité (preview) :"
+          ls -la F03_PICTOR/CODEBASE/public/sfx/
+
       - name: F00-PUR — télécharger le segment VOD de ${{ matrix.angle_id }} (gates G0-G3)
         run: |
           python3 F00_INGEST/CODEBASE/f00_pur.py \

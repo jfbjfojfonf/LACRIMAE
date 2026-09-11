@@ -19,7 +19,7 @@
  * ni inférable) et que --style n'est pas fourni → CONVERSION REFUSÉE.
  * C'est TOI qui choisis le style, jamais le code en silence.
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
@@ -123,6 +123,27 @@ if (packsList) {
   }
   console.log(`  style: ${manifest.style} (source: ${manifest.style_source})`);
 }
+
+// ── PORTES ASSETS (anti-404, calculées jamais déclarées) ──
+// sfx_available : true seulement si chaque type de SFX du codex existe dans
+// F03_PICTOR/CODEBASE/public/sfx/ — sinon rendu SANS SFX, jamais de crash 404.
+// boom n'existe pas encore (fichier à fournir) → mapping boom→impact côté
+// composition, journalisé le 2026-09-11.
+const sfxDir = resolve('F03_PICTOR/CODEBASE/public/sfx');
+const requiredSfx = [...new Set(manifest.entries
+  .flatMap((e) => (e.sfx_list || []).map((s) => String(s.type || '')))
+  .filter(Boolean))];
+// boom n'existe pas encore (fichier à fournir) → mapping provisoire boom→impact
+const missingSfx = [...new Set(requiredSfx.map((t) => (t === 'boom' ? 'impact' : t)))]
+  .filter((t) => !existsSync(resolve(sfxDir, t + '.mp3')));
+manifest.sfx_available = missingSfx.length === 0;
+if (!manifest.sfx_available) {
+  console.log('  ⚠ SFX absents du codebase de rendu : ' + missingSfx.join(', ') + ' → sfx_available=false (rendu sans SFX)');
+} else if (requiredSfx.length) {
+  console.log('  SFX disponibles : ' + requiredSfx.join(', '));
+}
+// Voix du clip ON — décision Warsmith 2026-09-11 (codex : « voix claire » hook).
+manifest.clip_audio_available = true;
 
 writeFileSync(resolve(outPath), JSON.stringify(manifest, null, 2) + '\n');
 console.log(`✓ ${manifest.schema_version} écrit : ${outPath}`);
