@@ -65,7 +65,7 @@ jobs:
 
       - name: Récupérer TOUS les packs PUR filtrés depuis PERTURABO EXPORT
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PERTURABO_TOKEN || secrets.GITHUB_TOKEN }}
           FILTER: ${{ inputs.pack_filter }}
           BRANCH: ${{ inputs.perturabo_branch }}
         run: |
@@ -153,14 +153,6 @@ jobs:
           sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
           pipx install yt-dlp || pip install --user yt-dlp
           yt-dlp --version
-
-      - name: Assets moteur unique — SFX validés preview → codebase de rendu
-        run: |
-          mkdir -p F03_PICTOR/CODEBASE/public/sfx
-          cp F03_PREVIEW/CODEBASE/public/sfx/impact.mp3 F03_PICTOR/CODEBASE/public/sfx/
-          cp F03_PREVIEW/CODEBASE/public/sfx/king_reveal.mp3 F03_PICTOR/CODEBASE/public/sfx/
-          echo "SFX copiés depuis la source de vérité (preview) :"
-          ls -la F03_PICTOR/CODEBASE/public/sfx/
 
       - name: F00-PUR — télécharger le segment VOD de ${{ matrix.angle_id }} (gates G0-G3)
         run: |
