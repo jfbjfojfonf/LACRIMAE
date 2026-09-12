@@ -30,6 +30,7 @@ from pathlib import Path
 
 MAX_SEGMENT_SECONDS = 150.0
 DURATION_TOLERANCE_SEC = 0.5
+REDRIFT_MAX_EXCESS_SEC = 3.0  # au-dela : vraie anomalie, echec legitime
 ALLOWED_CODECS = {"h264", "vp9", "hevc", "av1"}
 
 
@@ -227,10 +228,29 @@ def main() -> int:
     else:
         shutil.move(str(downloaded), str(clip_path))
 
-    # ── G2 DUREE ──
+    # ── G2 DUREE (fix run 34721632577 : dérive keyframes Twitch) ──
+    # --force-keyframes-at-cuts est déjà actif, mais les fragments HLS de
+    # Twitch peuvent quand même ajouter ~1-2 s (A03 : 31.35s au lieu de 30s).
+    # Filet : si l'excès est raisonnable, re-découpe locale (re-encodage,
+    # car -c copy couperait sur keyframes et resterait imprécis), puis re-probe.
     meta = probe_clip(clip_path)
+    excess = meta["duration_seconds"] - expected_duration
+    if excess > DURATION_TOLERANCE_SEC and excess <= REDRIFT_MAX_EXCESS_SEC:
+        print(f"  [..] G2 DUREE : +{excess:.2f}s (dérive fragments Twitch) → re-découpe locale…")
+        fixed = clip_path.with_name(clip_path.stem + "_g2fix.mp4")
+        subprocess.run(
+            ["ffmpeg", "-y", "-v", "error", "-i", str(clip_path),
+             "-t", f"{expected_duration:.3f}",
+             "-c:v", "libx264", "-preset", "veryfast", "-crf", "18",
+             "-c:a", "aac", str(fixed)],
+            check=True, capture_output=True, text=True, timeout=180)
+        meta2 = probe_clip(fixed)
+        if abs(meta2["duration_seconds"] - expected_duration) <= DURATION_TOLERANCE_SEC and meta2["codec"] in ALLOWED_CODECS:
+            fixed.replace(clip_path)
+            meta = meta2
+            print(f"  [✓] G2 DUREE : re-découpe OK → {meta['duration_seconds']}s (attendu {expected_duration}s)")
     if abs(meta["duration_seconds"] - expected_duration) > DURATION_TOLERANCE_SEC:
-        print(f"  [✗] G2 DUREE : {meta['duration_seconds']}s ≠ {expected_duration}s ±{DURATION_TOLERANCE_SEC}")
+        print(f"  [✗] G2 DUREE : {meta['duration_seconds']}s ≠ {expected_duration}s ±{DURATION_TOLERANCE_SEC} (après re-découpe éventuelle)")
         return 1
     print(f"  [✓] G2 DUREE : {meta['duration_seconds']}s (attendu {expected_duration}s)")
 

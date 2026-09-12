@@ -45,3 +45,18 @@ Déclencheur par asset : `"white_flash": true` sur l'entrée de zoom du moment c
 Run **sans filtre** = **tous les assets** en parallèle (matrix GitHub, jusqu'à 20 runners),
 1 MP4 par asset, agrégation stricte : le zip final est refusé si un seul rendu manque.
 Dernier run vert : [34686817585](https://github.com/jfbjfojfonf/LACRIMAE/actions/runs/34686817585) — pur_A01, 28,6 s, 19,3 Mo.
+
+---
+
+## Addendum (2026-09-12, après run 34721632577)
+
+**Résultat tous assets** : A01 ✓, A02 ✓, A03 ✗ (G2 DUREE : 31.35s ≠ 30.0s ±0.5 —
+dérive de fragments HLS Twitch malgré `--force-keyframes-at-cuts`).
+L'agrégation stricte a refusé de publier un bundle incomplet → **règle respectée, aucun zip sorti**.
+
+**Speed 1.05 maintenu par décision de l'opérateur** (2026-09-12) : le garde-fou G0
+continue de signaler tout speed > 1.03, mais aucune correction n'est appliquée côté
+moteur tant que PERTURABO n'a pas tranché. À revoir ici le jour où la valeur change.
+
+**Côté LACRIMAE (déjà appliqué)** : G2 re-découpe localement (ffmpeg re-encode,
+fenêtre ≤ +3 s) quand la durée dérape — la loterie aux keyframes ne peut plus tuer un job.

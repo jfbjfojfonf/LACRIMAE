@@ -4,6 +4,7 @@
 |---|---|---|---|---|---|---|---|---|---|
 | 2026-09-09 | pur-A01 | A01 | 737.48 → 767.48 | 9:16 | G0 ✓ G1 ✓ G2 ✓ G3 ✓ (automatiques, script) | ❌ NON VALIDÉE | ⚠️ brouillon technique — lac_pur_final.mp4 12.6 Mo, 857/857 frames | [34340044745](https://github.com/kioka8877-ux/LACRIMAE/actions/runs/34340044745) | **TEST TECHNIQUE LANCÉ SANS AUTORISATION OPÉRATEUR — NON VALIDÉ.** Artefact à considérer comme brouillon jusqu'à visualisation et décision du Warsmith |
 | 2026-09-12 | pur-A01 | A01 | durée complète | 9:16 | G0 ✓ G1 ✓ G2 ✓ G3 ✓ | n/a (CI direct) | ✅ VALIDÉ — pur_A01_finale.mp4 19,3 Mo, 28,6 s | [34686817585](https://github.com/jfbjfojfonf/LACRIMAE/actions/runs/34686817585) | **RUN VERT — fix staticFile() (d9ba0dc). Décisions du jour : swell continu + flash blanc 5 f + garde-fou speed >1.03 (voir PERTURABO_NOTE_2026-09-12)** |
+| 2026-09-12 | pur-TOUT (A01+A02+A03) | A01, A02, A03 | 30s × 3 | 9:16 | A01 ✓ A02 ✓ A03 ✗ G2 (31.35s≠30s) | n/a (CI direct) | ❌ A03 absent — bundle refusé | [34721632577](https://github.com/jfbjfojfonf/LACRIMAE/actions/runs/34721632577) | **Loterie keyframes Twitch. Fix : G2 re-découpe locale ≤ +3s. Speed 1.05 maintenu (décision opérateur).** |
 | — | — | — | — | — | — | — | — | — | — |
 
 ### Journal technique (2026-09-10)

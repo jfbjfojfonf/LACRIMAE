@@ -130,3 +130,19 @@ cat TRACKING/TODO_CONTINUATION.md
 - **À faire ensuite** : run de validation avec TOUS les assets (A01+A02+A03,
   filtre vide, 3 jobs parallèles), puis chantier panneaux de configuration
   (texte/couleurs/contours/position, blur/split/reframing).
+
+---
+
+## 2026-09-12 (soir) — Run tous assets 34721632577 : A01 ✓ A02 ✓ A03 ✗ → fix G2
+
+- **Run 34721632577** (commit `df23f0a`, 3 jobs parallèles) : A01 ✓ (28.6s), A02 ✓ (28.6s),
+  A03 ✗ — **G2 DUREE 31.35s ≠ 30.0s ±0.5**. Cause : dérive de fragments HLS Twitch
+  (~+1-2 s) malgré `--force-keyframes-at-cuts` (déjà actif dans la commande).
+  Agrégation : refus propre de publier le bundle (règle dev9 respectée, 1 rendu manquant).
+- **Fix appliqué (f00_pur.py)** : G2 à deux passes — si excès ≤ +3 s, re-découpe locale
+  ffmpeg (re-encode libx264 crf18, `-t durée_attendue`, purge auto du fichier périmé)
+  puis re-probe ; échec G2 seulement en dernier recours.
+- **Speed 1.05 MAINTENU par décision de l'opérateur** (le garde-fou G0 signale >1.03
+  mais n'applique aucune correction moteur).
+- **À faire ensuite** : relance run tous assets (planifié ci-dessous), puis chantier
+  panneaux de configuration preview.
