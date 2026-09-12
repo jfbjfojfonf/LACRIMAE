@@ -76,7 +76,7 @@ let purFontLoaded = false;
 function ensurePurFont() {
   if (purFontLoaded || typeof document === 'undefined') return;
   purFontLoaded = true;
-  const face = new FontFace('Montserrat', 'url(fonts/Montserrat-ExtraBold.ttf)', { weight: '900' });
+  const face = new FontFace('Montserrat', 'url(/fonts/Montserrat-ExtraBold.ttf)', { weight: '900' });
   face.load().then((f) => document.fonts.add(f)).catch(() => {});
 }
 
@@ -112,7 +112,11 @@ export function PurPackComposition({ purManifest, session: sessionProp, entryInd
   const sp = normalizePurStyleParams(manifest.style_params, styleName || 'blur');
 
   const localFrame = frame;
-  const videoUrl = entry.clip_file ? entry.clip_file.replace(/^\.?\//, '') : null;
+  // FIX 2026-09-12 (run 34683747939) : le clip DOIT passer par staticFile()
+  // comme tous les autres moteurs (ranking/reveal/hybrid). Le chemin brut
+  // produit une URL hors serveur Remotion en CI -> 404 -> delayRender
+  // "Loading <Html5Video> duration" jamais resolu -> rendu mort.
+  const videoUrl = entry.clip_file ? staticFile(entry.clip_file.replace(/^\.?\//, '')) : null;
 
   // Anti-detection
   const anti = entry.anti_detection || {};
