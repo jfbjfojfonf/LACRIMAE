@@ -140,3 +140,9 @@ https://github.com/kioka8877-ux/LACRIMAE/releases/download/f04_f05_f06_spiderman
 - **Rang 1** : Toujours le dernier, avec effet spécial (glow doré)
 - **Titre** : Word-by-word avec couleur par mot, position configurable
 - **Pas de musique de fond** : Contrairement à dev8, dev9 n'a pas de musique de fond
+
+## Mode PUR (dev10 — bras armé de PERTURABO)
+
+1 asset (A01, A02, …) = 1 vidéo finale = 1 job runner ; le pack = l'ensemble des assets.
+Workflow `dev10_pur_render.yml` : rendus parallèles (jusqu'à 20), flash blanc de transition (5 frames),
+swell continu (montée douce → retour doux, jamais un zoom brutal), agrégation stricte (zip refusé si un rendu manque).

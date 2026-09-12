@@ -1,7 +1,7 @@
 # LACRIMAE dev10 — TODO DE CONTINUATION
 
 > Point d'entrée obligatoire après toute migration de sandbox.
-> Dernière mise à jour : 2026-09-10.
+> Dernière mise à jour : 2026-09-12.
 
 ## État confirmé
 
@@ -106,3 +106,27 @@ cat TRACKING/TODO_CONTINUATION.md
   (blur/zooms/SFX/voix) → tag `pur-canon-v1`.
 - ⏭ En attente du Warsmith : fichier `boom.mp3` (pour lever le mapping provisoire) ;
   purge éventuelle du codex preview (héritages dev4/dev9).
+
+---
+
+## 2026-09-12 — Run vert jfbjfojfonf + swell continu + flash blanc
+
+- **Fix staticFile() validé en CI** : run [34686817585](https://github.com/jfbjfojfonf/LACRIMAE/actions/runs/34686817585)
+  100 % VERT (prepare → render → agrégation stricte 1/1). Sortie : `pur_A01_finale.mp4`
+  19,3 Mo / 28,6 s, voix ON, SFX impact/boom, miroir + crop anti-détection.
+  Artifact `lac-pur-final` prêt pour F05 CAMOUFLAGE.
+- **Décisions Warsmith 2026-09-12 (implémentées aujourd'hui)** :
+  - **Swell continu** remplace le zoom à retour instantané : montée douce → tenue →
+    redescente douce vers 1.0, une seule courbe (`purZoomAtFrame` + ease in-out,
+    champs asset `hold_frames` / `release_frames`).
+  - **Flash blanc** de transition 5 frames (montée/descente symétriques),
+    déclenché par `entry.zooms[].white_flash === true`.
+  - **Garde-fou speed** : G0 signale tout asset dont `speed > 1.03`
+    (accélération perceptible — PERTURABO doit passer à 1.01-1.02).
+  - **Vocabulaire corrigé** : asset = A01/A02/… (1 vidéo finale = 1 job runner),
+    pack = l'ensemble des assets. Workflow et docs renommés en conséquence.
+- **Note PERTURABO** : `TRACKING/PERTURABO_NOTE_2026-09-12.md`
+  (speed, schéma swell, flash blanc, renommage `asset_pur_*`).
+- **À faire ensuite** : run de validation avec TOUS les assets (A01+A02+A03,
+  filtre vide, 3 jobs parallèles), puis chantier panneaux de configuration
+  (texte/couleurs/contours/position, blur/split/reframing).

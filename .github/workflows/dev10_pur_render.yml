@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       pack_filter:
-        description: 'Filtre des packs (ex: pur_A = tous les angles A, vide = TOUS les packs PUR)'
+        description: 'Filtre des assets (ex: pur_A = tous les angles A, vide = TOUS les assets PUR)'
         required: false
         default: ''
         type: string
@@ -63,7 +63,7 @@ jobs:
         with:
           ref: dev10
 
-      - name: Récupérer TOUS les packs PUR filtrés depuis PERTURABO EXPORT
+      - name: Récupérer TOUS les assets PUR filtrés depuis PERTURABO EXPORT
         env:
           GH_TOKEN: ${{ secrets.PERTURABO_TOKEN || secrets.GITHUB_TOKEN }}
           FILTER: ${{ inputs.pack_filter }}
@@ -72,15 +72,15 @@ jobs:
           mkdir -p "$RUNNER_TEMP/pur-packs"
           PACKS=$(gh api "repos/${PERTURABO_REPO}/contents/${PERTURABO_EXPORT}?ref=${BRANCH}" \
             --jq '[.[] | select(.name | startswith("production_pack_pur_")) | .name]')
-          echo "Packs PUR disponibles : ${PACKS}"
+          echo "Assets PUR disponibles : ${PACKS}"
           if [ -n "${FILTER}" ]; then
             SELECTED=$(echo "${PACKS}" | jq -r --arg f "${FILTER}" '[.[] | select(contains($f))] | sort | .[]')
           else
             SELECTED=$(echo "${PACKS}" | jq -r 'sort | .[]')
           fi
           COUNT=$(echo "${SELECTED}" | grep -c . || true)
-          echo "Packs sélectionnés : ${COUNT}"
-          [ "${COUNT}" -ge 1 ] || { echo "✗ aucun pack PUR trouvé"; exit 1; }
+          echo "Assets sélectionnés : ${COUNT}"
+          [ "${COUNT}" -ge 1 ] || { echo "✗ aucun asset PUR trouvé"; exit 1; }
           while IFS= read -r PACK; do
             gh api "repos/${PERTURABO_REPO}/contents/${PERTURABO_EXPORT}/${PACK}?ref=${BRANCH}" \
               --jq .content | base64 -d > "$RUNNER_TEMP/pur-packs/${PACK}"

@@ -150,6 +150,28 @@ def main() -> int:
         return 1
     print("  [✓] G0 PACK : pack PUR valide")
 
+    # ── Garde-fou speed (décision Warsmith 2026-09-12) ──
+    def _pur_speeds(node):
+        found = []
+        if isinstance(node, dict):
+            ad = node.get("anti_detection")
+            if isinstance(ad, dict) and ad.get("speed") is not None:
+                try:
+                    found.append(float(ad["speed"]))
+                except (TypeError, ValueError):
+                    pass
+            for v in node.values():
+                found.extend(_pur_speeds(v))
+        elif isinstance(node, list):
+            for v in node:
+                found.extend(_pur_speeds(v))
+        return found
+
+    _speeds = [s for s in _pur_speeds(pack) if s and s > 1.0]
+    if _speeds and max(_speeds) > 1.03:
+        print(f"  [!] G0 SPEED : speed max={max(_speeds)} > 1.03 — accélération perceptible pour un humain.")
+        print("      PERTURABO : viser 1.01-1.02 (imperceptible, toujours efficace contre les robots).")
+
     mi = pack["montage_instructions"]
     segment = mi.get("segment") or pack.get("source") or {}
     vod_url = segment.get("source_url") or pack["source"].get("vod_url")

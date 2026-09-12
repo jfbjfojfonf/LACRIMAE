@@ -16,18 +16,62 @@ import { AbsoluteFill, Audio, Sequence, staticFile, useCurrentFrame, useVideoCon
 import { antiDetectionTransform, antiDetectionSpeed } from './antiDetection';
 import { normalizePurOverlayParams, normalizePurStyleParams } from './bridgeClipper';
 
-/** Zoom ponctuel actif à ce frame ? → scale multipliant. */
+/**
+ * Swell continu (décision Warsmith 2026-09-12) — PAS un zoom :
+ * montée douce → tenue légère → redescente douce jusqu'à 1.0, en UNE
+ * seule courbe continue. Zéro discontinuité, zéro retour instantané.
+ * Champs asset (optionnels) : hold_frames, release_frames, scale_from, scale_to.
+ */
+function purEaseInOut(t) {
+  const x = Math.min(1, Math.max(0, t));
+  return x * x * (3 - 2 * x);
+}
+
 function purZoomAtFrame(zooms, frame) {
   let scale = 1;
   for (const z of zooms || []) {
     const start = Number(z.moment_frame || 0);
-    const end = start + Number(z.frames || 3);
-    if (frame >= start && frame < end) {
-      const p = (frame - start) / Math.max(1, end - start);
-      scale *= z.easing === 'NONE' ? z.scale_to : (z.scale_from + (z.scale_to - z.scale_from) * p);
+    const attack = Math.max(1, Number(z.frames || 3));
+    const hold = Math.max(0, Number(z.hold_frames || 0));
+    const release = Math.max(1, Number(z.release_frames || Math.round(attack * 1.5)));
+    if (frame >= start && frame < start + attack + hold + release) {
+      const peak = Number(z.scale_to ?? 1.06);
+      const from = Number(z.scale_from ?? 1);
+      let s;
+      if (frame < start + attack) {
+        s = from + (peak - from) * purEaseInOut((frame - start) / attack);
+      } else if (frame < start + attack + hold) {
+        s = peak;
+      } else {
+        s = peak + (1 - peak) * purEaseInOut((frame - start - attack - hold) / release);
+      }
+      scale *= s;
     }
   }
   return scale;
+}
+
+/**
+ * Flash blanc de transition (décision Warsmith 2026-09-12) :
+ * montée + redescente symétriques, 5 frames par défaut.
+ * Déclenché par entry.zooms[].white_flash === true (frontière de segment).
+ */
+function purWhiteFlashAtFrame(zooms, frame) {
+  let opacity = 0;
+  for (const z of zooms || []) {
+    if (z.white_flash !== true && z.white_flash !== 'true') continue;
+    const start = Number(z.moment_frame || 0);
+    const f = Math.max(1, Number(z.frames || 5));
+    const attack = Math.max(1, Math.round(f / 2));
+    const release = Math.max(1, f - attack);
+    const peak = Number(z.flash_opacity ?? 1);
+    if (frame >= start && frame < start + attack) {
+      opacity = Math.max(opacity, peak * ((frame - start) / attack));
+    } else if (frame >= start + attack && frame < start + attack + release) {
+      opacity = Math.max(opacity, peak * (1 - (frame - start - attack) / release));
+    }
+  }
+  return Math.min(1, Math.max(0, opacity));
 }
 
 /** Crop offset depuis anti_detection.crop_pct (2.5% des bords). */
@@ -126,6 +170,7 @@ export function PurPackComposition({ purManifest, session: sessionProp, entryInd
 
   // Zooms ponctuels (brutal_impact / snap_zoom)
   const zoomScale = purZoomAtFrame(entry.zooms, localFrame);
+  const whiteFlash = purWhiteFlashAtFrame(entry.zooms, localFrame);
 
   // v2 : texte STATIQUE — visible du début à la fin (static_text !== false),
   // sinon comportement legacy (après le hook). Pas d'animation.
@@ -231,6 +276,11 @@ export function PurPackComposition({ purManifest, session: sessionProp, entryInd
           </div>
         )}
       </AbsoluteFill>
+
+      {/* Flash blanc de transition (décision Warsmith 2026-09-12) — sous le texte */}
+      {whiteFlash > 0 && (
+        <AbsoluteFill style={{ backgroundColor: '#FFFFFF', opacity: whiteFlash, pointerEvents: 'none' }} />
+      )}
 
       {/* Overlay titre PUR : STATIQUE du début à la fin (v2) — pas d'animation */}
       {overlayVisible && (
