@@ -177,3 +177,20 @@ cat TRACKING/TODO_CONTINUATION.md
 - **Mini-rendu 6 s EFFECTUE (run 34744097428, SUCCES)** : A/V synchro prouvee
   (video 6,03 s / audio 6,08 s). Fixes valides -> run complet tous assets lance
   avec fx_mode=off + mute_bg=true.
+
+---
+
+## 2026-09-13 — Brainstorm Caviar 99 % + SPEC PERTURABO redigee (aucune implémentation)
+
+- Run complet 34744374215 (tous assets, fx_mode=off, mute_bg) : SUCCES total cote
+  pipeline — clips propres, sans montage narratif (etat des lieux actuel).
+- Brainstorm « Caviar 99 % » (7 cuts, 4 piliers, analogie Heisenberg) avec l'operateur :
+  doctrine des roles (PERTURABO = le OU/QUOI, LACRIMAE = le COMMENT, Warsmith tranche),
+  flash blanc = entree de B-roll UNIQUEMENT (sortie en Flow Cut), budgets anti-saturation
+  en portes bloquantes (pas des warnings).
+- **Note de cadrage ecrite : `TRACKING/CAVIAR_SPEC_PERTURABO.md`** — schema JSON cible
+  (narrative / broll / audio_design, retrocompatible v2), grammaire des 7 cuts avec
+  faisabilite, doctrine, ce que PERTURABO doit ajouter aux packs, ce que LACRIMAE
+  construira (Directeur : silences, amplitudes, whisper CPU, gates P-CAV), phases 0-4.
+- **Rien n'est implemente** : GO operateur requis a chaque phase (regle du 09-09).
+  Prochaine etape : PERTURABO valide/amende le schema §5 + fournit un pack de test.

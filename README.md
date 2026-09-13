@@ -146,3 +146,5 @@ https://github.com/kioka8877-ux/LACRIMAE/releases/download/f04_f05_f06_spiderman
 1 asset (A01, A02, …) = 1 vidéo finale = 1 job runner ; le pack = l'ensemble des assets.
 Workflow `dev10_pur_render.yml` : rendus parallèles (jusqu'à 20), flash blanc de transition (5 frames),
 swell continu (montée douce → retour doux, jamais un zoom brutal), agrégation stricte (zip refusé si un rendu manque).
+
+- **[SPEC CAVIAR 99 %]**(`TRACKING/CAVIAR_SPEC_PERTURABO.md`) — contrat de montage narratif PERTURABO <-> LACRIMAE (7 cuts, 4 piliers, schema JSON cible, doctrine des roles). Cadrage uniquement.
