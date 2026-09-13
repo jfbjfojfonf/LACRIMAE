@@ -194,3 +194,26 @@ cat TRACKING/TODO_CONTINUATION.md
   construira (Directeur : silences, amplitudes, whisper CPU, gates P-CAV), phases 0-4.
 - **Rien n'est implemente** : GO operateur requis a chaque phase (regle du 09-09).
   Prochaine etape : PERTURABO valide/amende le schema §5 + fournit un pack de test.
+
+---
+
+## 2026-09-13 (suite) — GO operateur : GROUPE 1 CAVIAR implemente (Directeur + Porte P-CAV)
+
+- **`F00_INGEST/CODEBASE/caviar.py`** (nouveau module) :
+  - `gate_pcav_budgets()` : porte P-CAV BLOQUANTE — schema narratif (hook_type,
+    is_climax, energy_curve) + budgets anti-saturation (broll<=3 et <=45 frames,
+    sfx obligatoire, flashs<=3 espaces >=1,5s, zooms<=4 espaces >=2s, element unique,
+    broll interdit pendant la resolution). Champs absents = bypass (packs v1).
+  - `analyze_clip()` : LE DIRECTEUR (advisory, jamais bloquant) — carte des silences
+    (ffmpeg silencedetect), clusters RMS (candidats is_climax), whisper CPU optionnel
+    (punchline = dernier mot avant la plus longue pause).
+- **Cablage f00_pur.py** : P-CAV s'execute apres G0 (echec = job rouge) ; le Directeur
+  tourne apres G3 et ecrit `pur_caviar_<angle>.json` + resume dans pur_sources.json
+  (cle `caviar`). Echec d'analyse = tolere et journalise.
+- **Tests** : `F00_INGEST/tests/test_caviar.py` — 20/20 verts (budgets, schema, clusters
+  RMS, detection silence ffmpeg). Tests existants f00_pur : 9/10 verts — le fail
+  `test_find_downloaded_file_prefers_mp4` est PRE-EXISTANT (identique sans mes mods).
+- **Doc** : `TRACKING/CAVIAR_GATES.md` (regles P-CAV + Directeur + phases restantes).
+- **Prochaine etape** : Groupe 2 (Phase 3 rendu narratif) APRES pack de test PERTURABO
+  + GO operateur : Jump Cuts (table source<->timeline + recalcul durees G2/aggregate),
+  ducking is_climax, rupture overlay, rendu B-roll.

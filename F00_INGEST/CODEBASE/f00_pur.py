@@ -25,6 +25,8 @@ import json
 import shutil
 import subprocess
 import sys
+
+import caviar  # noqa: E402 — couche Caviar (porte P-CAV + Directeur advisory)
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -180,6 +182,20 @@ def main() -> int:
     end = float(segment.get("end_sec") if segment.get("end_sec") is not None else pack["source"]["end_sec"])
     expected_duration = end - start
     angle_id = (pack.get("identite") or {}).get("angle_id") or pack.get("pack_id") or "clip"
+
+    # ── Porte P-CAV (Caviar, 2026-09-13) — budgets anti-saturation ──
+    # Champs narratifs présents = validation stricte (job rouge si dépassement).
+    # Champs absents (packs v1) = bypass, comportement inchangé.
+    if caviar.has_caviar_fields(pack):
+        pcav_ok, pcav_errors = caviar.gate_pcav_budgets(pack, expected_duration=expected_duration)
+        if not pcav_ok:
+            for e in pcav_errors:
+                print(f"  [✗] P-CAV : {e}")
+            print("\n═══ CONTRÔLE P-CAV : ✗ ÉCHOUÉ (spec CAVIAR_SPEC_PERTURABO §5) ═══")
+            return 1
+        print("  [✓] P-CAV : budgets narratifs respectés")
+    else:
+        print("  [·] P-CAV : aucun champ narratif (pack v1) — bypass")
     clip_name = args.clip_name or f"pur_{angle_id}.mp4"
 
     cmd = build_ytdlp_command(vod_url, start, end, Path(clip_name))
@@ -260,6 +276,27 @@ def main() -> int:
         return 1
     print(f"  [✓] G3 CODEC : {meta['codec']} {meta['width']}x{meta['height']}")
 
+    # ── CAVIAR — le Directeur (analyse advisory, JAMAIS bloquante) ──
+    # Produit des PROPOSITIONS (trims, candidats climax) consommables par
+    # PERTURABO/l'opérateur. Rien n'est appliqué au rendu sans validation.
+    try:
+        analysis = caviar.analyze_clip(clip_path, expected_duration)
+        caviar_path = args.out / f"pur_caviar_{angle_id}.json"
+        caviar_path.write_text(json.dumps(analysis, indent=2, ensure_ascii=False), encoding="utf-8")
+        print(f"  [✓] CAVIAR : {len(analysis['trim_proposals'])} trim(s) proposé(s), "
+              f"{len(analysis['climax_proposals'])} candidat(s) climax → {caviar_path.name}")
+        caviar_summary = {
+            "schema": caviar.SCHEMA_VERSION,
+            "analysis_file": caviar_path.name,
+            "trim_proposals": len(analysis["trim_proposals"]),
+            "climax_proposals": analysis["climax_proposals"],
+            "speech_ratio": analysis.get("speech_ratio"),
+            "whisper": analysis.get("whisper"),
+        }
+    except Exception as exc:  # advisory : un échec d'analyse ne tue pas le job
+        print(f"  [!] CAVIAR : analyse indisponible ({exc}) — on continue")
+        caviar_summary = {"schema": caviar.SCHEMA_VERSION, "error": str(exc)}
+
     # ── Manifeste pur_sources.json ──
     # MULTI-VIDÉOS (--append) : chaque pack ajoute son entrée à la liste
     # segments[] — le workflow agrège le tout et le convertisseur consomme
@@ -274,6 +311,7 @@ def main() -> int:
         "clip_file": f"clips/{clip_name}",
         "probe": meta,
         "gates": {"G0": "PASSED", "G1": "PASSED", "G2": "PASSED", "G3": "PASSED"},
+        "caviar": caviar_summary,
     }
     sources_path = args.out / "pur_sources.json"
     if args.append and sources_path.exists():

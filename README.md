@@ -148,3 +148,4 @@ Workflow `dev10_pur_render.yml` : rendus parallèles (jusqu'à 20), flash blanc 
 swell continu (montée douce → retour doux, jamais un zoom brutal), agrégation stricte (zip refusé si un rendu manque).
 
 - **[SPEC CAVIAR 99 %]**(`TRACKING/CAVIAR_SPEC_PERTURABO.md`) — contrat de montage narratif PERTURABO <-> LACRIMAE (7 cuts, 4 piliers, schema JSON cible, doctrine des roles). Cadrage uniquement.
+- **[GATES CAVIAR]**(`TRACKING/CAVIAR_GATES.md`) — porte P-CAV (budgets bloquants) + Directeur (analyse advisory) — Groupe 1 implemente.
