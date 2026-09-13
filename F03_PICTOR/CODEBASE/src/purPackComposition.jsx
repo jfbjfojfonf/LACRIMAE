@@ -165,11 +165,23 @@ export function PurPackComposition({ purManifest, session: sessionProp, entryInd
   // Anti-detection
   const anti = entry.anti_detection || {};
   const speed = Number(anti.speed || 1);
-  const antiTransform = [antiDetectionTransform(anti, frame, fps), purCropTransform(anti.crop_pct)]
-    .filter(Boolean).join(' ');
 
-  // Zooms ponctuels (brutal_impact / snap_zoom)
-  const zoomScale = purZoomAtFrame(entry.zooms, localFrame);
+  // Interrupteurs operateur (workflow, 2026-09-12) — isolation SANS toucher aux assets :
+  // fx_mode=off -> AUCUN effet d'echelle (zooms asset, swell, breathing_zoom) : clip normal.
+  //   Miroir, crop et speed anti-detection restent appliques (decision Warsmith).
+  // mute_bg=true -> style blur : seule la couche nette porte la voix (les 2 couches sonores
+  //   decalees simulaient une course/echo de l'audio). Flash blanc de transition : TOUJOURS actif.
+  const fxOptions = manifest.fx_options || {};
+  const fxOff = fxOptions.fx_mode === 'off';
+  const muteBg = fxOptions.mute_bg === true;
+
+  const antiTransform = [
+    fxOff ? (anti.mirror ? 'scaleX(-1)' : undefined) : antiDetectionTransform(anti, frame, fps),
+    purCropTransform(anti.crop_pct),
+  ].filter(Boolean).join(' ');
+
+  // Zooms ponctuels (brutal_impact / snap_zoom) — desactives en fx_mode=off
+  const zoomScale = fxOff ? 1 : purZoomAtFrame(entry.zooms, localFrame);
   const whiteFlash = purWhiteFlashAtFrame(entry.zooms, localFrame);
 
   // v2 : texte STATIQUE — visible du début à la fin (static_text !== false),
@@ -213,7 +225,10 @@ export function PurPackComposition({ purManifest, session: sessionProp, entryInd
 
   const videoProps = {
     src: videoUrl,
-    startFrom: Math.round(localFrame * speed),
+    // FIX 2026-09-12 (gel ~14s sur A03) : l'ancien startFrom = localFrame*speed DOUBLAIT
+    // l'avance (seek + progression ~ 2,1x) -> 30s de contenu epuisees en ~14,6s de
+    // timeline, video gelee + voix compresse. Remotion avance SEUL depuis startFrom=0.
+    startFrom: 0,
     muted: false, // VOIX DU CLIP ON — décision Warsmith 2026-09-11 (codex : « voix claire » hook)
     playbackRate: speed,
   };
@@ -245,7 +260,7 @@ export function PurPackComposition({ purManifest, session: sessionProp, entryInd
           styleLayout === 'blur' ? (
             /* ── BLUR : couche arrière floutée + couche avant nette positionnable ── */
             <>
-              <Video {...videoProps}
+              <Video {...videoProps} muted={muteBg}
                 style={{ width: '100%', height: '100%', objectFit: 'cover', filter: `blur(${Number(sp.degree || 24)}px) brightness(0.6)`, transform: `scale(${(Number(sp.bg_scale || 118) / 100).toFixed(4)})` }} />
               <div style={{ position: 'absolute', left: 0, right: 0, top: `${Number(sp.fg_y_pct ?? 62)}%`, height: `${Number(sp.fg_scale || 72)}%`, transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Video {...videoProps}

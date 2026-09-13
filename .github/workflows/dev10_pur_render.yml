@@ -40,6 +40,16 @@ on:
         required: false
         default: '0'
         type: string
+      fx_mode:
+        description: "Effets d'échelle : 'asset' = zooms du codex (défaut), 'off' = clip normal sans aucun zoom/gonflement"
+        required: false
+        default: 'asset'
+        type: string
+      mute_bg:
+        description: 'Style blur : couche arrière muette (une seule voix, plus de double audio)'
+        required: false
+        default: 'true'
+        type: string
 
 permissions:
   contents: read
@@ -180,6 +190,9 @@ jobs:
           codex_path = Path('F03_PICTOR/CODEBASE/src/data/codex.json')
           d = json.loads(codex_path.read_text()) if codex_path.exists() else {}
           manifest = json.loads(Path('F03_PICTOR/OUT/${{ matrix.angle_id }}/pur_manifest.json').read_text())
+          # Interrupteurs opérateur (aucun asset modifié) : fx_mode / mute_bg
+          manifest['fx_options'] = {'fx_mode': '${{ inputs.fx_mode }}', 'mute_bg': '${{ inputs.mute_bg }}' == 'true'}
+          print(f"fx_options : {manifest['fx_options']}")
           d['pur_manifest'] = manifest
           d['review_mode'] = 'pur_pack'
           d.setdefault('session', {})['review_mode'] = 'pur_pack'

@@ -60,3 +60,20 @@ moteur tant que PERTURABO n'a pas tranché. À revoir ici le jour où la valeur 
 
 **Côté LACRIMAE (déjà appliqué)** : G2 re-découpe localement (ffmpeg re-encode,
 fenêtre ≤ +3 s) quand la durée dérape — la loterie aux keyframes ne peut plus tuer un job.
+
+---
+
+## Addendum 2 (2026-09-12, nuit — post run 34724140887)
+
+**Speed 1.05 n'etait PAS la cause de l'acceleration percue.** Le vrai coupable était
+côté LACRIMAE : `startFrom = localFrame * speed` doublait l'avance du clip (~2,1x).
+Fix posé (`startFrom: 0`). La vitesse de lecture reste celle que tu as choisie.
+
+**Breathing_zoom : template cachée.** Tes packs activent `breathing_zoom`
+(1.02 <-> 1.08, cycle 8 s) dans l'anti_detection — découvert seulement au scan des
+MP4 du run. LACRIMAE l'ignore désormais quand `fx_mode=off` (interrupteur workflow).
+Si tu veux le garder pour PERTURABO, rends-le optionnel/doux ou documente-le dans les
+packs : l'opérateur ne doit pas découvrir un effet par hasard.
+
+**Aucun asset modifié** : les interrupteurs vivent dans le workflow LACRIMAE
+(`fx_mode`, `mute_bg`). Les packs continuent de porter speed/crop/mirror/zooms.

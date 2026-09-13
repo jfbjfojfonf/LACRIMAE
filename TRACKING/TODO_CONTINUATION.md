@@ -146,3 +146,31 @@ cat TRACKING/TODO_CONTINUATION.md
   mais n'applique aucune correction moteur).
 - **À faire ensuite** : relance run tous assets (planifié ci-dessous), puis chantier
   panneaux de configuration preview.
+
+---
+
+## 2026-09-12 (nuit) — Diagnostic audio/video run 34724140887 : DOUBLE startFrom + template cachee + fix
+
+- **Run 34724140887 (tous assets) : SUCCES complet** — G2 deux passes a sauve A03,
+  agrégation stricte satisfaite, bundle `lac-pur-final` publié (3 MP4).
+- **Constat operateur** : audio « qui court » (compression + course), video gelee
+  vers ~14 s sur A03, gonflements bizarres.
+- **Cause racine (prouvee)** : `startFrom: Math.round(localFrame * speed)` dans
+  `purPackComposition.jsx` DOUBLAIT l'avance du clip (seek + progression Remotion ~ 2,1x)
+  -> 30 s de contenu epuisees en ~14,6 s de timeline ; la voix se retrouve comprimee dans ce
+  temps reduit. Le speed 1.05 n'ajoutait que 5 % : ce n'etait PAS lui.
+- **Template cachee des assets** : `breathing_zoom` (1.02 <-> 1.08, cycle 8 s) enfouie
+  dans l'anti_detection des packs -> gonflement perpetuel. Et bug de mon swell :
+  retour a 1.0 au lieu de `scale_from` -> saut visible de -8 % apres chaque zoom.
+- **Double audio (style blur)** : les 2 couches Video (floue + nette) portaient toutes
+  deux la voix -> echo/course.
+- **Fixes (interrupteurs, aucun asset modifie)** :
+  - `startFrom: 0` (fix de bug, toujours actif) — Remotion avance SEUL depuis 0.
+  - `fx_mode=off` (input workflow) : AUCUN zoom/swell/breathing — clip normal.
+    Miroir + crop + speed conserves (decision operateur).
+  - `mute_bg=true` (input workflow, defaut) : couche arriere blur muette, une seule voix.
+  - Flash blanc de transition : TOUJOURS actif (hors fx_mode, non concerne).
+- **Protocole d'isolation 6 s** : mini-rendus `max_duration=6` par combinaison
+  d'interrupteurs avant le run complet — comparaison rapide, pipeline intact.
+- **A faire ensuite** : mini-rendu 6 s (A01, fx off) -> controle visuel operateur ->
+  run complet tous assets avec fx_mode=off.

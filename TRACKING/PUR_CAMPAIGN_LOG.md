@@ -198,3 +198,12 @@ Run A01 post-moteur-unique (GO Warsmith requis, règle du 09-09) → contrôle v
 tag `pur-canon-v1`. Attendu cette fois : blur codex (24px, bande 46% à y 52%), zooms
 1,15×/1,30× à 8,62 s et 24,43 s, SFX impact aux 2 zooms, voix du clip audible,
 overlay boxé unique 44px à y 11%.
+
+### Run 34724140887 (commit 108b688) — tous assets ✓ + diagnostic audio
+
+- G2 deux passes : A03 re-decoupe localement (dérive +1,35 s corrigee) -> 3/3 jobs verts,
+  agregation OK, bundle final publie.
+- **Post-mortem operateur** : gel ~14 s (double avance `startFrom`, fix -> 0),
+  gonflements (`breathing_zoom` cache des assets + saut du swell -> corriges via
+  `fx_mode=off`), double voix (couches blur -> `mute_bg=true`).
+- Interrupteurs pilotables depuis le workflow : `fx_mode` (asset|off), `mute_bg` (bool).
