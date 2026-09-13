@@ -207,3 +207,10 @@ overlay boxé unique 44px à y 11%.
   gonflements (`breathing_zoom` cache des assets + saut du swell -> corriges via
   `fx_mode=off`), double voix (couches blur -> `mute_bg=true`).
 - Interrupteurs pilotables depuis le workflow : `fx_mode` (asset|off), `mute_bg` (bool).
+
+### Run isolation 34744097428 (commit d3e6ee4) — preuve des fixes (6 s, A01, fx_mode=off)
+
+- SUCCES. Mesures ffprobe du final : video 6,033 s / audio 6,080 s — synchro A/V
+  retablie (avant : A03 audio +1,3 s de derive, contenu epuise en ~14,3 s).
+- startFrom=0 verifie : 6 s de timeline = 6 s de contenu reel, plus de course.
+- mute_bg verifie : une seule piste vocale dans le mux.

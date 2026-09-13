@@ -174,3 +174,6 @@ cat TRACKING/TODO_CONTINUATION.md
   d'interrupteurs avant le run complet — comparaison rapide, pipeline intact.
 - **A faire ensuite** : mini-rendu 6 s (A01, fx off) -> controle visuel operateur ->
   run complet tous assets avec fx_mode=off.
+- **Mini-rendu 6 s EFFECTUE (run 34744097428, SUCCES)** : A/V synchro prouvee
+  (video 6,03 s / audio 6,08 s). Fixes valides -> run complet tous assets lance
+  avec fx_mode=off + mute_bg=true.
