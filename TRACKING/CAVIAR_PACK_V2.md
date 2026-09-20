@@ -5,9 +5,10 @@
 > l'exécute. **Rappel doctrinal** : F00D commande le geste, F06 exécute le
 > reste, le bras armé rend, le gate vérifie — personne ne crée.
 
-**Statut (2026-09-15)** : Groupe 1 v2 implémenté et vérifié sur le pack RÉEL
-`production_pack_pur_voxc2_blur_v2.json` (voxc-2). Groupe 2 (rendu du panneau
-possédé par la partition) en attente de GO.
+**Statut (2026-09-15)** : Groupes 1 v2 + 2 v2 implémentés et vérifiés sur le
+pack RÉEL `production_pack_pur_voxc2_blur_v2.json` (voxc-2) — le panneau
+possédé par la partition est rendu (§8). Reste : dépôt des MP4 réels +
+rendu CI de bout en bout (§9).
 
 ---
 
@@ -101,12 +102,36 @@ checksum marqué « non vérifié »).
   même à `speed: 1.05`.
 - Tests : adaptateur v2 **12/12**, gate **24/24**, moteur **21/21**.
 
-## 8. Ce qui reste (Groupe 2 — après GO opérateur)
+## 8. Groupe 2 v2 — le panneau possédé par la partition (IMPLÉMENTÉ)
 
-1. **Rendu du panneau possédé par la partition** : appliquer `crop_zoom`
-   (1.3), `blur_radius_px` (18) et `panel: vertical_text_overlay` au B-roll
-   rendu (aujourd'hui : overlay plein cadre simple).
-2. **Rendu réel de bout en bout** sur voxc-2 (ou pack équivalent) : jump cuts
-   (0 dans ce pack), punch-ins (0), smash (exporté, s'activera avec la piste
-   musicale), panels B-roll dès que les MP4 `BLUR-01/02` sont déposés dans
-   `public/broll/`.
+Le Groupe 2 v2 applique l'EMBALLAGE que F00D possède (note §3.3/§3.5/§3.6) :
+
+- **`crop_zoom`** (ex. 1.3) : zoom de recadrage appliqué à la couche B-roll
+  rendue — plafonné [1.0, 2.0] (hors doctrine → plafonné, jamais cassé).
+- **`blur_radius_px`** (ex. 18) : flou du panneau — plafonné [0, 60] px.
+- **`panel: vertical_text_overlay`** : habillage « cadre vertical + jauge
+  latérale » (décor SEUL — le TEXTE éditorial reste possédé par F06,
+  hiérarchie note §3.6). Type inconnu → `plain` (rendu ne casse jamais).
+- **Cap 45 frames** : un panneau plus long est TRONQUÉ au cap (dépôt tracé).
+- **Élément unique** (note §3.5) : un punch-in pendant un panneau est DÉPOSÉ
+  (le panneau est l'événement fort) — vérifié au rendu ET au gate.
+- **`resolution_at`** : AUCUN événement après la résolution narrative — le
+  gate vérifie le pack, le moteur re-vérifie la TIMELINE réelle (dernier
+  filet) : punch-ins, B-rolls et smash audio fautifs sont déposés.
+- **Repli registre** : si la partition omet l'emballage, le registre
+  sémantique le fournit ; sinon replis doctrinaux (1.3 / 18 px / plain).
+- **v1 inchangé** : un B-roll numéroté sans emballage ni entrée sémantique
+  → `panel_spec: null` → rendu plein cadre historique à l'identique.
+
+Code : `F03_PICTOR/CODEBASE/src/caviarPanel.js` (résolution + habillage) +
+`caviarRender.js` (application moteur) + `purPackComposition.jsx` (rendu).
+Tests : `tests/caviar_panel.test.mjs` — **13/13**.
+
+## 9. Ce qui reste (rendu réel — après GO opérateur)
+
+1. **Déposer les MP4 réels** `BLUR-01.mp4` / `BLUR-02.mp4` dans
+   `F03_PICTOR/CODEBASE/public/broll/` (jamais commités — règle registre).
+2. **Rendu CI de bout en bout** sur voxc-2 (ou pack équivalent) : le pack
+   réel passe déjà les portes v2 + le budget ; le rendu s'exécute avec le
+   bloc caviar actif (jump cuts 0, punch-ins 0, smash exporté — s'activera
+   avec la piste musicale PUR, panels appliqués dès les MP4 présents).

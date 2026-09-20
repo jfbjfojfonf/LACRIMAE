@@ -99,6 +99,18 @@ Budget d'Attention AVANT d'appliquer — excédent déposé (respiration gagnée
 gate rouge. Gate CI rouge dure : `caviar_gate.py` (pack avant rendu + agrégat
 avant publication). Tests moteur : `cd F03_PICTOR/CODEBASE && npm run test:caviar`.
 
+## Groupe 2 v2 — le panneau possédé par la partition F00D
+
+En v2, F00D possède l'EMBALLAGE du panneau : `crop_zoom` (plafonné [1.0-2.0]),
+`blur_radius_px` ([0-60]) et `panel` (`vertical_text_overlay` = cadre vertical
++ jauge — décor SEUL, le texte éditorial reste possédé par F06, note §3.6).
+Résolution : `F03_PICTOR/CODEBASE/src/caviarPanel.js` ; application :
+`caviarRender.js` (`panel_spec`, cap 45 frames, élément unique — punch-in
+pendant un panneau déposé —, `resolution_at` re-vérifié sur la timeline) ;
+rendu : `purPackComposition.jsx`. B-roll v1 sans emballage → `panel_spec:
+null` → rendu plein cadre historique. Tests : `node
+tests/caviar_panel.test.mjs` (13/13).
+
 ## Ce que Heisenberg NE fait PAS
 
 - Écrire une accroche, choisir un segment, décider d'un style (PERTURABO/Warsmith).

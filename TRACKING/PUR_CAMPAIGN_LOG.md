@@ -272,5 +272,11 @@ overlay boxé unique 44px à y 11%.
   panels au top de la partition OU sous events.* (les deux acceptés).
 - CI : étape gate étendue (`--pack-v2` + checksum best-effort via le
   manifeste F00D déclaré). Tests : v2 12/12, gate 24/24, moteur 21/21.
-- À venir : rendu du panneau possédé par la partition (crop_zoom/blur/panel)
-  puis rendu réel de bout en bout — après GO opérateur.
+- **Groupe 2 v2 (2026-09-15)** — panneau possédé par la partition : le
+  rendu applique l'emballage F00D (`crop_zoom` 1.3 plafonné [1-2],
+  `blur_radius_px` 18 plafonné [0-60], habillage `vertical_text_overlay`
+  décor-seul — texte = F06), cap 45 frames, élément unique (punch-in
+  pendant un panneau déposé), `resolution_at` re-vérifié sur la timeline.
+  Tests : panneau 13/13, moteur 21/21, v2 12/12, gate 24/24, frégate 20/20.
+- À venir : MP4 réels `BLUR-01/02` dans `public/broll/` puis rendu réel de
+  bout en bout sur voxc-2.

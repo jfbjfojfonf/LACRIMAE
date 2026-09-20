@@ -308,8 +308,25 @@ cat TRACKING/TODO_CONTINUATION.md
 - **CI** : étape gate v1/v2 étendue (`--pack-v2` + tentative checksum via le
   manifeste F00D déclaré, best-effort non bloquant si introuvable).
 - **Tests** : moteur 21/21 + v2 12/12 + gate 24/24 + frégate 20/20 + Groupe 1.
-- **Reste (Groupe 2)** : rendu du PANNEAU possédé par la partition (crop_zoom,
-  blur_radius_px, panel vertical_text_overlay) puis rendu réel voxc-2.
-- **Reste (Groupe 3)** : docs v2 dédiées (CAVIAR_PACK_V2.md), registry
-  sémantique côté HEISENBERG, push final.
+### 2026-09-15 (v2) — GO operateur : GROUPE 2 v2 — PANNEAU POSSEDE PAR LA PARTITION F00D
+
+- **`caviarPanel.js`** (nouveau, fonctions pures) : résolution de l'EMBALLAGE
+  du panneau depuis extra/registre (`crop_zoom` plafonné [1.0-2.0],
+  `blur_radius_px` [0-60], `panel` — type inconnu → `plain`, rendu ne casse
+  jamais) + habillage `vertical_text_overlay` (cadre vertical + jauge, DECOR
+  seul — le TEXTE editorial reste possede par F06, hierarchie note §3.6).
+- **Application moteur** (`caviarRender.js`) : `panel_spec` sur chaque broll,
+  cap 45 frames (tronque + depot trace), ELEMENT UNIQUE (punch-in pendant un
+  panneau → depose, note §3.5), `resolution_at` re-verifie sur la TIMELINE
+  reelle (dernier filet : punch-ins, brolls, smash audio fautifs deposes).
+- **Rendu** (`purPackComposition.jsx`) : emballage applique a la couche
+  B-roll (scale crop_zoom + blur), decor vertical au-dessus, flash entree
+  et SFX inchanges. v1 sans emballage → panel_spec null → rendu historique
+  a l'identique (zero regression, teste).
+- **Tests** : panneau **13/13** (pack reel inclus : BLUR-01/02 → crop 1.3,
+  blur 18px, vertical_text_overlay) · moteur 21/21 · v2 12/12 · gate 24/24
+  · frégate 20/20. CI : suite panneau ajoutée à l'étape gate.
+- **Prochaine etape** : deposer les MP4 reels `BLUR-01/02` dans
+  `public/broll/` puis rendu CI de bout en bout sur voxc-2. Ensuite
+  Groupe 4 — memoire ARCHIVUM (voir section precedente).
 

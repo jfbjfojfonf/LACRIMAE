@@ -175,5 +175,12 @@ Le pack v2 (note technique PERTURABO) porte le geste dans `caviar_partition`
   l'agrégat.
 - **Vérifié sur le pack réel voxc-2** : portes vertes, 32u recalculées ==
   32u déclarées, BLUR-01/02 résolus.
-- **Reste (Groupe 2)** : rendu du panneau (`crop_zoom`, `blur_radius_px`,
-  `panel: vertical_text_overlay`) puis rendu réel de bout en bout.
+- **Groupe 2 v2 — panneau possédé par la partition** : `caviarPanel.js`
+  (résolution emballage + habillage vertical) appliqué au rendu —
+  `crop_zoom` [1.0-2.0], `blur_radius_px` [0-60], `vertical_text_overlay`
+  (décor seul, texte = F06), cap 45 frames, élément unique (punch-in
+  pendant un panneau déposé), `resolution_at` re-vérifié sur la timeline
+  (dernier filet). v1 sans emballage → rendu historique identique.
+  Tests : `caviar_panel.test.mjs` **13/13**.
+- **Reste** : MP4 réels `BLUR-01/02` dans `public/broll/` puis rendu CI de
+  bout en bout sur voxc-2.

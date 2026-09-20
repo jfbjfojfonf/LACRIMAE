@@ -1,5 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════
    caviarRender.js — GROUPE 3 : moteur de rendu narratif (HEISENBERG)
+                 + GROUPE 2 v2 : panneau possédé par la partition F00D
 
    Consomme le bloc `caviar` du manifeste dev10.pur.v1 (décisions
    PERTURABO prises depuis le caviar_manifest émis par la frégate) et le
@@ -27,8 +28,10 @@
    Zéro dépendance Remotion/React ici : fonctions pures testables en
    Node (npm run test:caviar). Le budget est passé en argument — la
    source de vérité unique reste HEISENBERG/caviar_budget.json, dont
-   le miroir data/caviar_budget.json est vérifié par caviar_gate.py.
+   le   miroir data/caviar_budget.json est vérifié par caviar_gate.py.
    ═══════════════════════════════════════════════════════════════════ */
+
+import { resolvePanelSpec } from './caviarPanel.js';
 
 /** Bloc caviar brut (pack PERTURABO) → forme normalisée.
  *  `extra` (v2 F00D : resolution_at, run_id, budget_state…) est transporté
@@ -99,10 +102,14 @@ const DROP_PRIORITY = [
 const eventTime = (key, e) =>
   key === 'jump_cuts' ? Number(e.cut_at_sec || 0) : Number(e.at_sec || 0);
 
-/** Double barrage : retire les événements excédentaires (caps + dépense).
+/** Double barrage : retire les événements excédentaires (caps + dépense)
+ *  et résout les conflits d'élément unique (note §3.5 : jamais 2 événements
+ *  visuels forts sur la même frame — un punch-in sur la fenêtre d'un panneau
+ *  est déposé, le panneau est l'événement fort).
  *  Retourne les événements appliqués, les déposés (avec raisons) et le
  *  verdict du gate rendu. */
-export function enforceCaviarBudget(block, budget) {
+export function enforceCaviarBudget(block, budget, ctx = {}) {
+  const fps = Math.max(1, Number(ctx.fps || 30));
   const applied = {
     jump_cuts: [...block.jump_cuts],
     punchins: [...block.punchins],
@@ -129,7 +136,21 @@ export function enforceCaviarBudget(block, budget) {
       dropFrom(key, `cap ${labelOf[key]} dépassé (max ${max})`);
     }
   }
-  // 2) dépense totale — du coût unitaire le plus élevé au plus faible
+  // 2) élément unique (note §3.5) : punch-in pendant un panneau → déposé
+  const winSec = Math.max(0, Number(budget?.unique_element_rule?.window_sec ?? 0.05));
+  for (let i = applied.punchins.length - 1; i >= 0; i--) {
+    const pf = Number(applied.punchins[i].at_sec || 0);
+    const conflict = applied.brolls.find((b) => {
+      const bs = Number(b.at_sec || 0);
+      const be = bs + Number(b.duration_frames || 0) / fps;
+      return pf >= bs - winSec && pf <= be + winSec;
+    });
+    if (conflict) {
+      dropped.push({ kind: 'punchins', event: applied.punchins[i], reason: 'élément unique : punch-in pendant un panneau B-roll (note §3.5)' });
+      applied.punchins.splice(i, 1);
+    }
+  }
+  // 3) dépense totale — du coût unitaire le plus élevé au plus faible
   const maxSpend = budget?.max_spend_units ?? 55;
   const costOf = { brolls: evCfg.broll?.cost_units ?? 12, smash_audio: evCfg.smash?.cost_units ?? 8, punchins: evCfg.punchin?.cost_units ?? 6, jump_cuts: evCfg.jumpcut?.cost_units ?? 1 };
   let gate = verifyCaviarBudget(applied, budget);
@@ -150,7 +171,9 @@ export function enforceCaviarBudget(block, budget) {
  *    - segments  : [{from, duration, sourceStart}] en FRAMES de timeline
  *                  (tuiles contiguës couvrant toute la durée)
  *    - punchins  : [{frame, scale_to, attack_frames, hold_frames, release_frames}]
- *    - brolls    : [{frame, frames, file, sfx}] (flash dérivé, entrée seule)
+ *    - brolls    : [{frame, frames, file, sfx, panel_spec?}] — panel_spec =
+ *                  emballage v2 possédé par la partition (crop_zoom, blur,
+ *                  panel) ; absent en v1 → rendu plein cadre historique
  *    - flashes   : [{frame, frames}] — ENTRÉE de B-roll uniquement
  *    - smash_audio : [{frame, duck_db, duration_sec}] (ducking musical)
  *    - gate      : verdict Budget d'Attention côté rendu
@@ -172,7 +195,7 @@ export function buildCaviarTimeline(caviarRaw, budget, ctx = {}) {
   };
   if (!block.enabled || durationInFrames <= 0) return inert;
 
-  const { applied, dropped, gate } = enforceCaviarBudget(block, budget);
+  const { applied, dropped, gate } = enforceCaviarBudget(block, budget, { fps });
   const evCfg = (budget && budget.events) || {};
 
   // ── Jump cuts : validité (≥ min silences, pas de chevauchement) ──
@@ -263,13 +286,40 @@ export function buildCaviarTimeline(caviarRaw, budget, ctx = {}) {
         dropped.push({ kind: 'brolls', event: b, reason: `numéro ${b.numero} : fichier non résolu — pas de vidéo, pas de B-roll` });
         continue;
       }
+      const rawFrames = Math.round(Number(b.duration_frames || maxBrollFrames));
+      if (rawFrames > maxBrollFrames) {
+        dropped.push({ kind: 'brolls', event: { at_sec: b.at_sec, duration_frames: b.duration_frames }, reason: `durée panneau ${rawFrames}f > cap ${maxBrollFrames}f — tronquée` });
+      }
+      // GROUPE 2 v2 : l'EMBALLAGE du panneau est possédé par la partition.
+      const spec = resolvePanelSpec(b, ctx.registry);
       brolls.push({
         frame: sourceToTimelineFrame(b.at_sec),
-        frames: Math.max(1, Math.min(maxBrollFrames, Math.round(Number(b.duration_frames || maxBrollFrames)))),
+        frames: Math.max(1, Math.min(maxBrollFrames, rawFrames)),
         file,
         sfx: String(b.sfx || 'impact'),
         numero: b.numero ?? null,
+        extra: b.extra ?? null,
+        panel_spec: spec,
       });
+    }
+  }
+
+  // ── resolution_at (note §3.5) : AUCUN événement après la résolution.
+  //    Le gate vérifie le pack ; ICI dernier filet sur la TIMELINE réelle.
+  const resolutionSec = Number(block.extra?.resolution_at || 0);
+  if (resolutionSec > 0) {
+    const limit = Math.round(resolutionSec * fps);
+    for (let i = punchins.length - 1; i >= 0; i--) {
+      if (punchins[i].frame >= limit) {
+        dropped.push({ kind: 'punchins', event: punchins[i], reason: `après resolution_at (${resolutionSec}s) — interdit (note §3.5)` });
+        punchins.splice(i, 1);
+      }
+    }
+    for (let i = brolls.length - 1; i >= 0; i--) {
+      if (brolls[i].frame >= limit) {
+        dropped.push({ kind: 'brolls', event: brolls[i], reason: `après resolution_at (${resolutionSec}s) — interdit (note §3.5)` });
+        brolls.splice(i, 1);
+      }
     }
   }
 
@@ -277,11 +327,21 @@ export function buildCaviarTimeline(caviarRaw, budget, ctx = {}) {
   const flashes = brolls.map((b) => ({ frame: b.frame, frames: 5 }));
 
   // ── Smash audio (ducking au climax) — exporté pour la couche musicale ──
-  const smash_audio = applied.smash_audio.map((s) => ({
+  let smash_audio = applied.smash_audio.map((s) => ({
     frame: sourceToTimelineFrame(s.at_sec),
     duck_db: Number(s.duck_db ?? -12),
     duration_sec: Math.max(0.1, Number(s.duration_sec || 0.8)),
   }));
+  if (resolutionSec > 0) {
+    const limit = Math.round(resolutionSec * fps);
+    smash_audio = smash_audio.filter((s) => {
+      if (s.frame >= limit) {
+        dropped.push({ kind: 'smash_audio', event: s, reason: `après resolution_at (${resolutionSec}s) — interdit (note §3.5)` });
+        return false;
+      }
+      return true;
+    });
+  }
 
   return {
     enabled: true,
@@ -293,7 +353,12 @@ export function buildCaviarTimeline(caviarRaw, budget, ctx = {}) {
     smash_audio,
     removed_sec: keptCuts.reduce((sum, c) => sum + c.removes_sec, 0),
     dropped,
-    gate: { ...gate, dropped_count: dropped.length },
+    gate: {
+      ...gate,
+      dropped_count: dropped.length,
+      resolution_at: resolutionSec > 0 ? resolutionSec : null,
+      resolution_violations: 0,
+    },
     sourceToTimelineFrame,
   };
 }

@@ -215,9 +215,11 @@ jobs:
           # Miroir : HEISENBERG (source de vérité) == miroir F03 (consommé au rendu)
           diff F03_PICTOR/HEISENBERG/caviar_budget.json F03_PICTOR/CODEBASE/src/data/caviar_budget.json \
             || { echo '✗ miroir caviar_budget.json divergent — resynchroniser avant rendu.'; exit 1; }
-          # Tests du moteur de rendu narratif (v1 + adaptateur v2, zéro dépendance)
+          # Tests du moteur de rendu narratif (v1 + adaptateur v2 + panneau
+          # possédé par la partition F00D, zéro dépendance)
           node F03_PICTOR/CODEBASE/tests/caviar_render.test.mjs
           node F03_PICTOR/CODEBASE/tests/caviar_v2.test.mjs
+          node F03_PICTOR/CODEBASE/tests/caviar_panel.test.mjs
           # Double barrage : le bloc caviar du pack respecte le Budget d'Attention
           # + portes v2 si le pack porte une partition F00D (review/checksum/
           # hiérarchie/horodatage/resolution_at/budget_state croisé).

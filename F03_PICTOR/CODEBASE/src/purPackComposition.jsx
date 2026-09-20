@@ -20,6 +20,7 @@ import {
   caviarPunchScaleAtFrame,
   caviarFlashOpacityAtFrame,
 } from './caviarRender';
+import { panelVerticalTextOverlayStyle } from './caviarPanel';
 import { toEngineBlock } from './caviarV2';
 import caviarBudget from './data/caviar_budget.json';
 import caviarRegistry from './data/caviar_registry.json';
@@ -304,15 +305,36 @@ export function PurPackComposition({ purManifest, session: sessionProp, entryInd
         }}
       >
         {/* GROUPE 3 — B-roll numéroté : plein cadre, voix du clip continue,
-            flash blanc à l'ENTRÉE (rendu plus bas) + SFX sur la même frame. */}
+            flash blanc à l'ENTRÉE (rendu plus bas) + SFX sur la même frame.
+            GROUPE 2 v2 : l'EMBALLAGE du panneau est possédé par la partition
+            F00D (crop_zoom, blur_radius_px, panel) — v1 sans spec = plein
+            cadre historique à l'identique. */}
         {caviarBroll && (
           <Video
             src={staticFile(String(caviarBroll.file).replace(/^\.?\//, ''))}
             startFrom={0}
             muted
-            style={{ width: '100%', height: '100%', objectFit: 'cover', zIndex: 5 }}
+            style={{
+              width: '100%', height: '100%', objectFit: 'cover', zIndex: 5,
+              ...(caviarBroll.panel_spec ? {
+                transform: `scale(${Number(caviarBroll.panel_spec.crop_zoom || 1).toFixed(4)})`,
+                filter: Number(caviarBroll.panel_spec.blur_radius_px || 0) > 0 ? `blur(${Number(caviarBroll.panel_spec.blur_radius_px)}px)` : undefined,
+              } : {}),
+            }}
           />
         )}
+        {/* GROUPE 2 v2 — habillage 'vertical_text_overlay' possédé par F00D :
+            décor SEUL (cadre vertical + jauge) — le texte éditorial reste
+            possédé par F06 (hiérarchie, note §3.6). */}
+        {caviarBroll?.panel_spec?.panel === 'vertical_text_overlay' && (() => {
+          const pStyle = panelVerticalTextOverlayStyle(caviarBroll.panel_spec);
+          return (
+            <>
+              <AbsoluteFill style={pStyle.frame} />
+              <AbsoluteFill style={pStyle.rail} />
+            </>
+          );
+        })()}
         {videoUrl ? (
           styleLayout === 'blur' ? (
             /* ── BLUR : couche arrière floutée + couche avant nette positionnable ── */

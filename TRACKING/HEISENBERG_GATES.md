@@ -3,6 +3,7 @@
 **Spec mère** : `TRACKING/CAVIAR_SPEC_PERTURABO.md` · **Plan** : `TRACKING/HEISENBERG_PLAN.md`
 **Code** : `F03_PICTOR/HEISENBERG/heisenberg.py` · **Budget** : `F03_PICTOR/HEISENBERG/caviar_budget.json`
 **Statut (2026-09-14)** : Groupe 2 implémenté — frégate opérationnelle (IN/OUT/LEDGER/BROLL + tests 20/20).
+**Statut (2026-09-15)** : Groupe 2 v2 (panneau F00D) implémenté — `caviarPanel.js` + application moteur/rendu (H-PANEL).
 
 ## Position dans le pipeline
 
@@ -51,6 +52,7 @@ jamais de constante dupliquée dans le code.
 | **H-PACK** | CI, avant rendu | bloc `caviar` du pack (par entrée) | `caviar_gate.py` : dépense ≤ 55 u, caps, flash ENTRÉE-seule, SFX ENTRÉE-seule, pas de B-roll sans fichier, élément unique — sinon rouge dure (rendu annulé) |
 | **H-AGGREGATE** | CI, avant publication | manifeste agrégé multi-entrées | `caviar_gate.py` sur chaque entrée — sinon AUCUN bundle final publié |
 | **H-RENDER (soft)** | rendu Remotion | `buildCaviarTimeline()` en rendu | dépassement en rendu → événements DÉPOSÉS (le plus cher/tardif d'abord) + gate rouge rapporté — le MP4 reste propre, jamais saturé |
+| **H-PANEL (v2)** | rendu Remotion + gate | panneau possédé par la partition F00D | `crop_zoom` [1.0-2.0], `blur_radius_px` [0-60], `panel` inconnu → `plain`, cap 45 frames, élément unique (punch-in pendant un panneau → déposé), `resolution_at` re-vérifié sur la timeline — v1 sans emballage → rendu historique identique. Tests `caviar_panel.test.mjs` 13/13 |
 
 Miroir budget consommé au rendu : `F03_PICTOR/CODEBASE/src/data/caviar_budget.json`
 (vérifié identique à la source HEISENBERG par H-MIRROR).
