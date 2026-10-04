@@ -1,7 +1,9 @@
 # TODO — continuation `dev-11`
 
 Dernière mise à jour : 2026-10-04
-État : **tree + Groupe 0 CUSTOS scellés**. Moteurs F01/F02/F03 = pas encore forgés.
+État : **F02 forgé**. F01/F03 moteurs présents (MediaPipe modèle + clips hors git). Modal skeleton.
+
+Carte : `TRACKING/WHERE_WE_ARE.md`
 
 ---
 
@@ -14,86 +16,88 @@ Dernière mise à jour : 2026-10-04
 - [x] Actions = dispatch ; Modal = compute
 - [x] Cibles `face | nose | eyes`
 - [x] Audio stream copy
-- [x] Pile : MediaPipe + One Euro + PyAV/FFmpeg + Modal
-- [x] Tree docs : README, DESIGN, GATES, campaign log, README frégates, exemples JSON
-- [x] Tree runtime : IN/OUT `.gitkeep`, CONFIG, SHARED, stubs moteurs
-- [x] Groupe 0 : `LAC_CUSTOS.py`, `LAC_RUN.py`, tests contrat, workflows GHA contrats
+- [x] Pile : MediaPipe + One Euro + FFmpeg + Modal
+- [x] Tree docs + IN/OUT `.gitkeep` + CONFIG
+- [x] Groupe 0 CUSTOS / LAC_RUN / tests contrat / GHA contrats
+- [x] Groupe 2 F02 : 1€ + deadzone + hold-last + zoom + clamp
+- [x] Note sœurs `TRACKING/INTEGRATION_SISTERS.md`
 
 ---
 
 ## Groupe 0 — Gardien (fait)
 
-- [x] `LAC_CUSTOS.py` : check-in / check-out F01 F02 F03 selon `DEV11_GATES.md`
-- [x] `LAC_RUN.py` : portes I–IV, transit copies IN←OUT, stop si moteur non forge
-- [x] Tests contrat : JSON fixtures valides / invalides (sans MP4 lourds)
-- [x] Workflow GHA : pytest contrats (`dev11_contracts.yml`)
+- [x] `LAC_CUSTOS.py`
+- [x] `LAC_RUN.py` (skip HOLD au transit)
+- [x] Tests contrat sans MP4 lourds
+- [x] `dev11_contracts.yml`
 
 ---
 
 ## Groupe 1 — F01 OCULUS
 
-- [ ] `f01_oculus.py` : MediaPipe Face Landmarker, Tasks API
-- [ ] Ecrire `dev11.landmarks.v1` par stem
-- [ ] `job_request.target` → IDs landmarks (face centre / nose / eyes mid)
-- [ ] Hold de détection : `detected=false` si sous seuil
-- [ ] Rapport `oculus_report.json` (taux détection, gaps)
-- [ ] Image Modal CPU + modèles dans volume
-- [ ] Fixture : 1 clip court synthétique en `tests/fixtures/` (généré CI, pas commité)
+- [x] `f01_oculus.py` : Tasks API si modèle, sinon HOLD `detected=false`
+- [x] Ecrire `dev11.landmarks.v1` par stem
+- [x] `job_request.target` → oval_mean / nose 4 / eyes 468+473
+- [x] Rapport `oculus_report.json`
+- [ ] Image Modal CPU + volume `face_landmarker.task`
+- [ ] Fixture clip synthétique généré CI (pas commité)
 
 ---
 
-## Groupe 2 — F02 SANGUINOR (cœur produit)
+## Groupe 2 — F02 SANGUINOR (cœur produit) — fait
 
-- [ ] One Euro sur cx, cy (params dans `CONFIG/camera_defaults.json`)
-- [ ] Deadzone : intérieur = camera immobile
-- [ ] Hold-last si `detected=false`
-- [ ] Zoom lent borné (`zoom_max_delta_per_s`)
-- [ ] Yeux au tiers haut si target=`eyes` ou composition talking-head
-- [ ] Clamp crop toujours dans le frame source
-- [ ] Ecrire `dev11.camera_path.v1`
-- [ ] Tests unitaires jitter / deadzone **sans** vidéo (frames synthétiques) — fichier placeholder `tests/test_sanguinor_filter.py`
+- [x] One Euro cx, cy
+- [x] Deadzone immobile
+- [x] Hold-last si `detected=false`
+- [x] Zoom borné `zoom_max_delta_per_s`
+- [x] Yeux `eyes_y_anchor`
+- [x] Clamp crop 9:16 in-bounds
+- [x] `dev11.camera_path.v1`
+- [x] `tests/test_sanguinor_filter.py`
 
 ---
 
 ## Groupe 3 — F03 CALIX
 
-- [ ] FFmpeg crop depuis camera_path (filtre crop+scale 1080×1920)
-- [ ] `-c:a copy` si audio ; flag manifeste si absent
-- [ ] yuv420p + faststart + H.264
-- [ ] `calix_manifest.json` + hashes
-- [ ] Agrégation stricte : un stem manquant = REFUS
-- [ ] Modal GPU optionnel `h264_nvenc`
+- [x] Crop+scale depuis camera_path (FFmpeg encode H.264 yuv420p +faststart)
+- [x] `-c:a copy` ou `audio: none`
+- [x] `calix_manifest.json` + sha256
+- [x] Agrégation stricte CUSTOS P-CX-6
+- [ ] Modal GPU `h264_nvenc`
+- [ ] Test encode bout-en-bout (clip synthétique CI, pas git)
 
 ---
 
 ## Groupe 4 — Orchestration
 
-- [x] `.github/workflows/dev11_oculus.yml` : squelette portes / secrets / timeouts
-- [ ] `modal/app.py` : app `lacrimae-dev11-oculus`, stages F01 / F02 / F03 (skeleton only)
-- [ ] Videos via Release GitHub ou URI objet — jamais artifact > quota
-- [ ] Secrets repo : `MODAL_TOKEN_ID`, `MODAL_TOKEN_SECRET` (documentés, non écrits)
+- [x] `dev11_oculus.yml` squelette timeouts / secrets
+- [ ] `modal/app.py` stages réels (encore skeleton)
+- [ ] Videos Release / URI objet
+- [ ] Secrets `MODAL_TOKEN_ID` / `MODAL_TOKEN_SECRET` dans le repo GitHub
 
 ---
 
 ## Groupe 5 — Branchement flottes sœurs
 
-- [ ] Note d'intégration `dev10` PUR : où pousser les clips vers F01/IN
-- [ ] Note d'intégration `dev9` ranking / `dev8` reveal
-- [ ] Interdit : importer le code PICTOR ici
+- [x] Note `dev10` / `dev9` / `dev8` dans `INTEGRATION_SISTERS.md`
+- [x] Interdit PICTOR ici
+- [ ] Premier transit réel depuis une campagne sœur
 
 ---
 
-## Hors scope (ne pas faire dans cette continuation)
+## Hors scope
 
 - Preview Remotion, titres, SFX, ranking
 - Camouflage / Luther
 - YOLO commercial
 - Tracking dans GitHub Actions
-- OpenReel / éditeur navigateur
-- Multi-visages v1 (max_num_faces=1, HOLD si plusieurs)
+- OpenReel
+- Multi-visages v1
 
 ---
 
-## Prochaine action recommandée
+## Prochaine action
 
-Forger **Groupe 1** (`f01_oculus.py` MediaPipe) maintenant que CUSTOS existe. Ne pas sauter à F02 tant que F01 n'écrit pas un JSON que P-OC-10…16 acceptent.
+1. Déposer `face_landmarker.task` (Modal volume).
+2. Un clip 9:16 de test hors git → `LAC_RUN.py run`.
+3. Forger `modal/app.py` stages.

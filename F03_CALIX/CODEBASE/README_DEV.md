@@ -2,6 +2,8 @@
 
 > *"Le Calice n'invente pas le geste. Il le conserve."*
 
+Moteur **forgé**. Crop illégal = REFUS (pas de recentrage).
+
 ## CLI prévu
 
 ```

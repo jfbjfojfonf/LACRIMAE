@@ -10,7 +10,8 @@ MediaPipe Face Landmarker sur chaque frame (ou sous-échantillon déclaré). Éc
 
 | Fichier | Rôle |
 |---------|------|
-| `f01_oculus.py` | Moteur (Groupe 1 — pas encore forgé) |
+| `f01_oculus.py` | Moteur : MediaPipe Tasks VIDEO, sinon HOLD |
+| `models/` | `face_landmarker.task` (hors git, `*.task` ignore) |
 | `README_DEV.md` | Ce fichier |
 
 ## CLI prévu

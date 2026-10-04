@@ -26,7 +26,9 @@ python3 F02_SANGUINOR/CODEBASE/f02_sanguinor.py \
 
 ## Tests sans vidéo
 
-`tests/test_sanguinor_filter.py` : séries x,y synthétiques. Vérifier deadzone immobile, hold-last, pas de NaN, crop in-bounds.
+`tests/test_sanguinor_filter.py` : séries x,y synthétiques. Deadzone immobile, hold-last, pas de NaN, crop 9:16 in-bounds.
+
+Moteur **forgé**. Crop : k pair, `w=9k` `h=16k` (jamais un 9:16 cassé par arrondi pair).
 
 ## Interdit
 

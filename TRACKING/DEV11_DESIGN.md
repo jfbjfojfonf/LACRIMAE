@@ -1,7 +1,7 @@
 # DEV11 — Design OCULUS / SANGUINOR / CALIX
 
 Branche : `dev-11`
-Statut : **cadrage + Groupe 0 scellés** — moteurs F01/F02/F03 non forgés
+Statut : **cadrage + Groupe 0 + F02 scellés** — F01/F03 moteurs présents, MediaPipe/Modal pas branchés campagne
 Date : 2026-10-04
 
 ---

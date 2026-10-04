@@ -189,6 +189,10 @@
 !**/examples/**
 !**/fixtures/**
 
+# MediaPipe Tasks models (download on Modal / local cache)
+*.task
+!**/models/.gitkeep
+
 # Modal / local campaign caches
 **/OUT/**/*.json
 !**/OUT/**/.gitkeep

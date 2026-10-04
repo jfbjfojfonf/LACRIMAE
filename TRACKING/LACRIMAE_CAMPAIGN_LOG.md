@@ -28,3 +28,17 @@ Magos : cadrage validé avant forge.
 - Interdit toujours : MediaPipe / One Euro / FFmpeg campaign tant que Groupe 1 n'est pas demandé.
 
 Magos : Groupe 0 scellé. Groupe 1 ensuite.
+
+---
+
+## 2026-10-04 — Moteurs + chronique
+
+- Poussé `dev-11` : https://github.com/jfbjfojfonf/LACRIMAE/tree/dev-11
+- F02 forgé : `one_euro.py`, `camera.py`, `f02_sanguinor.py`. Tests deadzone / hold-last / clamp sans video.
+- F01 : MediaPipe Tasks si modèle, sinon HOLD (P-OC-14 bloque transit).
+- F03 : crop Python + ffmpeg libx264 +faststart + audio copy.
+- `SHARED/CODEBASE/ffmpeg_io.py` : probe/decode/encode. Isolation OK.
+- Docs : `WHERE_WE_ARE.md`, `INTEGRATION_SISTERS.md`, TODO mis à jour.
+- Modal toujours skeleton. Pas de campagne réelle sans clips + modèle.
+
+Magos : F02 est le cœur. Ne pas retune F01 pour un jitter camera.

@@ -70,17 +70,19 @@ YOLO / Ultralytics : **hors pile v1** (licence AGPL). Fallback multi-têtes docu
 
 ---
 
-## Quickstart (Groupe 0 scellé, moteurs encore stubs)
+## Quickstart
 
 ```
 1. Déposer les clips 9:16 H.264 dans F01_OCULUS/IN/clips/
 2. Copier F01_OCULUS/IN/job_request.example.json → job_request.json (cible: face | nose | eyes)
 3. python LAC_CUSTOS.py --frigate F01 --mode check-in
-4. python LAC_RUN.py run          → F01 stub exit 2 ; Porte II non franchie
-5. python -m pytest tests         → contrats JSON, pas de decode MP4
+4. python LAC_RUN.py run
+5. python -m pytest tests
 ```
 
-En GHA : `dev11_contracts.yml` (pytest). `dev11_oculus.yml` dispatch Modal — skeleton Groupe 4. Videos hors git (Release ou objet S3/R2).
+Sans `face_landmarker.task` : F01 HOLD (detected=false) → pas de transit F02 (P-OC-14).
+F02 se teste seul sur JSON : `python F02_SANGUINOR/CODEBASE/f02_sanguinor.py --in ... --out ...`
+GHA : `dev11_contracts.yml` pytest. `dev11_oculus.yml` Modal skeleton. Videos hors git.
 
 ---
 
@@ -90,8 +92,10 @@ En GHA : `dev11_contracts.yml` (pytest). `dev11_oculus.yml` dispatch Modal — s
 |----------|------|
 | `TRACKING/DEV11_DESIGN.md` | Architecture, hommage, pourquoi 3 frégates |
 | `TRACKING/DEV11_GATES.md` | Portes bloquantes P-OC / P-SG / P-CX |
-| `TRACKING/TODO_CONTINUATION.md` | Ce qui est scellé vs ce qui reste à forger |
+| `TRACKING/WHERE_WE_ARE.md` | Où on en est, pièce par pièce |
+| `TRACKING/TODO_CONTINUATION.md` | Scellé vs reste à forger |
 | `TRACKING/LACRIMAE_CAMPAIGN_LOG.md` | Journal de branche |
+| `TRACKING/INTEGRATION_SISTERS.md` | Branchement dev10 / dev9 / dev8 |
 | `F01_OCULUS/README.md` | Contrat F01 |
 | `F02_SANGUINOR/README.md` | Contrat F02 |
 | `F03_CALIX/README.md` | Contrat F03 |
