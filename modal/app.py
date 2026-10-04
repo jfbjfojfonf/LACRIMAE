@@ -38,7 +38,24 @@ campaign_vol = modal.Volume.from_name("lacrimae-dev11-campaign", create_if_missi
 
 image = (
     modal.Image.debian_slim(python_version="3.11")
-    .apt_install("ffmpeg", "libgl1", "libglib2.0-0", "libgomp1")
+    .apt_install(
+        "ffmpeg",
+        "libgl1",
+        "libglib2.0-0",
+        "libgomp1",
+        "libegl1",
+        "libgles2",
+        "libgl1-mesa-dri",
+        "mesa-utils",
+        "libglx-mesa0",
+    )
+    .env(
+        {
+            "LIBGL_ALWAYS_SOFTWARE": "1",
+            "MESA_GL_VERSION_OVERRIDE": "3.3",
+            "GLOG_minloglevel": "2",
+        }
+    )
     .pip_install("mediapipe>=0.10.14", "numpy>=1.26.0")
     .add_local_dir(
         str(REPO_LOCAL),

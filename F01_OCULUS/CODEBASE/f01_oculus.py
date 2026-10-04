@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -83,6 +84,9 @@ def target_from_landmarks(lms: list[Any], target: str) -> tuple[dict[str, float]
 
 
 def try_landmarker(job: dict[str, Any]) -> Any | None:
+    os.environ.setdefault("LIBGL_ALWAYS_SOFTWARE", "1")
+    os.environ.setdefault("MESA_GL_VERSION_OVERRIDE", "3.3")
+    os.environ.setdefault("GLOG_minloglevel", "2")
     try:
         import mediapipe as mp  # type: ignore
         from mediapipe.tasks import python as mp_python  # type: ignore
@@ -102,8 +106,12 @@ def try_landmarker(job: dict[str, Any]) -> Any | None:
     FaceLandmarker = vision.FaceLandmarker
     FaceLandmarkerOptions = vision.FaceLandmarkerOptions
     VisionRunningMode = vision.RunningMode
+    base_kwargs: dict[str, Any] = {"model_asset_path": str(model)}
+    delegate = getattr(BaseOptions, "Delegate", None)
+    if delegate is not None and hasattr(delegate, "CPU"):
+        base_kwargs["delegate"] = delegate.CPU
     options = FaceLandmarkerOptions(
-        base_options=BaseOptions(model_asset_path=str(model)),
+        base_options=BaseOptions(**base_kwargs),
         running_mode=VisionRunningMode.VIDEO,
         num_faces=int(job.get("max_num_faces") or 1),
         min_face_detection_confidence=float(job.get("min_detection_confidence") or 0.5),
