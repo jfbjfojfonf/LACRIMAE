@@ -78,14 +78,15 @@ test('mapping : panels → brolls (start_sec→at_sec, fichier résolu, extra co
 
 test('mapping : silence_trims → jump_cuts, events.punch_ins/smash_audio', () => {
   const block = normalizeCaviarPartition({
-    silence_trims: [{ start_sec: 10, duration_sec: 0.6 }, { cut_at_sec: 20, removes_sec: 0.4 }],
+    silence_trims: [{ start_sec: 10, end_sec: 10.6, duration_sec: 0.6 }, { cut_at_sec: 20, removes_sec: 0.4 }],
     events: {
       punch_ins: [{ at_sec: 5, crop_zoom: 1.1 }],
       smash_audio: [{ at_sec: 28.216, duck_db: -12, duration_sec: 0.8 }],
       broll: [{ broll_id: 'BLUR-01', start_sec: 8, duration_frames: 30 }],
     },
   }, registry);
-  assert.deepEqual(block.jump_cuts, [{ cut_at_sec: 10, removes_sec: 0.6 }, { cut_at_sec: 20, removes_sec: 0.4 }]);
+  // Fenêtre [10, 10.6) retirée → reprise du contenu à 10.6 (cut_at_sec = END).
+  assert.deepEqual(block.jump_cuts, [{ cut_at_sec: 10.6, removes_sec: 0.6 }, { cut_at_sec: 20, removes_sec: 0.4 }]);
   assert.equal(block.punchins[0].at_sec, 5);
   assert.equal(block.punchins[0].scale_to, 1.1);
   assert.equal(block.smash_audio[0].at_sec, 28.216);
@@ -177,6 +178,91 @@ test('passthrough v2 : miroirs bridgeClipper bit-à-bit + caviar_partition trans
   let esbuild = null;
   try { esbuild = (await import('esbuild')).default; } catch { /* CI : npm ci le fournit */ }
   if (esbuild) esbuild.transformSync(preview, { loader: 'jsx' });
+});
+
+/* ── Packs RÉELS asf c1→c5 (Groupe 3 v2 — punch-ins, trims géants) ── */
+
+let asfPacks = null;
+try {
+  asfPacks = [1, 2, 3, 4, 5].map((i) => ({
+    i,
+    pack: JSON.parse(readFileSync(new URL(`./pack_asf_c${i}.json`, import.meta.url), 'utf8')),
+  }));
+} catch { /* sandbox hors ligne : les tests asf sont sautés */ }
+
+const ASF_SPEND = { 1: 52, 2: 54, 3: 46, 4: 50, 5: 55 }; // 12·broll + 8·smash + 6·punch + 1·cut
+
+test('asf réel : mapping punch-ins v2 (scale 1.2, duration_sec 0.6, cause) + trims fenêtre', () => {
+  if (!asfPacks) { console.log('  ↷ fixtures asf absentes — sauté'); return; }
+  const { pack } = asfPacks[0];
+  assert.equal(detectPackSchema(pack), 'v2');
+  const block = packToCaviarBlock(pack, registry);
+  // Trims : fenêtre [0, 9.994) → reprise à 9.994 (bug voxc-2 corrigé ici)
+  assert.deepEqual(block.jump_cuts, [
+    { cut_at_sec: 9.994, removes_sec: 9.994 },
+    { cut_at_sec: 28.134, removes_sec: 0.451 },
+  ]);
+  // Punch-ins v2 : le champ s'appelle `scale` (1.2), avec durée 0.6 s
+  assert.equal(block.punchins.length, 3);
+  assert.equal(block.punchins[0].at_sec, 14.85);
+  assert.equal(block.punchins[0].scale_to, 1.2);
+  assert.equal(block.punchins[0].duration_sec, 0.6);
+  assert.equal(block.punchins[0].cause, 'amplitude_peak');
+  // Panels : emballage possédé par la partition (comme voxc-2)
+  assert.equal(block.brolls.length, 2);
+  assert.equal(block.brolls[0].extra.crop_zoom, 1.3);
+  assert.equal(block.brolls[0].extra.blur_radius_px, 18);
+});
+
+test('asf réel c1 : timeline avec TRIM GÉANT (intro 9,99 s coupée, tuiles justes)', () => {
+  if (!asfPacks) { console.log('  ↷ fixtures asf absentes — sauté'); return; }
+  const block = packToCaviarBlock(asfPacks[0].pack, registry);
+  const t = buildCaviarTimeline(block, budget, { fps: 30, speed: 1, durationInFrames: 1800 });
+  assert.equal(t.enabled, true);
+  // La timeline commence à 9.994 s de source (l'intro muette n'existe plus)
+  assert.equal(t.segments[0].sourceStart, Math.round(9.994 * 30));
+  assert.equal(Math.round(t.removed_sec * 1000) / 1000, 10.445, '9.994 + 0.451');
+  // Événements recalés APRÈS le trim (source sec → timeline frame)
+  assert.equal(t.brolls[0].frame, Math.round((15.0 - 9.994) * 30));   // 150
+  assert.equal(t.brolls[1].frame, Math.round((30.0 - 10.445) * 30));  // 587
+  assert.equal(t.smash_audio[0].frame, Math.round((12.5 - 9.994) * 30)); // 75
+  // Élément unique PAR INTERVALLE : punch @14.85 + 0.6 s mord sur BLUR-01 @15.0
+  assert.equal(t.punchins.length, 2, 'punch @14.85 déposé, 17.3 et 20.7 survivent');
+  assert.deepEqual(t.punchins.map((p) => p.frame), [
+    Math.round((17.3 - 9.994) * 30),
+    Math.round((20.7 - 9.994) * 30),
+  ]);
+  assert.ok(t.dropped.some((d) => d.kind === 'punchins' && String(d.reason).includes('élément unique')));
+  // Courbe du punch dérivée de duration_sec : 0.6 s @30fps → 3f/6f/9f (défauts)
+  assert.deepEqual(
+    { a: t.punchins[0].attack_frames, h: t.punchins[0].hold_frames, r: t.punchins[0].release_frames },
+    { a: 3, h: 6, r: 9 },
+  );
+});
+
+test('asf réel : les 5 packs passent moteur + budget, dépenses recalculées exactes', () => {
+  if (!asfPacks) { console.log('  ↷ fixtures asf absentes — sauté'); return; }
+  for (const { i, pack } of asfPacks) {
+    const block = packToCaviarBlock(pack, registry);
+    const v = verifyCaviarBudget(block, budget);
+    assert.equal(v.spend_units, ASF_SPEND[i], `c${i} : dépense recalculée`);
+    assert.equal(v.ok, true, `c${i} : ≤ 55u, caps respectés`);
+    assert.equal(block.extra.budget_state, null, `c${i} : budget_state absent (forme asf) → recalcul seul`);
+    const t = buildCaviarTimeline(block, budget, { fps: 30, speed: 1, durationInFrames: 1800 });
+    assert.equal(t.gate.ok, true, `c${i} : timeline rendue, gate vert`);
+  }
+});
+
+test('asf réel c3 : 8 jump cuts (cap exact, aucun déposé) + 8 tuiles', () => {
+  if (!asfPacks) { console.log('  ↷ fixtures asf absentes — sauté'); return; }
+  const block = packToCaviarBlock(asfPacks[2].pack, registry);
+  assert.equal(block.jump_cuts.length, 8, 'cap jumpcut = 8 atteint pile');
+  const t = buildCaviarTimeline(block, budget, { fps: 30, speed: 1, durationInFrames: 1800 });
+  // Les trims adjacents [16.999→18.32] + [18.32→22.345] fusionnent : la
+  // 2e coupe ouvre une tuile de longueur nulle, sautée proprement (le
+  // silence de 4,025 s est bien RETIRÉ, pas réintégré — bug asf_c1 corrigé).
+  assert.equal(t.segments.length, 8, '8 coupes valides → 8 tuiles (tuile vide fusionnée sautée)');
+  assert.ok(t.dropped.every((d) => d.kind !== 'jump_cuts'), 'aucun jump cut déposé');
 });
 
 runSuite();

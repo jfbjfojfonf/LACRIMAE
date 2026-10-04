@@ -74,11 +74,23 @@ def to_v1_block(caviar: dict, registry: dict, label: str, warnings: list[str]) -
             warnings.append(f"{label} : broll_id {bid!r} non résolu dans le registre — déposé au rendu (pas de vidéo = pas de B-roll)")
         brolls.append({"at_sec": float(b.get("start_sec") or b.get("at_sec") or 0),
                        "numero": bid, "file": file, "sfx": sfx})
-    jump = [{"cut_at_sec": float(t.get("cut_at_sec", t.get("start_sec", 0))),
-             "removes_sec": float(t.get("removes_sec", t.get("duration_sec", 0)))}
-            for t in (caviar.get("silence_trims") or []) if isinstance(t, dict)]
+    jump = []
+    for t in (caviar.get("silence_trims") or []):
+        if not isinstance(t, dict):
+            continue
+        # Forme v2 (asf c1→c5) : fenêtre [start_sec, end_sec) — le moteur
+        # découpe [cut_at − removes, cut_at) → reprise = END, pas START.
+        if t.get("cut_at_sec") is not None:
+            jump.append({"cut_at_sec": float(t["cut_at_sec"]),
+                         "removes_sec": float(t.get("removes_sec", t.get("duration_sec", 0)))})
+        elif t.get("end_sec") is not None and t.get("start_sec") is not None:
+            jump.append({"cut_at_sec": float(t["end_sec"]),
+                         "removes_sec": max(0.0, float(t["end_sec"]) - float(t["start_sec"]))})
+        else:
+            start, dur = float(t.get("start_sec", 0)), float(t.get("duration_sec", 0))
+            jump.append({"cut_at_sec": start + dur, "removes_sec": dur})
     punch = [{"at_sec": float(z.get("at_sec", z.get("start_sec", 0))),
-              "scale_to": float(z.get("scale_to", z.get("crop_zoom", 1.08)))}
+              "scale_to": float(z.get("scale_to", z.get("scale", z.get("crop_zoom", 1.08))))}
              for z in (events.get("punch_ins") or []) + (caviar.get("punch_ins") or []) if isinstance(z, dict)]
     smash = [{"at_sec": float(s.get("at_sec", s.get("start_sec", 0))),
               "duck_db": float(s.get("duck_db", -12)),
@@ -138,10 +150,23 @@ def check_caviar_block(caviar: dict, budget: dict, fps: float, label: str) -> li
             if abs(strong[i][0] - strong[j][0]) < max(window, 1e-6):
                 errors.append(f"{label} : deux événements forts à moins de {window}s : {strong[i]} vs {strong[j]}")
 
+    # 6) Punch-ins espacés d'au moins min_gap_sec (Groupe 3 v2 — cap punchin
+    #    du budget : « ≤ 4, espacés ≥ 2 s » ; vérifié sur les DÉBUTS, le
+    #    chevauchement de fenêtre est déjà couvert par la règle élément unique
+    #    au rendu).
+    min_gap = float((budget.get("events", {}).get("punchin", {}) or {}).get("min_gap_sec", 2.0))
+    punch_times = sorted(float(p.get("at_sec") or 0.0) for p in events["punchins"])
+    for a, b in zip(punch_times, punch_times[1:]):
+        if b - a < min_gap:
+            errors.append(
+                f"{label} : deux punch-ins espacés de {b - a:.2f}s < {min_gap}s "
+                f"(cap punchin.min_gap_sec)"
+            )
+
     return errors
 
 
-def check_pack_v2(pack: dict, budget: dict) -> list[str]:
+def check_pack_v2(pack: dict, budget: dict, warnings: list | None = None) -> list[str]:
     """Portes v2 (note technique PERTURABO 2026-09-15) sur le pack BRUT.
 
     Vérifie ce que le moteur ne peut pas vérifier : la LÉGALITÉ du pack
@@ -216,13 +241,18 @@ def check_pack_v2(pack: dict, budget: dict) -> list[str]:
         if late:
             errors.append(f"événements après resolution_at ({res_at}s) : {', '.join(late)} — interdit par la note §3.5")
 
-    # 7) budget_state.caps_respected croisé avec NOTRE recalcul indépendant
+    # 7) budget_state.caps_respected croisé avec NOTRE recalcul indépendant.
+    #    Groupe 3 v2 : les packs asf portent punch_ins/smash_audio au TOP de la
+    #    partition (pas sous events.*) — on compte les DEUX formes.
     bstate = partition.get("budget_state") or {}
+    if warnings is not None and not bstate:
+        warnings.append("budget_state absent de la partition — budget recalculé côté bras armé (forme asf v2)")
     counts = bstate.get("counts") or {}
     ev_cfg = budget["events"]
-    n_panels = len(partition.get("panels") or []) + len((partition.get("events") or {}).get("broll") or [])
-    n_smash = counts.get("smash_audio", 0) or len((partition.get("events") or {}).get("smash_audio") or [])
-    n_punch = counts.get("punch_ins", 0) or len((partition.get("events") or {}).get("punch_ins") or [])
+    ev_nested = partition.get("events") or {}
+    n_panels = len(partition.get("panels") or []) + len(ev_nested.get("broll") or [])
+    n_smash = counts.get("smash_audio", 0) or len(ev_nested.get("smash_audio") or []) + len(partition.get("smash_audio") or [])
+    n_punch = counts.get("punch_ins", 0) or len(ev_nested.get("punch_ins") or []) + len(partition.get("punch_ins") or [])
     n_cuts = counts.get("jump_cuts", 0) or len(partition.get("silence_trims") or [])
     spend = (n_panels * ev_cfg["broll"]["cost_units"] + n_smash * ev_cfg["smash"]["cost_units"]
              + n_punch * ev_cfg["punchin"]["cost_units"] + n_cuts * ev_cfg["jumpcut"]["cost_units"])
@@ -258,7 +288,10 @@ def main() -> int:
     pack_errors: list[str] = []
     if args.pack_v2:
         pack_raw = json.loads(args.pack_v2.read_text(encoding="utf-8"))
-        pack_errors = check_pack_v2(pack_raw, budget)
+        pack_warnings: list[str] = []
+        pack_errors = check_pack_v2(pack_raw, budget, pack_warnings)
+        for w in pack_warnings:
+            print(f"[caviar_gate] ⚠ {w}")
         # checksum16 contre le manifeste F00D livré (si fourni)
         if args.manifest_caviar:
             import hashlib

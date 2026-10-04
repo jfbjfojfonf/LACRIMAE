@@ -16,6 +16,14 @@
      3. résoudre le registre sémantique : broll_id → fichier, avec compat du
         registre numéroté 1-4 (v1). PERTURABO ne voit jamais les fichiers.
 
+   Groupe 3 v2 (packs asf c1→c5, 2026-10) — divergences réelles gérées :
+     - silence_trims v2 = FENÊTRE [start_sec, end_sec) → cut_at_sec = end_sec
+       (le moteur attend la reprise du contenu, pas le début du silence) ;
+     - punch_ins v2 = { at_sec, scale, duration_sec, cause } → scale_to +
+       duration_sec (l'attaque/tenue/release est dérivée par le moteur) ;
+     - punch_ins/smash_audio acceptés au TOP de la partition (asf) ET sous
+       events.* (manifeste F00D) — tolérance déjà en place.
+
    Zéro décision créative ici : F00D commande, le moteur exécute, le gate
    vérifie. Bloc absent → null (rendu historique à l'identique).
    ═══════════════════════════════════════════════════════════════════ */
@@ -109,14 +117,33 @@ export function normalizeCaviarPartition(partition, registry = null) {
     };
   }).filter(Boolean);
 
-  const jumpCuts = silTrims.map((t) => ({
-    cut_at_sec: Number(t.cut_at_sec ?? t.start_sec ?? 0),
-    removes_sec: Number(t.removes_sec ?? t.duration_sec ?? 0),
-  })).filter((t) => Number.isFinite(t.cut_at_sec) && Number.isFinite(t.removes_sec));
+  const jumpCuts = silTrims.map((t) => {
+    // Forme v1 déjà correcte : cut_at_sec = reprise du contenu.
+    if (t.cut_at_sec != null) {
+      return { cut_at_sec: Number(t.cut_at_sec), removes_sec: Number(t.removes_sec ?? t.duration_sec ?? 0) };
+    }
+    // Forme v2 (asf c1→c5) : le silence retiré est la fenêtre [start, end).
+    // Le moteur découpe [cut_at_sec − removes_sec, cut_at_sec) → la reprise
+    // est END, pas START (bug voxc-2 invisible : voxc-2 n'a aucun trim).
+    // Arrondi ms : end−start en flottant donne 0.4510000000000005 — la
+    // donnée est au millième près, on nettoie la poussière binaire.
+    if (t.end_sec != null && t.start_sec != null) {
+      const removes = Math.round(Math.max(0, Number(t.end_sec) - Number(t.start_sec)) * 1000) / 1000;
+      return { cut_at_sec: Number(t.end_sec), removes_sec: removes };
+    }
+    const start = Number(t.start_sec ?? 0);
+    const dur = Math.round(Number(t.duration_sec ?? 0) * 1000) / 1000;
+    return { cut_at_sec: start + dur, removes_sec: dur };
+  }).filter((t) => Number.isFinite(t.cut_at_sec) && Number.isFinite(t.removes_sec) && t.removes_sec > 0);
 
   const punchins = punchIns.map((z) => ({
     at_sec: Number(z.at_sec ?? z.start_sec ?? 0),
-    scale_to: Number(z.scale_to || z.crop_zoom || 1.08),
+    // v2 asf : le zoom s'appelle `scale` (1.2) — on lit les trois noms.
+    scale_to: Number(z.scale_to || z.scale || z.crop_zoom || 1.08),
+    // v2 asf : durée explicite (0.6 s) — le moteur en dérive la courbe si
+    // aucune frame attack/hold/release n'est fournie (défauts = 18f = 0.6 s).
+    duration_sec: Number(z.duration_sec || 0) || undefined,
+    cause: z.cause || undefined,
     attack_frames: z.attack_frames, hold_frames: z.hold_frames, release_frames: z.release_frames,
   }));
 

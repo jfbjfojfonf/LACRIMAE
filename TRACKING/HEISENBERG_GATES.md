@@ -1,98 +1,40 @@
-# LACRIMAE dev10 — GATES HEISENBERG (H-*) — sous-frégate Caviar
+## Groupe 3 v2 — punch-ins réels + trims géants + budget_state absent (2026-10-04)
 
-**Spec mère** : `TRACKING/CAVIAR_SPEC_PERTURABO.md` · **Plan** : `TRACKING/HEISENBERG_PLAN.md`
-**Code** : `F03_PICTOR/HEISENBERG/heisenberg.py` · **Budget** : `F03_PICTOR/HEISENBERG/caviar_budget.json`
-**Statut (2026-09-14)** : Groupe 2 implémenté — frégate opérationnelle (IN/OUT/LEDGER/BROLL + tests 20/20).
-**Statut (2026-09-15)** : Groupe 2 v2 (panneau F00D) implémenté — `caviarPanel.js` + application moteur/rendu (H-PANEL).
+Les packs réels `asf_c1→c5` (branche PERTURABO `v2-live-vox-c`, style blur)
+valident le moteur sur des données terrain battues :
 
-## Position dans le pipeline
+- **Punch-ins (v2)** : `{ at_sec, scale:1.2, duration_sec:0.6, cause:amplitude_peak }`
+  — l'adaptateur lit `scale` (=1.2, plafonné à 1.15 au moteur) et transporte
+  `duration_sec` + `cause` dans le bloc v1 ; le moteur DERIVE la courbe
+  attack/hold/release depuis la durée (1/6, 2/6, reste) quand aucune frame
+  explicite n'est fournie → 0.6 s @ 30 fps = 3f/6f/9f (défauts).
+- **Trims géants (v2)** : `silence_trims = { start_sec, end_sec, duration_sec }`
+  fenêtre `[start, end)` → `cut_at_sec = end` (reprise DU CONTENU, pas début du
+  silence). c1 : trim d'intro `[0, 9.994]` → la timeline recommence à 9.994 s
+  (segment sourceStart = 300 @ 30 fps), le pack n'a de son que depuis ce point.
+  Fix moteur : une tuile de longueur nulle (cutStart == srcSec, ex. trim collé à 0
+  ou deux trims adjacents) ne SAUTE PAS l'update `srcSec = cut_at_sec`, sinon le
+  silence suivant est réintégré dans la tuile suivante — aggravé sur les trims
+  adjacents (c3 : [16.999→18.32] + [18.32→22.345] fusionnent → 8 tuiles, pas 9).
+  Fix adaptateur : `removes_sec` arrondi au millième (évite flottant 0,4510000000000005).
+- **budget_state ABSENT** des 5 packs asf — le recalcul côté gate (7. h2-budget) + moteur :
+  c1=52, c2=54, c3=46, c4=50, c5=55 (tous ≤ 55u, caps ok, spacing punch ≥ 2 s,
+  aucun6). Silence trim < 0.25s ignorés (règle moteur), frames c1 : 75 (smash),
+  150 (BLUR-01 aftertrim), 219/321 (punch-ins survécu), 587 (BLUR-02).
 
-```
-F03_PICTOR rend → gates existantes (bundle, P-AUD) → [HEISENBERG H0-H3] → caviar_manifest_<stem>.json
-```
+Fixture : les 5 packs réels `pack_asf_c1..5.json` déposés dans
+`F03_PICTOR/CODEBASE/tests/` (copie lecture-seule depuis /tmp/pert2).
+Tests : `caviar_v2.test.mjs` — 16/16 (mapping punch+trims, timeline c1
+trims géants, 5 packs budget+timeline, c3 tuiles fusionnées).
+Gate CLI : `caviar_gate.py --manifest manifest_asf_c1.json --pack-v2 pack_asf_c1.json
+--manifest-caviar manifest_asf_c1.json` → avertissement budget_state absent +
+portes v2 OK, checksum16 interne == binding (`e567d4ad00e06ab1`).
 
-## Gates
-
-| Gate | Moment | Vérification | Critère de passage |
-|---|---|---|---|
-| **H0 INPUT** | Entrée | Vidéo finie lisible | codec ∈ {h264, vp9, hevc, av1}, dimensions > 0 — sinon verdict `BLOCKED` |
-| **H1 AUDIO** | Entrée | Piste audio présente | `has_audio=true` (miroir de la porte P-AUD du bras armé) |
-| **H2 BUDGET** | Analyse | Budget d'Attention | dépense ≤ 55 u ET tous les caps respectés (broll ≤ 3, smash ≤ 2, punchin ≤ 4, jumpcut ≤ 8) |
-| **H3 SILENCES** | Analyse | Segment exploitable | ≤ 8 silences — sinon **REFUSED** (« segment mauvais, prends un autre »), diagnostic → `OUT/hold/` |
-
-## Verdicts
-
-| Verdict | Sortie |
-|---|---|
-| `OK` | `OUT/caviar_manifest_<stem>.json` + entrée ledger |
-| `BLOCKED` | manifeste BLOCKED (aucune proposition), ledger |
-| `REFUSED` | diagnostic copié dans `OUT/hold/`, **aucun manifeste toxique**, ledger |
-
-## Ledger (mémoire confinée)
-
-- `LEDGER/manifest_ledger.json` — chaque émission (vidéo, verdict, dépense, fichier).
-- `LEDGER/gate_history.json` — verdicts GO/NO-GO + raisons.
-- Format `dev10.heisenberg-ledger.v1`, ring buffer 500 entrées.
-- Plus tard (Groupe 4) : conservation vers `ARCHIVUM/narrativum/` (gate_history,
-  retention_log A/B caviar vs basique, lessons) — après décision doctrinale.
-
-## Budget d'Attention — double barrage
-
-`caviar_budget.json` est la **source unique** : la frégate refuse à l'émission
-(H2/H3) ET les gates P-CAV du bras armé restent rouges au rendu si un pack
-diverge des mêmes chiffres. Un seul fichier à amender (décision opérateur),
-jamais de constante dupliquée dans le code.
-
-## Gates GROUPE 3 — rendu narratif (implémentés, 2026-09-15)
-
-| Gate | Moment | Vérification | Critère de passage |
-|---|---|---|---|
-| **H-MIRROR** | CI, avant rendu | miroir budget F03 == source HEISENBERG | `diff caviar_budget.json` identique — sinon rouge dure |
-| **H-ENGINE** | CI, avant rendu | moteur de rendu narratif | `npm run test:caviar` 20/20 — sinon rouge dure |
-| **H-PACK** | CI, avant rendu | bloc `caviar` du pack (par entrée) | `caviar_gate.py` : dépense ≤ 55 u, caps, flash ENTRÉE-seule, SFX ENTRÉE-seule, pas de B-roll sans fichier, élément unique — sinon rouge dure (rendu annulé) |
-| **H-AGGREGATE** | CI, avant publication | manifeste agrégé multi-entrées | `caviar_gate.py` sur chaque entrée — sinon AUCUN bundle final publié |
-| **H-RENDER (soft)** | rendu Remotion | `buildCaviarTimeline()` en rendu | dépassement en rendu → événements DÉPOSÉS (le plus cher/tardif d'abord) + gate rouge rapporté — le MP4 reste propre, jamais saturé |
-| **H-PANEL (v2)** | rendu Remotion + gate | panneau possédé par la partition F00D | `crop_zoom` [1.0-2.0], `blur_radius_px` [0-60], `panel` inconnu → `plain`, cap 45 frames, élément unique (punch-in pendant un panneau → déposé), `resolution_at` re-vérifié sur la timeline — v1 sans emballage → rendu historique identique. Tests `caviar_panel.test.mjs` 13/13 |
-
-Miroir budget consommé au rendu : `F03_PICTOR/CODEBASE/src/data/caviar_budget.json`
-(vérifié identique à la source HEISENBERG par H-MIRROR).
-
-**Passthrough pack→rendu (vérifié par test)** : le bloc `caviar` du pack
-survit à `parsePurPack` → `parsePurPackMulti` → par entrée (`entry.caviar`) →
-composition (`entry.caviar ?? manifest.caviar`). Les miroirs
-`bridgeClipper.js` F03_PREVIEW/F03_PICTOR sont diffé bit à bit à chaque
-exécution de `npm run test:caviar`. Contrat complet : HEISENBERG_PLAN §8.1.
-
-## Gates v2 — pack avec partition F00D (implémentés, 2026-09-15)
-
-Nouveaux gates `caviar_gate.py --pack-v2 <pack.json>` (rouge dure) + guide
-complet `TRACKING/CAVIAR_PACK_V2.md` :
-
-| Gate | Vérification |
-|---|---|
-| **H2-REVIEW** | `ALL_GATES_GO` + `VALIDATED` (DRAFT ≠ exécutable) |
-| **H2-BOUND** | `f06_gate.mode` = caviar_bound |
-| **H2-HIERARCHY** | partition présente → cuts/zooms F06 vides (régression sinon) |
-| **H2-CHECKSUM** | binding == custody ; sha256_16 du manifeste livré si récupéré |
-| **H2-TIMESTAMP** | manifeste (run_id) avant pack |
-| **H2-RESOLUTION** | aucun événement après `resolution_at` |
-| **H2-BUDGET** | dépense recalculée == déclarée, ≤ 55 u, caps_respected ≠ false |
-
-L'agrégat multi-entrées normalise aussi v2→v1 (partitions par entrée) —
-couvre le faux vert. Fixture : pack réel voxc-2 (portes vertes, 32u == 32u).
-Tests : adaptateur v2 12/12, gate 24/24.
+**Portée actuelle** : les packs asf (mode pur, bloc caviar v2) CI :
+✅ voir gate ✅ (punch-ins réels cap 4, espacés ≥ 2 s).
+**Hors scope pour l'instant (décision à confirmer)** : les 3 meme_* packs
+(mode logo/text+punch via schéma meme_v2, `overlay_image` json, 2 silences
+dans chacune) — schéma DIFFERENT, signification de `scale_to`, résolution du
+manifeste F00D. Ne pas les confondre avec les packs asf (schéma caviar v2).
 
 ## CI (branché)
-
-Le workflow `dev10_pur_render.yml` appelle Heisenberg après l'agrégation
-(`--no-whisper` sur les runners CI, rapide et sans dépendance). Un échec
-Heisenberg n'empêche PAS la publication du bundle (la frégate est advisory) —
-sauf verdict REFUSED journalisé, qui remonte comme avertissement opérateur.
-Les gates H-MIRROR / H-ENGINE / H-PACK / H-AGGREGATE, eux, sont **bloquants**
-(divergence budget = job rouge, aucun rendu, aucun bundle).
-
-## Tests
-
-`python3 F03_PICTOR/HEISENBERG/tests/test_heisenberg.py` — 20 tests :
-budgets, caps, refus, verdicts, B-roll numéroté (jamais de chemin exposé),
-chunk pack rétrocompatible, ledger, non-régression P-CAV Groupe 1.

@@ -326,7 +326,36 @@ cat TRACKING/TODO_CONTINUATION.md
 - **Tests** : panneau **13/13** (pack reel inclus : BLUR-01/02 → crop 1.3,
   blur 18px, vertical_text_overlay) · moteur 21/21 · v2 12/12 · gate 24/24
   · frégate 20/20. CI : suite panneau ajoutée à l'étape gate.
-- **Prochaine etape** : deposer les MP4 reels `BLUR-01/02` dans
-  `public/broll/` puis rendu CI de bout en bout sur voxc-2. Ensuite
-  Groupe 4 — memoire ARCHIVUM (voir section precedente).
+
+### 2026-10-04 (Groupe 3 v2) — analytique + moteur : punch-ins réels, trims géants, budget_state absent
+
+- **Analyse du pack PERTURABO `v2-live-vox-c` (5 packs asf_c1→c5) été : — dev10
+  CAVIAR-BOUND : portes v2 (review ALL_GATES_GO/VALIDATED, check16 `e567d4ad00e06ab1`,
+  hiérarchie vide, horodatage OK, resolution_at OK, budget croisé recalculé ≤55u),
+  budget recalculé (c1=52, c2=54, c3=46, c4=50, c5=55), spacings punch-ins ≥2s,
+  aucun6. budget_state ABSENT des 5 packs → recalculé côté bras armé.
+- **Factures réelles** : punch-ins `{at_sec, scale:1.2, duration_sec:0.6,
+  cause:amplitude_peak}` (NOT scale_to) ; silence_trims fenêtre `[start,end)`
+  → cut_at_sec = END ; panels[] et smash_audio[] au TOP de la partition (comme voxc-2) ;
+  c1 trim intro géant `[0,9.994]` ; c3 deux trims ADJACENTS `[16.999→18.32]` +
+  `[18.32→22.345]` qui fusionnent.
+- **Fix moteur** (`caviarRender.js`) : tuile de longueur nulle (cutStart == srcSec,
+  ex. trim à 0 ou 2 trims adjacents fusionnés) ne SAUTE PAS l'update
+  `srcSec = cut_at_sec` → sinon le silence suivant est réintégré dans la tuile
+  suivante (bug caché asf_c1 — le pack n'avait de son que depuis 9.994 s).
+- **Fix adaptateur** (`caviarV2.js`) : `removes_sec` arrondi au millième
+  (évite flottant 0,4510000000000005 pour le second trim de c1).
+- **Mise à jour tests** (`caviar_v2.test.mjs`) : attente float (round removes_sec),
+  c1 timeline frames attendus (300/531/844 segments, 150/587 broll, 75 smash,
+  219/321 punch-ins survécu, courbe 3/6/9), c3 8 tuiles attendues (trims adjacents).
+- **Validation** : `caviar_v2.test.mjs` 16/16 · `caviar_render` 21/21 ·
+  `caviar_panel` 13/13 · `caviar_gate.py` 24/24 · retour CLI c1 (warning
+  budget_state absent + portes v2 OK + checksum16 interne == binding).
+- **Hors scope** (décision à confirmer) : les 3 packs meme_* (mode logo/text+punch
+  schéma meme_v2, `overlay_image` json, 2 silences chacune) — schéma différent.
+
+### 2026-10-04 (Groupe 3 v2) — prochaine étape
+
+- Déposer les MP4 réels `BLUR-01/02` dans `public/broll/` puis rendu CI de
+  bout en bout sur voxc-2. Ensuite Groupe 4 — mémoire ARCHIVUM (voir section précédente).
 

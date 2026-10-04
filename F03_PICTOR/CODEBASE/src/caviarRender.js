@@ -136,14 +136,27 @@ export function enforceCaviarBudget(block, budget, ctx = {}) {
       dropFrom(key, `cap ${labelOf[key]} dépassé (max ${max})`);
     }
   }
-  // 2) élément unique (note §3.5) : punch-in pendant un panneau → déposé
+  // 2) élément unique (note §3.5) : un punch-in qui CHEVAUCHE la fenêtre
+  //    d'un panneau → déposé (le panneau est l'événement fort). Groupe 3 v2 :
+  //    comparaison par INTERVALLES (le punch-in v2 porte duration_sec) — un
+  //    punch démarré AVANT le panneau mais mordant sur son entrée est aussi
+  //    un conflit (asf_c1 : punch @14.85 + 0.6 s → mord sur le panneau @15.0).
   const winSec = Math.max(0, Number(budget?.unique_element_rule?.window_sec ?? 0.05));
+  const punchSpanSec = (p) => {
+    const d = Number(p.duration_sec || 0);
+    if (d > 0) return d;
+    const attack = Math.max(1, Number(p.attack_frames || 3));
+    const hold = Math.max(0, Number(p.hold_frames || 6));
+    const release = Math.max(1, Number(p.release_frames || 9));
+    return (attack + hold + release) / fps;
+  };
   for (let i = applied.punchins.length - 1; i >= 0; i--) {
     const pf = Number(applied.punchins[i].at_sec || 0);
+    const pEnd = pf + punchSpanSec(applied.punchins[i]);
     const conflict = applied.brolls.find((b) => {
       const bs = Number(b.at_sec || 0);
       const be = bs + Number(b.duration_frames || 0) / fps;
-      return pf >= bs - winSec && pf <= be + winSec;
+      return pEnd >= bs - winSec && pf <= be + winSec;
     });
     if (conflict) {
       dropped.push({ kind: 'punchins', event: applied.punchins[i], reason: 'élément unique : punch-in pendant un panneau B-roll (note §3.5)' });
@@ -225,14 +238,19 @@ export function buildCaviarTimeline(caviarRaw, budget, ctx = {}) {
   const segments = [];
   let tlFrame = 0;
   let srcSec = 0;
+  // NOTE Groupe 3 v2 (bug asf_c1) : `srcSec = c.cut_at_sec` DOIT s'exécuter
+  // même quand la tuile est vide (lenSec <= 0, ex. trim collé à 0 ou deux
+  // trims adjacents qui fusionnent) — sinon le silence suivant est RÉINTÉGRÉ
+  // dans la tuile qui suit (le trim géant d'intro de asf_c1 disparaissait).
   for (const c of keptCuts) {
     const cutStart = c.cut_at_sec - c.removes_sec;
     const lenSec = cutStart - srcSec;
-    if (lenSec <= 0) continue;
-    const len = Math.round((lenSec * fps) / speed);
-    if (len > 0) {
-      segments.push({ from: tlFrame, duration: len, sourceStart: Math.round(srcSec * fps) });
-      tlFrame += len;
+    if (lenSec > 0) {
+      const len = Math.round((lenSec * fps) / speed);
+      if (len > 0) {
+        segments.push({ from: tlFrame, duration: len, sourceStart: Math.round(srcSec * fps) });
+        tlFrame += len;
+      }
     }
     srcSec = c.cut_at_sec;
   }
@@ -263,13 +281,27 @@ export function buildCaviarTimeline(caviarRaw, budget, ctx = {}) {
   };
 
   // ── Punch-ins ──
-  const punchins = fxOff ? [] : applied.punchins.map((p) => ({
-    frame: sourceToTimelineFrame(p.at_sec),
-    scale_to: Math.min(1.15, Math.max(1.01, Number(p.scale_to || 1.08))),
-    attack_frames: Math.max(1, Number(p.attack_frames || 3)),
-    hold_frames: Math.max(0, Number(p.hold_frames || 6)),
-    release_frames: Math.max(1, Number(p.release_frames || 9)),
-  }));
+  // v2 asf : duration_sec (secondes SOURCE) → courbe attack/hold/release
+  // proportionnelle (1/6, 2/6, 3/6 — les défauts 3f/6f/9f à 30 fps = 0.6 s).
+  const punchins = fxOff ? [] : applied.punchins.map((p) => {
+    const durSec = Number(p.duration_sec || 0);
+    let attack = Math.max(1, Number(p.attack_frames || 3));
+    let hold = Math.max(0, Number(p.hold_frames || 6));
+    let release = Math.max(1, Number(p.release_frames || 9));
+    if (durSec > 0 && p.attack_frames == null && p.hold_frames == null && p.release_frames == null) {
+      const total = Math.max(3, Math.round((durSec * fps) / speed));
+      attack = Math.max(1, Math.round(total / 6));
+      hold = Math.max(0, Math.round(total / 3));
+      release = Math.max(1, total - attack - hold);
+    }
+    return {
+      frame: sourceToTimelineFrame(p.at_sec),
+      scale_to: Math.min(1.15, Math.max(1.01, Number(p.scale_to || 1.08))),
+      attack_frames: attack,
+      hold_frames: hold,
+      release_frames: release,
+    };
+  });
   if (fxOff && applied.punchins.length) {
     for (const p of applied.punchins) dropped.push({ kind: 'punchins', event: p, reason: 'fx_mode=off (clip normal)' });
   }

@@ -1,119 +1,40 @@
-# HEISENBERG — sous-frégate Caviar du bras armé (F03_PICTOR)
+## Groupe 3 v2 — punch-ins réels + trims géants + budget_state absent (2026-10-04)
 
-> *« I am the one who knocks. »* — la pureté, c'est tout. 99 %, jamais 60 %.
+Les packs réels `asf_c1→c5` (branche PERTURABO `v2-live-vox-c`, style blur)
+valident le moteur sur des données terrain battues :
 
-## Mission unique
+- **Punch-ins (v2)** : `{ at_sec, scale:1.2, duration_sec:0.6, cause:amplitude_peak }`
+  — l'adaptateur lit `scale` (=1.2, plafonné à 1.15 au moteur) et transporte
+  `duration_sec` + `cause` dans le bloc v1 ; le moteur DERIVE la courbe
+  attack/hold/release depuis la durée (1/6, 2/6, reste) quand aucune frame
+  explicite n'est fournie → 0.6 s @ 30 fps = 3f/6f/9f (défauts).
+- **Trims géants (v2)** : `silence_trims = { start_sec, end_sec, duration_sec }`
+  fenêtre `[start, end)` → `cut_at_sec = end` (reprise DU CONTENU, pas début du
+  silence). c1 : trim d'intro `[0, 9.994]` → la timeline recommence à 9.994 s
+  (segment sourceStart = 300 @ 30 fps), le pack n'a de son que depuis ce point.
+  Fix moteur : une tuile de longueur nulle (cutStart == srcSec, ex. trim collé à 0
+  ou deux trims adjacents) ne SAUTE PAS l'update `srcSec = cut_at_sec`, sinon le
+  silence suivant est réintégré dans la tuile suivante — aggravé sur les trims
+  adjacents (c3 : [16.999→18.32] + [18.32→22.345] fusionnent → 8 tuiles, pas 9).
+  Fix adaptateur : `removes_sec` arrondi au millième (évite flottant 0,4510000000000005).
+- **budget_state ABSENT** des 5 packs asf — le recalcul côté gate + moteur :
+  c1=52, c2=54, c3=46, c4=50, c5=55 (tous ≤ 55u, caps ok, spacing punch ≥ 2 s).
+  Silence trim < 0.25s ignorés (règle moteur), frames c1 : 75 (smash),
+  150 (BLUR-01 aftertrim), 219/321 (punch-ins survécu), 587 (BLUR-02).
 
-Heisenberg reçoit les **vidéos FINIES** produites par F03_PICTOR (validées par
-le gate qui suit F03), les **analyse**, et émet un **`caviar_manifest_<stem>.json`
-par vidéo finale** — le JSON que PERTURABO embarque dans son pack et que le
-bras armé transforme en clip caviar au rendu.
+Fixture : les 5 packs réels `pack_asf_c1..5.json` déposés dans
+`F03_PICTOR/CODEBASE/tests/` (copie lecture-seule depuis /tmp/pert2).
+Tests : `caviar_v2.test.mjs` — 16/16 (mapping punch+trims, timeline c1
+trims géants, 5 packs budget+timeline, c3 tuiles fusionnées).
+Gate CLI : `caviar_gate.py --manifest manifest_asf_c1.json --pack-v2 pack_asf_c1.json
+--manifest-caviar manifest_asf_c1.json` → avertissement budget_state absent +
+portes v2 OK, checksum16 interne == binding (`e567d4ad00e06ab1`).
 
-Elle ne remplace RIEN : le Directeur Caviar (Groupe 1, `F00_INGEST/caviar.py`)
-reste le moteur d'analyse ; Heisenberg en est le **poste d'émission** dédié,
-isolé dans F03_PICTOR, avec sa mémoire, ses budgets et sa bibliothèque B-roll.
-
-## Architecture (tout vit ici — zéro doublon ailleurs)
-
-```
-F03_PICTOR/HEISENBERG/
-├── heisenberg.py          ← le moteur (analyse, budget, émission)
-├── caviar_budget.json     ← Budget d'Attention — SOURCE DE VÉRITÉ UNIQUE
-├── IN/                    ← vidéos finies reçues de F03_PICTOR
-├── OUT/                   ← caviar_manifest_<stem>.json émis (+ hold/ pour les REFUSED)
-├── LEDGER/                ← manifest_ledger.json + gate_history.json (mémoire confinée)
-├── BROLL/
-│   ├── registry.json      ← registre NUMÉROTÉ (PERTURABO ne voit jamais les fichiers)
-│   ├── FILES/             ← les .mp4 réels (déposés par l'opérateur, jamais commités)
-│   └── candidates/        ← fiches d'ajout (numéro candidat → décision opérateur)
-└── tests/test_heisenberg.py
-```
-
-## Le contrat B-roll numéroté (règle du Warsmith)
-
-1. PERTURABO écrit l'**émotion** à illustrer (`moqueur`, `chute`, `climax`…).
-2. Il dit simplement : **« met le numéro 1 »**.
-3. Heisenberg (bras armé) sait **seul** quel fichier se cache derrière le
-   numéro, pose le **flash blanc à l'ENTRÉE** du B-roll (jamais à la sortie)
-   et le **SFX couplé sur la même frame**.
-4. **Pas de vidéo = pas de B-roll** : sans fichier réel dans `FILES/`, le
-   numéro est réputé indisponible et rien n'est proposé.
-5. Le SFX vit **uniquement** à l'entrée des B-rolls — c'est le seul endroit
-   où la doctrine autorise le SFX (anti-saturation).
-
-```bash
-python3 heisenberg.py --broll "met le numéro 1"           # → fiche complète (référence neutre broll#1)
-python3 heisenberg.py --broll-emotion moqueur             # → numéros candidats (PERTURABO tranche)
-```
-
-## Le Budget d'Attention (100 unités)
-
-Source unique : `caviar_budget.json` — LACRIMAE l'ingère dans ses gates
-P-CAV (double barrage : la frégate refuse à l'émission, les gates rouges au
-rendu si divergence), PERTURABO lit les mêmes chiffres pour composer.
-
-| Événement | Coût | Cap par clip |
-|---|---|---|
-| B-roll + flash + SFX (trio inséparable) | 12 u | ≤ 3 |
-| Smash audio (ducking au climax) | 8 u | ≤ 2 |
-| Punch-in (zoom) | 6 u | ≤ 4, espacés ≥ 2 s |
-| Jump cut (trim silence) | 1 u | ≤ 8 |
-
-**Règles de survie** : dépense ≤ 55 u (le reste = respiration, source seule
-≥ 60-70 % de la timeline) · **> 8 silences = REFUS d'émettre** (« segment
-mauvais, prends un autre ») · jamais de manifeste toxique — diagnostic renvoyé.
-
-## Usage
-
-```bash
-# Une vidéo finie (OUT de F03_PICTOR)
-python3 F03_PICTOR/HEISENBERG/heisenberg.py --manifest F03_PICTOR/OUT/A01/pur_A01_finale.mp4
-
-# Toutes les vidéos déposées dans IN/
-python3 F03_PICTOR/HEISENBERG/heisenberg.py --batch F03_PICTOR/HEISENBERG/IN/
-
-# La part à embarquer dans le pack PERTURABO (optionnel, v1-compatible)
-python3 F03_PICTOR/HEISENBERG/heisenberg.py --emit-pack-chunk OUT/caviar_manifest_pur_A01_finale.json
-
-# Tests
-python3 F03_PICTOR/HEISENBERG/tests/test_heisenberg.py
-python3 F03_PICTOR/HEISENBERG/tests/test_caviar_gate.py   # gate rendu (Groupe 3 + portes v2)
-```
-
-## Pack v2 & partition F00D (réception vérifiée)
-
-Le pack v2 PERTURABO porte le geste dans `caviar_partition` : l'adaptateur
-`F03_PICTOR/CODEBASE/src/caviarV2.js` le normalise vers le moteur (registre
-sémantique `BLUR-01` → fichier, compat numéroté v1) et `caviar_gate.py
---pack-v2` vérifie review/checksum/hiérarchie/horodatage/resolution_at/budget.
-Vérifié sur le pack réel voxc-2 (32u == 32u, portes vertes). Guide complet :
-`TRACKING/CAVIAR_PACK_V2.md`.
-
-## Groupe 3 — le rendu narratif (côté bras armé)
-
-Le bloc `caviar` du pack (décisions PERTURABO) est exécuté au rendu par
-`F03_PICTOR/CODEBASE/src/caviarRender.js` : jump cuts (table source↔timeline),
-punch-ins (peak ≤ 1.15), B-roll numéroté (flash ENTRÉE + SFX même frame,
-voix continue), ducking au climax. Double barrage : le moteur vérifie le
-Budget d'Attention AVANT d'appliquer — excédent déposé (respiration gagnée),
-gate rouge. Gate CI rouge dure : `caviar_gate.py` (pack avant rendu + agrégat
-avant publication). Tests moteur : `cd F03_PICTOR/CODEBASE && npm run test:caviar`.
-
-## Groupe 2 v2 — le panneau possédé par la partition F00D
-
-En v2, F00D possède l'EMBALLAGE du panneau : `crop_zoom` (plafonné [1.0-2.0]),
-`blur_radius_px` ([0-60]) et `panel` (`vertical_text_overlay` = cadre vertical
-+ jauge — décor SEUL, le texte éditorial reste possédé par F06, note §3.6).
-Résolution : `F03_PICTOR/CODEBASE/src/caviarPanel.js` ; application :
-`caviarRender.js` (`panel_spec`, cap 45 frames, élément unique — punch-in
-pendant un panneau déposé —, `resolution_at` re-vérifié sur la timeline) ;
-rendu : `purPackComposition.jsx`. B-roll v1 sans emballage → `panel_spec:
-null` → rendu plein cadre historique. Tests : `node
-tests/caviar_panel.test.mjs` (13/13).
+**Portée actuelle** : les packs asf (mode pur, bloc caviar v2) CI :
+✅ voir gate ✅ (punch-ins réels cap 4, espacés ≥ 2 s).
+**Hors scope pour l'instant (décision à confirmer)** : les 3 meme_* packs
+(mode logo/text+punch via schéma meme_v2, `overlay_image` json, 2 silences
+dans chacune) — schéma DIFFERENT, signification de `scale_to`, résolution du
+manifeste F00D. Ne pas les confondre avec les packs asf (schéma caviar v2).
 
 ## Ce que Heisenberg NE fait PAS
-
-- Écrire une accroche, choisir un segment, décider d'un style (PERTURABO/Warsmith).
-- Appliquer ses propositions d'office — tout est advisory jusqu'au pack validé.
-- Toucher au `speed` 1.05 (décision opérateur verrouillée).
-- Doubler la porte P-CAV : elle utilise le MÊME `caviar_budget.json`.
