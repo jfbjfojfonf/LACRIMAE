@@ -41,6 +41,11 @@ import asfPackC1 from '../tests/pack_asf_c1.json';
 //   renseigner leurs ids ici. Le bras armé tient cette liste à jour.
 const DEPLOYED_BROLL_IDS = [];
 
+// INTERRUPTEUR CAVIAR — true = rendu narratif (cuts/punch-ins/ducking),
+// false = clip simple lu d'un bout à l'autre (baseline de référence).
+// false reproduit exactement le rendu AVANT le branchement du 016cfd7.
+const CAVIAR_ENABLED = false;
+
 /** Partition F00D → bloc moteur, panneaux sans asset déployé retirés. */
 function caviarPartitionForRender(partition) {
   if (!partition || typeof partition !== 'object') return partition;
@@ -216,7 +221,9 @@ export function PurPackComposition({ purManifest, session: sessionProp, entryInd
   // B-roll numéroté, ducking). Bloc caviar de l'ENTRÉE (rendu CI = 1 vidéo,
   // chaque pack porte ses décisions) avec repli bloc racine (pack mono v1).
   // Absent partout → timeline vide, rendu historique à l'identique.
-  const caviarRaw = entry.caviar ?? manifest.caviar ?? caviarPartitionForRender(asfPackC1.caviar_partition);
+  const caviarRaw = CAVIAR_ENABLED
+    ? (entry.caviar ?? manifest.caviar ?? caviarPartitionForRender(asfPackC1.caviar_partition))
+    : null;
   const caviar = useMemo(
     () => buildCaviarTimeline(toEngineBlock(caviarRaw, caviarRegistry), caviarBudget, {
       fps, speed, durationInFrames, fxOff,
