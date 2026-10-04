@@ -1,7 +1,7 @@
 # TODO — continuation `dev-11`
 
 Dernière mise à jour : 2026-10-04
-État : **F02 forgé**. F01/F03 moteurs présents (MediaPipe modèle + clips hors git). Modal skeleton.
+État : **F02 forgé**. F01/F03 moteurs présents. Modal stages forgés. Reste : tokens + premier clip.
 
 Carte : `TRACKING/WHERE_WE_ARE.md`
 
@@ -39,7 +39,7 @@ Carte : `TRACKING/WHERE_WE_ARE.md`
 - [x] Ecrire `dev11.landmarks.v1` par stem
 - [x] `job_request.target` → oval_mean / nose 4 / eyes 468+473
 - [x] Rapport `oculus_report.json`
-- [ ] Image Modal CPU + volume `face_landmarker.task`
+- [x] Image Modal CPU + volume `face_landmarker.task`
 - [ ] Fixture clip synthétique généré CI (pas commité)
 
 ---
@@ -70,9 +70,9 @@ Carte : `TRACKING/WHERE_WE_ARE.md`
 
 ## Groupe 4 — Orchestration
 
-- [x] `dev11_oculus.yml` squelette timeouts / secrets
-- [ ] `modal/app.py` stages réels (encore skeleton)
-- [ ] Videos Release / URI objet
+- [x] `dev11_oculus.yml` timeouts / secrets / `modal run`
+- [x] `modal/app.py` stages réels (bootstrap / oculus / sanguinor / calix / full)
+- [x] Videos via `object_uri` HTTPS (MP4 ou ZIP)
 - [ ] Secrets `MODAL_TOKEN_ID` / `MODAL_TOKEN_SECRET` dans le repo GitHub
 
 ---
@@ -98,6 +98,6 @@ Carte : `TRACKING/WHERE_WE_ARE.md`
 
 ## Prochaine action
 
-1. Déposer `face_landmarker.task` (Modal volume).
-2. Un clip 9:16 de test hors git → `LAC_RUN.py run`.
-3. Forger `modal/app.py` stages.
+1. Poser secrets `MODAL_TOKEN_ID` / `MODAL_TOKEN_SECRET` (repo GitHub + CLI Modal).
+2. Dispatch `bootstrap` puis `full` avec `object_uri` d'un clip 9:16 hors git.
+3. Tests contrat A (pytest) + campagne B une fois le clip fourni.

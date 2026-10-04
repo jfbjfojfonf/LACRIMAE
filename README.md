@@ -82,7 +82,7 @@ YOLO / Ultralytics : **hors pile v1** (licence AGPL). Fallback multi-têtes docu
 
 Sans `face_landmarker.task` : F01 HOLD (detected=false) → pas de transit F02 (P-OC-14).
 F02 se teste seul sur JSON : `python F02_SANGUINOR/CODEBASE/f02_sanguinor.py --in ... --out ...`
-GHA : `dev11_contracts.yml` pytest. `dev11_oculus.yml` Modal skeleton. Videos hors git.
+GHA : `dev11_contracts.yml` pytest. `dev11_oculus.yml` dispatch Modal (`modal run`). Videos hors git. Secrets `MODAL_TOKEN_ID` / `MODAL_TOKEN_SECRET`.
 
 ---
 

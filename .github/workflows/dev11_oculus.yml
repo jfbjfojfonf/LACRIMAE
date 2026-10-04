@@ -6,22 +6,35 @@ on:
       stage:
         description: "Stage to run after contract tests"
         required: true
-        default: "contracts"
+        default: "full"
         type: choice
         options:
           - contracts
+          - bootstrap
           - oculus
           - sanguinor
           - calix
           - full
       object_uri:
-        description: "Remote URI for campaign clips (never git)"
+        description: "Remote URI for campaign clips (never git, never runner decode)"
         required: false
         default: ""
+      target:
+        description: "Camera target"
+        required: false
+        default: "face"
+        type: choice
+        options:
+          - face
+          - nose
+          - eyes
 
 concurrency:
   group: dev11-oculus-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   contracts:
@@ -36,7 +49,7 @@ jobs:
       - name: Install test deps
         run: pip install -r requirements-dev.txt
       - name: Pytest contrats
-        run: python -m pytest tests -q --ignore=tests/test_sanguinor_filter.py
+        run: python -m pytest tests -q
       - name: Isolation CUSTOS
         run: |
           python LAC_CUSTOS.py --frigate F01 --mode check-in || true
@@ -48,24 +61,34 @@ jobs:
     needs: contracts
     if: github.event.inputs.stage != 'contracts'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 45
     env:
       MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
       MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
       DEV11_STAGE: ${{ github.event.inputs.stage }}
       DEV11_OBJECT_URI: ${{ github.event.inputs.object_uri }}
+      DEV11_TARGET: ${{ github.event.inputs.target }}
       DEV11_TIMEOUT_F01_S: 600
       DEV11_TIMEOUT_F02_S: 300
       DEV11_TIMEOUT_F03_S: 900
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
       - name: Guard secrets
         run: |
-          test -n "$MODAL_TOKEN_ID"
-          test -n "$MODAL_TOKEN_SECRET"
-      - name: Modal skeleton (Groupe 4 non forge)
+          if [ -z "$MODAL_TOKEN_ID" ] || [ -z "$MODAL_TOKEN_SECRET" ]; then
+            echo "P-CI-2: secrets MODAL_TOKEN_ID / MODAL_TOKEN_SECRET absents."
+            exit 1
+          fi
+      - name: Install Modal
+        run: pip install "modal>=0.73"
+      - name: Modal run (remote decode only)
         run: |
-          echo "Groupe 4: pas de modal run tant que modal/app.py est skeleton"
-          echo "stage=$DEV11_STAGE uri=$DEV11_OBJECT_URI"
-          echo "Timeouts F01=${DEV11_TIMEOUT_F01_S}s F02=${DEV11_TIMEOUT_F02_S}s F03=${DEV11_TIMEOUT_F03_S}s"
           echo "P-CI-1: this job must not ffmpeg/ffprobe campaign MP4."
+          echo "stage=$DEV11_STAGE target=$DEV11_TARGET timeouts F01=${DEV11_TIMEOUT_F01_S}s F02=${DEV11_TIMEOUT_F02_S}s F03=${DEV11_TIMEOUT_F03_S}s"
+          python -m modal run modal/app.py \
+            --stage "$DEV11_STAGE" \
+            --object-uri "$DEV11_OBJECT_URI" \
+            --target "$DEV11_TARGET"

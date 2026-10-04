@@ -6,25 +6,45 @@ GitHub Actions **orchestre**. Modal **exécute**. Jamais de decode/tracking MP4 
 
 Nom : `lacrimae-dev11-oculus`
 
+Fichier : `modal/app.py`
+
 | Stage | Fonction Modal | Compute v1 |
 |-------|----------------|------------|
-| F01 | `stage_oculus` | CPU, volume modèles MediaPipe |
-| F02 | `stage_sanguinor` | CPU |
-| F03 | `stage_calix` | CPU libx264 ; GPU optionnel `h264_nvenc` |
+| bootstrap | `run_stage("bootstrap")` | CPU, telecharge `face_landmarker.task` sur volume |
+| F01 | `run_stage("oculus")` | CPU, volume modeles MediaPipe |
+| F02 | `run_stage("sanguinor")` | CPU |
+| F03 | `run_stage("calix")` | CPU libx264 |
+| full | `LAC_RUN.py run` | CPU, portes I-IV |
+
+Volumes :
+
+- `lacrimae-dev11-models` → `/models/face_landmarker.task`
+- `lacrimae-dev11-campaign` → `/campaign/IN/clips` + `/campaign/OUT`
 
 ## Secrets
 
-Repo GitHub :
+Repo GitHub (P-CI-2, P-ISO-3) :
 
 - `MODAL_TOKEN_ID`
 - `MODAL_TOKEN_SECRET`
 
-Jamais dans git. Jamais dans un JSON de campagne (P-ISO-3, P-CI-2).
+Jamais dans git. Jamais dans un JSON de campagne.
+
+Creer un token : https://modal.com/settings/tokens
+
+## CLI local (une fois token present)
+
+```
+python -m modal run modal/app.py --stage bootstrap
+python -m modal run modal/app.py --stage full --object-uri "https://example.com/clip.mp4" --target face
+```
+
+`object_uri` : MP4 direct ou ZIP de MP4. Videos jamais dans git.
 
 ## Timeout
 
-Documenté dans `.github/workflows/dev11_oculus.yml` (P-CI-3). Défaut : 10 min / clip F01, 5 min F02, 15 min F03.
+Documente dans `.github/workflows/dev11_oculus.yml` (P-CI-3). Defaut : 10 min / clip F01, 5 min F02, 15 min F03. Job GHA 45 min.
 
 ## Videos
 
-IN clips via URI objet (S3/R2) ou GitHub Release. Jamais artifact GHA > quota. OUT tracked : objet distant + `calix_manifest.json` en artifact JSON.
+IN clips via URI objet (HTTPS / S3-compatible public). OUT tracked : volume Modal `lacrimae-dev11-campaign` + rapports JSON. Artifact GHA = JSON seulement.

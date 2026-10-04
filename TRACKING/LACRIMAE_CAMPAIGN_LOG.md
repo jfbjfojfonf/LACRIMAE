@@ -42,3 +42,15 @@ Magos : Groupe 0 scellé. Groupe 1 ensuite.
 - Modal toujours skeleton. Pas de campagne réelle sans clips + modèle.
 
 Magos : F02 est le cœur. Ne pas retune F01 pour un jitter camera.
+
+---
+
+## 2026-10-04 — Groupe 4 Modal
+
+- `modal/app.py` : image Debian+ffmpeg+mediapipe, volumes models/campaign, stages bootstrap/oculus/sanguinor/calix/full.
+- Bootstrap telecharge `face_landmarker.task` (Google storage) sur volume. F01 le lit via `/models/`.
+- GHA `dev11_oculus.yml` : pytest contrats puis `modal run` (P-CI-1 : zero ffmpeg sur le runner).
+- Secrets requis : `MODAL_TOKEN_ID`, `MODAL_TOKEN_SECRET`. Pas dans git.
+- Clip campagne : `object_uri` HTTPS. Pas de video dans le repo.
+
+Magos : tokens avant premier `modal run`.

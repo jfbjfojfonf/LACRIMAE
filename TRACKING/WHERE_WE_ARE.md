@@ -7,7 +7,7 @@ Branche : `dev-11` → `origin/dev-11` (https://github.com/jfbjfojfonf/LACRIMAE/
 
 ## Une phrase
 
-Flotte camera virtuelle 9:16. Tree + CUSTOS scellés. F02 (cœur) **forgé**. F01 écrit des landmarks (MediaPipe si modèle, sinon HOLD). F03 croppe si FFmpeg. Modal = skeleton. Moteurs **ne tournent pas** de campagne réelle tant que clips + `face_landmarker.task` ne sont pas là.
+Flotte camera virtuelle 9:16. Tree + CUSTOS scellés. F02 (cœur) **forgé**. F01 écrit des landmarks (MediaPipe si modèle, sinon HOLD). F03 croppe si FFmpeg. Modal **forgé** (`modal/app.py` stages bootstrap/oculus/sanguinor/calix/full). GHA `dev11_oculus.yml` dispatch `modal run`. Campagne réelle : token Modal + clip 9:16.
 
 ---
 
@@ -32,19 +32,18 @@ Flotte camera virtuelle 9:16. Tree + CUSTOS scellés. F02 (cœur) **forgé**. F0
 | Tests contrat | `tests/test_*_contract.py` | forgé | 0 decode campagne |
 | Tests filtre | `tests/test_sanguinor_filter.py` | forgé | deadzone/hold/crop |
 | GHA contrats | `.github/workflows/dev11_contracts.yml` | scellé | pytest push/PR |
-| GHA Modal | `.github/workflows/dev11_oculus.yml` | skeleton | dispatch, pas ffmpeg |
-| Modal app | `modal/app.py` | skeleton | Groupe 4 |
+| GHA Modal | `.github/workflows/dev11_oculus.yml` | forgé | dispatch `modal run`, pas ffmpeg |
+| Modal app | `modal/app.py` | forgé | Groupe 4 stages réels |
 | Sœurs | `TRACKING/INTEGRATION_SISTERS.md` | noté | où pousser les clips |
 
 ---
 
 ## Ce qui manque pour une vraie campagne
 
-1. Clips 9:16 H.264 dans `F01_OCULUS/IN/clips/` (hors git)
-2. `job_request.json` copié depuis l'exemple
-3. Modèle `face_landmarker.task` (MediaPipe Tasks) sur Modal / volume
-4. `modal/app.py` stages réels + secrets `MODAL_TOKEN_*`
-5. Sans (3) : F01 écrit `detected=false` partout → HOLD P-OC-14 → F02 non transité
+1. Secrets GitHub `MODAL_TOKEN_ID` + `MODAL_TOKEN_SECRET` (et token pour `modal run` local)
+2. Clip 9:16 H.264 via `object_uri` (hors git) — bootstrap telecharge `face_landmarker.task`
+3. `job_request.json` : GHA `--target face|nose|eyes` ou copie de l'exemple en local
+4. Sans token Modal : GHA job `modal` REFUS P-CI-2. Sans clip : Porte I P-OC-2.
 
 ---
 
