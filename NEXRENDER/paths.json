@@ -1,0 +1,23 @@
+{
+  "vps": {
+    "template_aep": "C:\\nexrender\\templates\\template.aep",
+    "composition": "MAIN",
+    "inbox_dir": "C:\\nexrender\\inbox",
+    "outbox_dir": "C:\\nexrender\\outbox",
+    "queue_dir": "C:\\nexrender\\queue",
+    "scripts_dir": "C:\\nexrender\\scripts",
+    "presets_dir": "C:\\nexrender\\presets",
+    "ffx_cc2": "C:\\nexrender\\presets\\cc2.ffx",
+    "jsx_apply_cc2": "C:\\nexrender\\scripts\\apply_cc2.jsx",
+    "nexrender_server": "http://127.0.0.1:3000"
+  },
+  "conventions": {
+    "layer_name": "SRC",
+    "output_format": "mp4",
+    "output_codec": "h264",
+    "expected_width": 1920,
+    "expected_height": 1080,
+    "job_policy": "one_job_per_video",
+    "missing_plugin_policy": "fail_job"
+  }
+}

@@ -16,8 +16,8 @@
    - FPS : identique à tes sources (ex. 120 ou 60)
    - Durée : couvrant la vidéo la plus longue à traiter
 3. **Ajouter un calque vidéo placeholder** :
-   - Nom du calque : **`SRC`** (nommage canonique — à confirmer, cf. TODO dans
-     `CONTINUATION.md` ; c'est ce nom que F02_RENDER référence dans le job)
+   - Nom du calque : **`SRC`** (figé Phase 1a)
+   - Nom de la composition : **`MAIN`**
    - Le preset `cc2.ffx` ne PAS encore appliqué ici : c'est le script JSX
      (`04_SCRIPT_JSX.md`) qui l'appliquera à chaque job.
 4. **Configurer l'Output Module (OBLIGATOIRE pour AE 2023+)** :

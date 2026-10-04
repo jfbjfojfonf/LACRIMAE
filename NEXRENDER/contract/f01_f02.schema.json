@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "F01_INGEST to F02_RENDER manifest",
+  "type": "object",
+  "required": ["generated_at", "items"],
+  "additionalProperties": false,
+  "properties": {
+    "generated_at": {
+      "type": "string",
+      "description": "ISO-8601 UTC timestamp"
+    },
+    "source_dir": {
+      "type": "string"
+    },
+    "inbox_dir": {
+      "type": "string"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "video_path"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique render request id (stem of source file + short hash)"
+          },
+          "video_path": {
+            "type": "string",
+            "description": "Absolute path of the mp4 deposited in the VPS inbox"
+          },
+          "source_name": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "width": { "type": "integer" },
+              "height": { "type": "integer" },
+              "fps": { "type": "number" },
+              "duration_sec": { "type": "number" },
+              "has_audio": { "type": "boolean" },
+              "size_bytes": { "type": "integer" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

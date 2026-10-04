@@ -1,0 +1,31 @@
+{
+  "template": {
+    "src": "file:///C:/nexrender/templates/template.aep",
+    "composition": "MAIN"
+  },
+  "assets": [
+    {
+      "src": "file:///C:/nexrender/inbox/video_test.mp4",
+      "type": "video",
+      "layerName": "SRC"
+    },
+    {
+      "src": "file:///C:/nexrender/scripts/apply_cc2.jsx",
+      "type": "script"
+    }
+  ],
+  "actions": {
+    "postrender": [
+      {
+        "module": "@nexrender/action-encode",
+        "preset": "mp4",
+        "output": "encoded.mp4"
+      },
+      {
+        "module": "@nexrender/action-copy",
+        "input": "encoded.mp4",
+        "output": "C:/nexrender/outbox/video_test.mp4"
+      }
+    ]
+  }
+}

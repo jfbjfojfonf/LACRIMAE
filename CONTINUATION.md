@@ -14,9 +14,8 @@ Flux **« vidéos existantes → Nexrender → preset `cc2.ffx` → vidéo finie
 
 1. Ne jamais modifier `dev6` (stable), `dev6-D`, `f09-output` ni `main`.
 2. Jamais committé : `.env*`, tokens, `*.ffx`, `*.aep`, `*.mp4`, `node_modules/`.
-3. **Pas de code avant validation humaine de la phase concernée** (voir TODO).
-4. Préservation absolue de tout changement utilisateur existant ; pas de reset/clean/squash.
-5. Push uniquement quand demandé — via `push_via_api.py` (le credential Freebuff n'a pas accès au repo).
+3. Préservation absolue de tout changement utilisateur existant ; pas de reset/clean/squash.
+4. Push uniquement quand demandé.
 
 ## Flux cible
 
@@ -41,11 +40,16 @@ Flux **« vidéos existantes → Nexrender → preset `cc2.ffx` → vidéo finie
 - [x] Documentation de branche (8 docs, cf. `NEXRENDER/README.md`)
 - [x] `.gitignore` de sécurité
 
-### ⬜ Phase 1 — Artefacts Nexrender dans le repo (**moi**, code à valider)
-- [ ] JSON de job de référence (`NEXRENDER/jobs/`)
-- [ ] Script JSX appliquant `cc2.ffx` à la volée (`NEXRENDER/scripts/`)
-- [ ] Contrat d'interface F01_INGEST → F02_RENDER
-- **Validation utilisateur requise avant d'écrire le code.**
+### ✅ Phase 1a — Artefacts Nexrender (Fait, 2026-10-04)
+- [x] JSON de job de référence (`NEXRENDER/jobs/job.reference.json`)
+- [x] Script JSX appliquant `cc2.ffx` (`NEXRENDER/scripts/apply_cc2.jsx`)
+- [x] Contrat F01 → F02 (`NEXRENDER/contract/`)
+- [x] Chemins VPS figés (`NEXRENDER/paths.json`)
+
+### ⬜ Phase 1b — Code des frégates (**en cours**)
+- [ ] `F01_INGEST` : scan source, validation, copie inbox, manifeste
+- [ ] `F02_RENDER` : manifeste → jobs Nexrender, soumission, suivi, outbox
+- [ ] Tests unitaires sans VPS
 
 ### ⬜ Phase 2 — VPS (**toi**, voir `NEXRENDER/docs/01_VPS_SETUP.md`)
 - [ ] Node.js LTS installé sur le VPS
@@ -55,10 +59,10 @@ Flux **« vidéos existantes → Nexrender → preset `cc2.ffx` → vidéo finie
 - [ ] Règle on/off du VPS maîtrisée (crédit essai 100 $ / 30 jours)
 
 ### ⬜ Phase 3 — Template `.aep` sur le VPS (**toi**, voir `02_TEMPLATE_AEP.md`)
-- [ ] Composition 1920×1080 créée via RDP
-- [ ] Calque vidéo placeholder nommé (convention à confirmer)
+- [ ] Composition 1920×1080 créée via RDP, nommée `MAIN`
+- [ ] Calque vidéo placeholder nommé `SRC`
 - [ ] Output module configuré (obligatoire AE 2023+)
-- [ ] `.aep` enregistré dans `NEXRENDER/templates/` **sur le VPS** (jamais committé)
+- [ ] `.aep` enregistré dans `C:\nexrender\templates\template.aep` (jamais committé)
 
 ### ⬜ Phase 4 — Premier rendu de test (**toi** + moi : dépannage)
 - [ ] 1 vidéo test déposée sur le VPS
@@ -68,16 +72,24 @@ Flux **« vidéos existantes → Nexrender → preset `cc2.ffx` → vidéo finie
 - [ ] Self-hosted runner GitHub installé sur le VPS (**toi**)
 - [ ] Workflow `.github/workflows/` (**moi**)
 
-## Points en attente de décision
+## Décisions figées (Phase 1a)
 
-| Question | Statut |
+| Question | Décision |
 |---|---|
-| Nom du calque vidéo placeholder dans le `.aep` | à confirmer (`SRC` proposé) |
-| Format de sortie (mp4 H.264 ? fps/résolution source ?) | à confirmer |
-| Source des vidéos pour F01_INGEST (autre branche ? stockage Modal ?) | à définir |
+| Nom du calque placeholder | `SRC` |
+| Nom de la composition | `MAIN` |
+| Format de sortie | mp4 H.264 |
+| Politique jobs | un job par vidéo |
+| Plugin manquant | échec du job |
+| Chemin preset | `C:\nexrender\presets\cc2.ffx` |
+| Source F01 par défaut | `C:\nexrender\sources` (overridable) |
+
+## Handoff agent
+
+Prochaine action : **Phase 1b** — écrire le code Python de `F01_INGEST` et `F02_RENDER`.
+Voir `HANDOFF.md`. Ne pas toucher Phase 2+ (VPS, c'est l'humain).
 
 ## État Git
 
-- Branche courante : `dev6-E` (créée depuis `main`)
-- Stash en attente : `stash@{0}` = modification `.pyc` de `f09-output` à restaurer
-  avec `git stash pop` quand on retourne sur `f09-output`
+- Branche courante : `dev6-E`
+- Dernier palier : Phase 1a artefacts Nexrender
