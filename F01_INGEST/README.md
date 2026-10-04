@@ -8,12 +8,21 @@
 [source des vidéos] ──► F01_INGEST ──► file d'attente ──► F02_RENDER
 ```
 
+## Usage
+
+```
+python F01_INGEST/ingest.py
+python F01_INGEST/ingest.py --source C:\nexrender\sources --inbox C:\nexrender\inbox --queue C:\nexrender\queue
+```
+
+Exige `ffprobe` dans le PATH (install FFmpeg sur le VPS).
+
 ## Ce qu'elle fait
 
-1. **Lire la source** : `C:\nexrender\sources` par defaut (overridable).
-2. **Valider** chaque video : mp4 lisible, 1920x1080.
-3. **Deposer** dans `C:\nexrender\inbox\`.
-4. **Emettre** `C:\nexrender\queue\manifest.json` (contrat `NEXRENDER/contract/`).
+1. **Lire la source** : `C:\nexrender\sources` par defaut (`NEXRENDER/paths.json`).
+2. **Valider** chaque video : mp4 lisible, 1920x1080, duree > 0.
+3. **Deposer** dans `C:\nexrender\inbox\<id>.mp4`.
+4. **Emettre** `C:\nexrender\queue\manifest.json`. Les skips vont dans `skipped.json`.
 
 ## Ce qu'elle ne fait PAS
 
@@ -28,4 +37,5 @@ Voir `NEXRENDER/contract/f01_f02.schema.json`. Champs obligatoires : `id`, `vide
 
 - [x] Source par defaut definie (`C:\nexrender\sources`)
 - [x] Contrat F01 → F02 fige
-- [ ] Code ecrit (Phase 1b)
+- [x] Code ecrit (`ingest.py`)
+- [x] Tests (`tests/test_ingest.py`)

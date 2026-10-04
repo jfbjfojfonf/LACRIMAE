@@ -37,7 +37,7 @@ Flux **« vidéos existantes → Nexrender → preset `cc2.ffx` → vidéo finie
 ### ✅ Phase 0 — Structure (Fait)
 - [x] Branche `dev6-E` créée depuis `main`
 - [x] Structure : `NEXRENDER/`, `F01_INGEST/`, `F02_RENDER/`
-- [x] Documentation de branche (8 docs, cf. `NEXRENDER/README.md`)
+- [x] Documentation de branche
 - [x] `.gitignore` de sécurité
 
 ### ✅ Phase 1a — Artefacts Nexrender (Fait, 2026-10-04)
@@ -46,10 +46,10 @@ Flux **« vidéos existantes → Nexrender → preset `cc2.ffx` → vidéo finie
 - [x] Contrat F01 → F02 (`NEXRENDER/contract/`)
 - [x] Chemins VPS figés (`NEXRENDER/paths.json`)
 
-### ⬜ Phase 1b — Code des frégates (**en cours**)
-- [ ] `F01_INGEST` : scan source, validation, copie inbox, manifeste
-- [ ] `F02_RENDER` : manifeste → jobs Nexrender, soumission, suivi, outbox
-- [ ] Tests unitaires sans VPS
+### ✅ Phase 1b — Code des frégates (Fait, 2026-10-04)
+- [x] `F01_INGEST/ingest.py` : scan source, validation 1920x1080, copie inbox, manifeste
+- [x] `F02_RENDER/render.py` : manifeste → jobs, POST nexrender-server, suivi, outbox
+- [x] Tests unitaires sans VPS (`tests/test_ingest.py`, `tests/test_render.py`) — 8/8 OK
 
 ### ⬜ Phase 2 — VPS (**toi**, voir `NEXRENDER/docs/01_VPS_SETUP.md`)
 - [ ] Node.js LTS installé sur le VPS
@@ -57,6 +57,8 @@ Flux **« vidéos existantes → Nexrender → preset `cc2.ffx` → vidéo finie
 - [ ] After Effects officiel installé + mode Render Only
 - [ ] Plugins du preset (Magic Bullet Looks, Sapphire) installés
 - [ ] Règle on/off du VPS maîtrisée (crédit essai 100 $ / 30 jours)
+- [ ] Copier `apply_cc2.jsx` vers `C:\nexrender\scripts\`
+- [ ] Copier `cc2.ffx` vers `C:\nexrender\presets\` (jamais dans le repo)
 
 ### ⬜ Phase 3 — Template `.aep` sur le VPS (**toi**, voir `02_TEMPLATE_AEP.md`)
 - [ ] Composition 1920×1080 créée via RDP, nommée `MAIN`
@@ -65,14 +67,15 @@ Flux **« vidéos existantes → Nexrender → preset `cc2.ffx` → vidéo finie
 - [ ] `.aep` enregistré dans `C:\nexrender\templates\template.aep` (jamais committé)
 
 ### ⬜ Phase 4 — Premier rendu de test (**toi** + moi : dépannage)
-- [ ] 1 vidéo test déposée sur le VPS
-- [ ] Job lancé, rendu réussi (pas de pop-up, pas de watermark, look cc2 correct)
+- [ ] 1 vidéo test déposée dans `C:\nexrender\sources`
+- [ ] `python F01_INGEST/ingest.py` puis `python F02_RENDER/render.py`
+- [ ] Rendu réussi (pas de pop-up, pas de watermark, look cc2 correct)
 
 ### ⬜ Phase 5 — Automatisation (optionnelle)
 - [ ] Self-hosted runner GitHub installé sur le VPS (**toi**)
 - [ ] Workflow `.github/workflows/` (**moi**)
 
-## Décisions figées (Phase 1a)
+## Décisions figées
 
 | Question | Décision |
 |---|---|
@@ -82,14 +85,23 @@ Flux **« vidéos existantes → Nexrender → preset `cc2.ffx` → vidéo finie
 | Politique jobs | un job par vidéo |
 | Plugin manquant | échec du job |
 | Chemin preset | `C:\nexrender\presets\cc2.ffx` |
-| Source F01 par défaut | `C:\nexrender\sources` (overridable) |
+| Source F01 par défaut | `C:\nexrender\sources` |
 
 ## Handoff agent
 
-Prochaine action : **Phase 1b** — écrire le code Python de `F01_INGEST` et `F02_RENDER`.
-Voir `HANDOFF.md`. Ne pas toucher Phase 2+ (VPS, c'est l'humain).
+Prochaine action **côté code** : rien de bloquant. Attendre Phase 2-3 (humain, VPS).
+Ensuite Phase 4 : lancer un job réel, dépanner via `NEXRENDER/docs/05_DEPANNAGE.md`.
+
+Voir `HANDOFF.md`.
+
+## Commandes locales (sans VPS)
+
+```
+python3 -m unittest tests.test_ingest tests.test_render -v
+python3 F02_RENDER/render.py --dry-run --manifest /chemin/manifest.json --jobs-dir /tmp/jobs --outbox /tmp/outbox
+```
 
 ## État Git
 
 - Branche courante : `dev6-E`
-- Dernier palier : Phase 1a artefacts Nexrender
+- Dernier palier : Phase 1b code F01/F02 + tests

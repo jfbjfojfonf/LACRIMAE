@@ -2,6 +2,7 @@
   "vps": {
     "template_aep": "C:\\nexrender\\templates\\template.aep",
     "composition": "MAIN",
+    "sources_dir": "C:\\nexrender\\sources",
     "inbox_dir": "C:\\nexrender\\inbox",
     "outbox_dir": "C:\\nexrender\\outbox",
     "queue_dir": "C:\\nexrender\\queue",
