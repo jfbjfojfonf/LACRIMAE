@@ -14,6 +14,8 @@ on:
       - '.github/workflows/dev10_asf_c1_render.yml'
       - 'F03_PICTOR/CODEBASE/src/caviarRender.js'
       - 'F03_PICTOR/CODEBASE/src/caviarV2.js'
+      - 'F03_PICTOR/CODEBASE/src/purPackComposition.jsx'
+      - 'F03_PICTOR/CODEBASE/src/data/pur_manifest.json'
       - 'F03_PICTOR/CODEBASE/tests/pack_asf_c1.json'
     branches: ['dev10']
 

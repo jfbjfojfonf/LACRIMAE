@@ -24,6 +24,34 @@ import { panelVerticalTextOverlayStyle } from './caviarPanel';
 import { toEngineBlock } from './caviarV2';
 import caviarBudget from './data/caviar_budget.json';
 import caviarRegistry from './data/caviar_registry.json';
+// BRANCHEMENT CAVIAR : la partition F00D du pack de production est lue
+// DIRECTEMENT (source de vérité unique — aucune copie dans pur_manifest.json,
+// donc aucun risque de drift). Sans ce branchement, `entry.caviar ?? manifest.caviar`
+// vaut undefined → buildCaviarTimeline renvoie la timeline INERT et la vidéo
+// rendue ne porte AUCUN caviar (zéro cut, zéro punch-in, zéro B-roll, zéro flash).
+import asfPackC1 from '../tests/pack_asf_c1.json';
+
+// B-roll DÉPLOYÉS dans public/broll/. VIDE = aucun B-roll sur ce rendu.
+// Raison (bug CI réel) : le moteur ne teste que le CHAMP `file` (renseigné par le
+// registre), pas l'existence du MP4. Referencer un fichier absent produit une URL
+// 404 côté Remotion → delayRender('Loading <Html5Video> duration') jamais résolu
+// → rendu mort. On filtre donc les panneaux dont l'asset n'est pas déployé, ce qui
+// les fait tomber par la voie officielle « pas de vidéo = pas de B-roll ».
+// ⚠ Pour activer BLUR-01/BLUR-02 : déposer les MP4 dans public/broll/ ET
+//   renseigner leurs ids ici. Le bras armé tient cette liste à jour.
+const DEPLOYED_BROLL_IDS = [];
+
+/** Partition F00D → bloc moteur, panneaux sans asset déployé retirés. */
+function caviarPartitionForRender(partition) {
+  if (!partition || typeof partition !== 'object') return partition;
+  if (!Array.isArray(partition.panels)) return partition;
+  return {
+    ...partition,
+    panels: partition.panels.filter(
+      (p) => p && DEPLOYED_BROLL_IDS.includes(String(p.broll_id || '').trim().toUpperCase()),
+    ),
+  };
+}
 
 /**
  * Swell continu (décision Warsmith 2026-09-12) — PAS un zoom :
@@ -188,7 +216,7 @@ export function PurPackComposition({ purManifest, session: sessionProp, entryInd
   // B-roll numéroté, ducking). Bloc caviar de l'ENTRÉE (rendu CI = 1 vidéo,
   // chaque pack porte ses décisions) avec repli bloc racine (pack mono v1).
   // Absent partout → timeline vide, rendu historique à l'identique.
-  const caviarRaw = entry.caviar ?? manifest.caviar;
+  const caviarRaw = entry.caviar ?? manifest.caviar ?? caviarPartitionForRender(asfPackC1.caviar_partition);
   const caviar = useMemo(
     () => buildCaviarTimeline(toEngineBlock(caviarRaw, caviarRegistry), caviarBudget, {
       fps, speed, durationInFrames, fxOff,
