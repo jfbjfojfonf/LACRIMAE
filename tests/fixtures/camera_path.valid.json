@@ -1,0 +1,41 @@
+{
+  "schema": "dev11.camera_path.v1",
+  "stem": "clip_001",
+  "source_clip": "clips/clip_001.mp4",
+  "target": "face",
+  "width": 1080,
+  "height": 1920,
+  "output_width": 1080,
+  "output_height": 1920,
+  "fps": 30,
+  "frame_count": 3,
+  "frames": [
+    {
+      "i": 0,
+      "t_s": 0.0,
+      "cx": 0.51,
+      "cy": 0.38,
+      "zoom": 1.0,
+      "crop": { "x": 0, "y": 0, "w": 1080, "h": 1920 },
+      "held": false
+    },
+    {
+      "i": 1,
+      "t_s": 0.0333,
+      "cx": 0.51,
+      "cy": 0.38,
+      "zoom": 1.0,
+      "crop": { "x": 0, "y": 0, "w": 1080, "h": 1920 },
+      "held": false
+    },
+    {
+      "i": 2,
+      "t_s": 0.0667,
+      "cx": 0.51,
+      "cy": 0.38,
+      "zoom": 1.0,
+      "crop": { "x": 0, "y": 0, "w": 1080, "h": 1920 },
+      "held": true
+    }
+  ]
+}

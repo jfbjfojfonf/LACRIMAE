@@ -1,0 +1,21 @@
+name: dev11-contracts
+
+on:
+  push:
+    branches: [dev-11]
+  pull_request:
+    branches: [dev-11]
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install test deps
+        run: pip install -r requirements-dev.txt
+      - name: Pytest contrats (pas de MP4)
+        run: python -m pytest tests -q

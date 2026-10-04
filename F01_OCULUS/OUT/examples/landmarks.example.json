@@ -1,0 +1,39 @@
+{
+  "schema": "dev11.landmarks.v1",
+  "stem": "clip_001",
+  "source_clip": "clips/clip_001.mp4",
+  "target": "face",
+  "landmark_ids": {
+    "face_center": ["oval_mean"],
+    "nose": [4],
+    "eyes": [468, 473]
+  },
+  "width": 1080,
+  "height": 1920,
+  "fps": 30,
+  "frame_count": 3,
+  "duration_s": 0.1,
+  "frames": [
+    {
+      "i": 0,
+      "t_s": 0.0,
+      "detected": true,
+      "target": { "x": 0.51, "y": 0.38 },
+      "bbox": { "x": 0.32, "y": 0.22, "w": 0.38, "h": 0.28 }
+    },
+    {
+      "i": 1,
+      "t_s": 0.0333,
+      "detected": true,
+      "target": { "x": 0.52, "y": 0.39 },
+      "bbox": { "x": 0.33, "y": 0.23, "w": 0.37, "h": 0.27 }
+    },
+    {
+      "i": 2,
+      "t_s": 0.0667,
+      "detected": false,
+      "target": null,
+      "bbox": null
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "schema": "dev11.calix_manifest.v1",
+  "campaign_id": "fixture",
+  "output_width": 1080,
+  "output_height": 1920,
+  "stems": [
+    {
+      "stem": "clip_001",
+      "file": "tracked/clip_001.mp4",
+      "duration_s": 6.0,
+      "audio": "copy",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}

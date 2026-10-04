@@ -1,0 +1,10 @@
+{
+  "schema": "dev11.calix_request.v1",
+  "campaign_id": "example",
+  "output_width": 1080,
+  "output_height": 1920,
+  "video_codec": "libx264",
+  "pix_fmt": "yuv420p",
+  "faststart": true,
+  "audio": "copy"
+}

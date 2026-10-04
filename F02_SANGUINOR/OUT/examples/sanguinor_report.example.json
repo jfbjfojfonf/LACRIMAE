@@ -1,0 +1,14 @@
+{
+  "schema": "dev11.sanguinor_report.v1",
+  "campaign_id": "example",
+  "stems": [
+    {
+      "stem": "clip_001",
+      "jitter_median_norm": 0.002,
+      "held_frames": 1,
+      "verdict": "PASS"
+    }
+  ],
+  "held": [],
+  "refused": []
+}

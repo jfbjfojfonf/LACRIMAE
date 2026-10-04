@@ -1,0 +1,11 @@
+{
+  "schema": "dev11.job_request.v1",
+  "campaign_id": "example",
+  "target": "face",
+  "max_num_faces": 1,
+  "min_detection_confidence": 0.5,
+  "min_tracking_confidence": 0.5,
+  "refine_landmarks": true,
+  "sample_every_n_frames": 1,
+  "notes": "Defaut talking-head. Changer target en nose ou eyes sans changer les clips."
+}

@@ -137,8 +137,6 @@
 **/.flutter-plugins-dependencies.lock
 **/.metadata
 **/.flutter_build
-**/build/
-**/.dart_tool/
 **/ios/Pods/
 **/ios/.symlinks/
 **/ios/Flutter/ephemeral/
@@ -153,8 +151,6 @@
 **/android/**/flutter_*.json
 **/web/.dart_tool/
 **/web/build/
-**/.flutter-plugins
-**/.flutter-plugins-dependencies
 
 # Compressed files
 *.zip
@@ -174,3 +170,40 @@
 *.lz
 *.lzma
 *.iso
+
+# Media — never commit campaign footage
+*.mp4
+*.mov
+*.mkv
+*.webm
+*.avi
+*.m4v
+*.mp3
+*.wav
+*.aac
+*.flac
+*.jpg
+*.jpeg
+*.png
+*.webp
+!**/examples/**
+!**/fixtures/**
+
+# Modal / local campaign caches
+**/OUT/**/*.json
+!**/OUT/**/.gitkeep
+!**/examples/**
+!**/OUT/examples/**
+!**/OUT/examples/**/*.json
+F01_OCULUS/IN/clips/*
+!F01_OCULUS/IN/clips/.gitkeep
+F02_SANGUINOR/IN/clips/*
+!F02_SANGUINOR/IN/clips/.gitkeep
+F02_SANGUINOR/IN/landmarks/*
+!F02_SANGUINOR/IN/landmarks/.gitkeep
+F03_CALIX/IN/clips/*
+!F03_CALIX/IN/clips/.gitkeep
+F03_CALIX/IN/camera_path/*
+!F03_CALIX/IN/camera_path/.gitkeep
+SHARED/IN/*
+!SHARED/IN/.gitkeep

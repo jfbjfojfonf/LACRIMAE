@@ -1,0 +1,17 @@
+{
+  "schema": "dev11.camera_defaults.v1",
+  "deadzone_norm": 0.04,
+  "one_euro_mincutoff": 1.0,
+  "one_euro_beta": 0.007,
+  "one_euro_dcutoff": 1.0,
+  "zoom_min": 1.0,
+  "zoom_max": 1.85,
+  "zoom_max_delta_per_s": 0.35,
+  "eyes_y_anchor": 0.33,
+  "jitter_median_norm_max": 0.02,
+  "hold_last": true,
+  "output_width": 1080,
+  "output_height": 1920,
+  "detected_ratio_min": 0.85,
+  "gap_amber_frames": 12
+}

@@ -1,0 +1,14 @@
+{
+  "schema": "dev11.oculus_report.v1",
+  "campaign_id": "example",
+  "stems": [
+    {
+      "stem": "clip_001",
+      "detected_ratio": 0.97,
+      "longest_gap_frames": 4,
+      "verdict": "PASS"
+    }
+  ],
+  "held": [],
+  "refused": []
+}

@@ -1,0 +1,14 @@
+{
+  "schema": "dev11.camera_request.v1",
+  "campaign_id": "example",
+  "use_config": "CONFIG/camera_defaults.json",
+  "overrides": {
+    "deadzone_norm": 0.04,
+    "one_euro_mincutoff": 1.0,
+    "one_euro_beta": 0.007,
+    "zoom_min": 1.0,
+    "zoom_max": 1.85,
+    "zoom_max_delta_per_s": 0.35,
+    "eyes_y_anchor": 0.33
+  }
+}
