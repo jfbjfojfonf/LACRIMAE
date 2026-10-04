@@ -1,48 +1,26 @@
-# Artefacts de production (générés par les frégates / l'orchestrateur)
-F00B/IN/
-F00B/OUT/
-F00_INGEST/IN/
-F00_INGEST/OUT/
-F01_SELECT/IN/
-F01_SELECT/OUT/
-F02_FORMAT/OUT/*
-!F02_FORMAT/OUT/clips/
-!F02_FORMAT/OUT/clips/*.mp4
-F03_PREVIEW/OUT/
-F03_PREVIEW/CODEBASE/public/
-F03_PREVIEW/CODEBASE/dist/
-F03_PREVIEW/CODEBASE/node_modules/
-F04_RENDER/OUT/
-F04_RENDER/CODEBASE/public/
-F04_RENDER/CODEBASE/dist/
-F04_RENDER/CODEBASE/node_modules/
-F05_CAMOUFLAGE/IN/
-F05_CAMOUFLAGE/OUT/
-F06_LUTHER/IN/
-F06_LUTHER/OUT/
-SHARED/OUT/
+# dev6-E — règles de sécurité (alignées sur CONTINUATION.md)
 
-# Médias volumineux transitant par les IN/ commités (cutlist/codex/manifest restent trackés)
-F02_FORMAT/IN/video_source.mp4
-# SHARED/IN : la vidéo source de l'opérateur est déposée DIRECTEMENT dans IN
-# (pas de sous-dossier videos/) — jamais commitée (volumineuse, max ~200 Mo).
-SHARED/IN/video_source.mp4
-# F03_PREVIEW/IN/clips : seul clip_001.mp4 est tracke (le clip 9:16 de la preview
-# F03, leger) — il alimente la preview GitHub Pages. Les autres restent ignores.
-F03_PREVIEW/IN/clips/*
-!F03_PREVIEW/IN/clips/clip_001.mp4
-F04_RENDER/IN/clips/
+# Secrets
+.env
+.env.*
+!.env.modal.example
 
-# Ledger de production (état volatile — la mémoire nomade du run en cours)
-TRACKING/LEDGER_DEV.json
+# Presets After Effects privés (règle projet : jamais committés)
+*.ffx
 
-# Cache Python
+# Projets After Effects binaires (restent sur le VPS)
+*.aep
+*.aepx
+
+# Vidéos sources et rendus
+*.mp4
+*.mov
+*.mkv
+*.avi
+
+# Dépendances et caches
+node_modules/
 __pycache__/
 *.pyc
-
-# Mode forge — IN/ et OUT/ du bridge sont commités par le flux GHA :
-#  - IN/  : l'opérateur commite production_pack.json + fond.png + logo.png
-#  - OUT/ : le workflow commite cutlist.json + codex.json à F01 (persistance
-#           inter-run jusqu'à F02). Seuls les gros médias sont ignorés.
-BRIDGE_PERTURABO/IN/video_source.mp4
-BRIDGE_PERTURABO/IN/*.mp4
+*.tsbuildinfo
+dist/
