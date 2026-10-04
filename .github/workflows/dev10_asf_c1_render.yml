@@ -1,0 +1,93 @@
+name: DEV10 ASF c1 — rendu Remotion du pack asf
+
+# Rendu du pack PERTURABO `production_pack_asf_c1.json` (Groupe 3 v2).
+# Tout est dans le dépôt : le pack (tests/pack_asf_c1.json) et le clip source
+# (public/clips/pur_A01.mp4) sont commités. Aucun fetch PERTURABO, aucun secret.
+# Pourquoi GitHub Actions et pas local : le runner ubuntu-latest a 4 CPU et un
+# timeout de 20 min, alors qu'un conteneur 1 CPU ne finit pas un rendu de 857
+# frames dans la fenêtre d'exécution disponible.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/dev10_asf_c1_render.yml'
+      - 'F03_PICTOR/CODEBASE/src/caviarRender.js'
+      - 'F03_PICTOR/CODEBASE/src/caviarV2.js'
+      - 'F03_PICTOR/CODEBASE/tests/pack_asf_c1.json'
+    branches: ['dev10']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dev10-asf-c1-render
+  cancel-in-progress: true
+
+jobs:
+  render:
+    name: ASF c1 — gate Heisenberg + rendu MP4
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CODEBASE: F03_PICTOR/CODEBASE
+    steps:
+      - name: Checkout dev10
+        uses: actions/checkout@v4
+        with:
+          ref: dev10
+
+      - name: Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: F03_PICTOR/CODEBASE/package-lock.json
+
+      - name: Installer les dépendances Remotion
+        working-directory: F03_PICTOR/CODEBASE
+        run: npm ci
+
+      - name: Chromium headless (Remotion)
+        working-directory: F03_PICTOR/CODEBASE
+        run: npx remotion browser ensure
+
+      - name: Vérifier que la source vidéo est présente
+        run: |
+          set -e
+          CLIP="$CODEBASE/public/clips/pur_A01.mp4"
+          if [ ! -f "$CLIP" ]; then
+            echo "✗ source vidéo absente : $CLIP" >&2
+            exit 1
+          fi
+          echo "✓ $CLIP ($(du -h "$CLIP" | cut -f1))"
+
+      - name: Gate Heisenberg — double barrage budget (AVANT tout rendu)
+        run: |
+          set -e
+          python3 F03_PICTOR/HEISENBERG/caviar_gate.py \
+            --manifest "$CODEBASE/tests/pack_asf_c1.json"
+
+      - name: Timeline caviar (mapping v2→v1 + moteur + budget)
+        working-directory: F03_PICTOR/CODEBASE
+        run: node render_c1.mjs
+
+      - name: Tests caviar (non-régression)
+        working-directory: F03_PICTOR/CODEBASE
+        run: node tests/caviar_render.test.mjs && node tests/caviar_v2.test.mjs && node tests/caviar_panel.test.mjs
+
+      - name: Rendu MP4
+        id: render
+        working-directory: F03_PICTOR/CODEBASE
+        run: |
+          set -e
+          npx remotion render src/index.jsx LacrimaeShort out/asf_c1_final.mp4 --concurrency=2
+          ls -lh out/asf_c1_final.mp4
+
+      - name: Publier l'artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dev10-asf-c1-${{ github.run_id }}
+          path: F03_PICTOR/CODEBASE/out/asf_c1_final.mp4
+          if-no-files-found: error
+          retention-days: 14
