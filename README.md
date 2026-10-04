@@ -2,4 +2,6 @@
 
 Flux videos existantes → Nexrender (VPS) → preset AE `cc2.ffx` → video finie.
 
-Lire `CONTINUATION.md` puis `HANDOFF.md`.
+- Humain (VPS) : `ROADMAP_HUMAIN.md`
+- Agent suivant : `HANDOFF.md`
+- Suivi : `CONTINUATION.md`

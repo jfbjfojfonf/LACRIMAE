@@ -22,7 +22,7 @@ python F02_RENDER/render.py --manifest C:\nexrender\queue\manifest.json --server
 
 1. Lire `C:\nexrender\queue\manifest.json`.
 2. Construire un job par item a partir de `NEXRENDER/jobs/job.reference.json`.
-3. Soumettre au `nexrender-server` (`http://127.0.0.1:3000`).
+3. Soumettre `POST /api/v1/jobs` (`http://127.0.0.1:3000`, header `nexrender-secret`).
 4. Suivre l'etat, livrer dans `C:\nexrender\outbox\<id>.mp4`.
 5. Ecrire `results.json` a cote de la queue.
 

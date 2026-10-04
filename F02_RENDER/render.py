@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import os
 import sys
 import time
 import urllib.error
@@ -50,9 +51,22 @@ def build_job(item: dict, template: dict, outbox_dir: str) -> dict:
     return job
 
 
-def http_json(method: str, url: str, payload: dict | None = None, timeout: int = 30) -> dict:
+def jobs_url(server: str, job_id: str | None = None) -> str:
+    base = server.rstrip("/") + "/api/v1/jobs"
+    return base + "/" + job_id if job_id else base
+
+
+def http_json(
+    method: str,
+    url: str,
+    payload: dict | None = None,
+    timeout: int = 30,
+    secret: str | None = None,
+) -> dict:
     data = None
     headers = {"Accept": "application/json"}
+    if secret:
+        headers["nexrender-secret"] = secret
     if payload is not None:
         data = json.dumps(payload).encode("utf-8")
         headers["Content-Type"] = "application/json"
@@ -72,9 +86,12 @@ def submit_job(
     server: str,
     job: dict,
     post_fn: Callable[..., dict] | None = None,
+    secret: str | None = None,
 ) -> str:
-    post = post_fn or (lambda method, url, payload=None: http_json(method, url, payload))
-    result = post("POST", server.rstrip("/") + "/jobs", job)
+    post = post_fn or (
+        lambda method, url, payload=None: http_json(method, url, payload, secret=secret)
+    )
+    result = post("POST", jobs_url(server), job)
     job_id = result.get("uid") or result.get("id") or result.get("jobId")
     if not job_id:
         raise RuntimeError(f"reponse submit sans id: {result}")
@@ -87,9 +104,12 @@ def poll_job(
     get_fn: Callable[..., dict] | None = None,
     timeout_sec: int = 3600,
     interval_sec: float = 5.0,
+    secret: str | None = None,
 ) -> dict:
-    get = get_fn or (lambda method, url, payload=None: http_json(method, url, payload))
-    url = server.rstrip("/") + "/jobs/" + job_id
+    get = get_fn or (
+        lambda method, url, payload=None: http_json(method, url, payload, secret=secret)
+    )
+    url = jobs_url(server, job_id)
     deadline = time.time() + timeout_sec
     last = {}
     while time.time() < deadline:
@@ -114,6 +134,7 @@ def render(
     get_fn: Callable[..., dict] | None = None,
     poll: bool = True,
     timeout_sec: int = 3600,
+    secret: str | None = None,
 ) -> dict:
     manifest = load_json(manifest_path)
     template = load_json(job_template_path)
@@ -139,10 +160,12 @@ def render(
             continue
         t0 = time.time()
         try:
-            job_id = submit_job(server, job, post_fn=post_fn)
+            job_id = submit_job(server, job, post_fn=post_fn, secret=secret)
             entry["nexrender_uid"] = job_id
             if poll:
-                poll_job(server, job_id, get_fn=get_fn, timeout_sec=timeout_sec)
+                poll_job(
+                    server, job_id, get_fn=get_fn, timeout_sec=timeout_sec, secret=secret
+                )
                 entry["status"] = "success"
             else:
                 entry["status"] = "queued"
@@ -172,6 +195,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--outbox", type=Path, default=None)
     parser.add_argument("--jobs-dir", type=Path, default=None)
     parser.add_argument("--server", default=None)
+    parser.add_argument("--secret", default=None)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--no-poll", action="store_true")
     parser.add_argument("--timeout", type=int, default=3600)
@@ -187,6 +211,7 @@ def main(argv: list[str] | None = None) -> int:
     outbox = args.outbox or Path(vps["outbox_dir"])
     jobs_dir = args.jobs_dir or (queue / "jobs")
     server = args.server or vps["nexrender_server"]
+    secret = args.secret or os.environ.get(vps.get("nexrender_secret_env", "NEXRENDER_SECRET"))
     summary = render(
         manifest_path=manifest,
         job_template_path=args.job_template,
@@ -196,6 +221,7 @@ def main(argv: list[str] | None = None) -> int:
         dry_run=args.dry_run,
         poll=not args.no_poll,
         timeout_sec=args.timeout,
+        secret=secret,
     )
     failed = [r for r in summary["results"] if r.get("status") == "failed"]
     print(json.dumps({"jobs": len(summary["results"]), "failed": len(failed), "results": summary.get("results_path")}))

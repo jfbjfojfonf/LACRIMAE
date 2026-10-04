@@ -6,7 +6,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "F02_RENDER"))
 
-from render import build_job, render, to_file_url  # noqa: E402
+from render import build_job, jobs_url, render, to_file_url  # noqa: E402
 
 
 class RenderTests(unittest.TestCase):
@@ -83,12 +83,12 @@ class RenderTests(unittest.TestCase):
         manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
 
         def post(_method, url, payload=None):
-            self.assertTrue(url.endswith("/jobs"))
+            self.assertTrue(url.endswith("/api/v1/jobs"))
             self.assertEqual(payload["assets"][0]["layerName"], "SRC")
             return {"uid": "job-1"}
 
         def get(_method, url, payload=None):
-            self.assertTrue(url.endswith("/jobs/job-1"))
+            self.assertTrue(url.endswith("/api/v1/jobs/job-1"))
             return {"state": "finished"}
 
         summary = render(
@@ -102,6 +102,13 @@ class RenderTests(unittest.TestCase):
         )
         self.assertEqual(summary["results"][0]["status"], "success")
         self.assertEqual(summary["results"][0]["nexrender_uid"], "job-1")
+
+    def test_jobs_url(self):
+        self.assertEqual(jobs_url("http://127.0.0.1:3000"), "http://127.0.0.1:3000/api/v1/jobs")
+        self.assertEqual(
+            jobs_url("http://127.0.0.1:3000/", "abc"),
+            "http://127.0.0.1:3000/api/v1/jobs/abc",
+        )
 
 
 if __name__ == "__main__":

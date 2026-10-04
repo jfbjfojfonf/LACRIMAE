@@ -41,6 +41,7 @@ F01_INGEST ──► F02_RENDER ──► [VPS: nexrender-server → aerender + 
 - `jobs/` — job de référence (`job.reference.json`)
 - `scripts/` — JSX d'application du preset (`apply_cc2.jsx`)
 - `contract/` — manifeste F01→F02 (schema + exemple)
+- `vps/` — scripts PowerShell (bootstrap, server+worker, pipeline)
 - `paths.json` — chemins VPS et conventions figées
 - `templates/` — **vide dans le repo, par design** : le `.aep` vit uniquement sur le VPS
 

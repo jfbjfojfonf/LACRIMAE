@@ -22,7 +22,8 @@
      (`04_SCRIPT_JSX.md`) qui l'appliquera à chaque job.
 4. **Configurer l'Output Module (OBLIGATOIRE pour AE 2023+)** :
    - Fenêtre Render Queue → cliquer sur le nom du Output Module
-   - Format : **H.264** (ou AVI/QuickTime si on veut un master non compressé)
+   - Nom vise : **H.264 - Match Render Settings - 15 Mbps** (celui du job JSON)
+   - Format : **H.264**
    - Sortie : fichier, chemin de destination sur le VPS
    - Sans ça, `aerender` ne rend **rien** sans erreur explicite (cf. `05_DEPANNAGE.md`).
 5. **Enregistrer le projet** :
