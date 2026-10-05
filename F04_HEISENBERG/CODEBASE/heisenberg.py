@@ -18,6 +18,9 @@ ALLOWED_STYLES = {"blur", "split_scene", "reframing"}
 JUMP_CUT_TYPES = {"breath_cut", "idea_cut"}
 JUMP_SKIP_SEC = 0.08
 FLASH_FRAMES = 5
+DUCK_SFX_SEC = 0.25
+DUCK_SMASH_SEC = 0.12
+DUCK_VOICE = 0.35
 BANNED_FILTERS = ("zoompan", "swell", "breathing_zoom")
 
 
@@ -165,8 +168,28 @@ def run_ffmpeg(cmd: list[str]) -> None:
         raise RuntimeError(result.stderr[-2000:] or result.stdout[-2000:])
 
 
+def duck_windows(sfx: list[dict], broll: list[dict], smash_times: list[float] | None = None) -> list[tuple[float, float]]:
+    windows: list[tuple[float, float]] = []
+    for item in sfx or []:
+        start = float(item.get("out_sec") or 0)
+        windows.append((start, start + DUCK_SFX_SEC))
+    for item in broll or []:
+        if item.get("duck", True):
+            windows.append((float(item.get("out_in_sec") or 0), float(item.get("out_out_sec") or 0)))
+    for moment in smash_times or []:
+        start = float(moment)
+        windows.append((start, start + DUCK_SMASH_SEC))
+    return merge_intervals([(a, b) for a, b in windows if b > a])
+
+
+def volume_enable(windows: list[tuple[float, float]]) -> str:
+    parts = [f"between(t,{a:.4f},{b:.4f})" for a, b in windows]
+    return "+".join(parts)
+
+
 def build_filter(segments: list[dict], width: int, height: int, has_audio: bool,
-                 broll: list[dict], sfx: list[dict], fps: int) -> tuple[str, int]:
+                 broll: list[dict], sfx: list[dict], fps: int,
+                 smash_times: list[float] | None = None) -> tuple[str, int]:
     parts: list[str] = []
     video_labels: list[str] = []
     audio_labels: list[str] = []
@@ -215,7 +238,15 @@ def build_filter(segments: list[dict], width: int, height: int, has_audio: bool,
     parts.append(f"[{current_v}]format=yuv420p[outv]")
     if has_audio:
         parts.append("".join(audio_labels) + f"concat=n={n}:v=0:a=1[acat]")
-        current_a = "acat"
+        ducks = duck_windows(sfx, broll, smash_times)
+        enable = volume_enable(ducks)
+        if enable:
+            parts.append(
+                f"[acat]volume={DUCK_VOICE}:enable='{enable}'[aduck]"
+            )
+            current_a = "aduck"
+        else:
+            current_a = "acat"
         for s_i, item in enumerate(sfx):
             extra_inputs += 1
             idx = extra_inputs
@@ -321,10 +352,15 @@ def main() -> int:
                 "path": path,
                 "out_sec": source_to_output(float(item.get("moment_sec") or 0), segments),
             })
+    smash_times = [
+        source_to_output(float(c.get("moment_sec") or 0), segments)
+        for c in (entry.get("cuts") or [])
+        if str(c.get("type") or "") == "smash_cut"
+    ]
 
     graph, extra = build_filter(
         segments, meta["width"], meta["height"], bool(meta.get("audio_codec")),
-        broll_mapped, sfx_mapped, fps,
+        broll_mapped, sfx_mapped, fps, smash_times,
     )
     assert_no_zoom(graph)
 

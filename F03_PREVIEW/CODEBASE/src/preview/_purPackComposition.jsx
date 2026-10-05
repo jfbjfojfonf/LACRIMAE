@@ -38,15 +38,19 @@ function fitOverlayLines(lines, baseSize, fontFamily, canvasWidth, minSize) {
 }
 
 let purFontLoaded = false;
-function ensurePurFont() {
-  if (purFontLoaded || typeof document === 'undefined') return;
+let purFontUrl = '';
+function ensurePurFont(fontUrl) {
+  if (typeof document === 'undefined') return;
+  const url = fontUrl || 'fonts/Montserrat-ExtraBold.ttf';
+  if (purFontLoaded && purFontUrl === url) return;
   purFontLoaded = true;
-  const face = new FontFace('Montserrat', 'url(fonts/Montserrat-ExtraBold.ttf)', { weight: '900' });
+  purFontUrl = url;
+  const face = new FontFace('Montserrat', `url("${url}")`, { weight: '900' });
   face.load().then((f) => document.fonts.add(f)).catch(() => {});
 }
 
-export function PurPackComposition({ purManifest, session: sessionProp, entryIndex = 0, muted = true }) {
-  ensurePurFont();
+export function PurPackComposition({ purManifest, session: sessionProp, entryIndex = 0, muted = true, fontUrl }) {
+  ensurePurFont(fontUrl);
   const frame = useCurrentFrame();
   const { fps, durationInFrames, width: canvasWidth } = useVideoConfig();
   const manifest = purManifest || sessionProp?.pur || {};

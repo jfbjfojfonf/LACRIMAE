@@ -12,6 +12,7 @@ def test_pictor_imports_preview_composition():
     text = PICTOR.read_text(encoding="utf-8")
     assert "_purPackComposition" in text
     assert "muted={muted}" in text
+    assert "fonts/Montserrat-ExtraBold.ttf" in text
 
 
 def test_preview_look_has_three_styles_only():

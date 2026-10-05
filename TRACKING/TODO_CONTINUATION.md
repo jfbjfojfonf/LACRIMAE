@@ -50,9 +50,10 @@ Doctrine figee :
 
 ## Prochaine etape exacte
 
-E/F/G poses. Premier E2E CI (Actions → DEV10-v2 — PUR render) avec un
-pack PERTURABO joignable. SFX mp3 a deposer dans
-`F03_PICTOR/CODEBASE/public/sfx/` (impact / whoosh) si le pack en demande.
+Code pipeline clos (fonte Remotion, ducking/smash Heisenberg, lockfile
+PICTOR). Premier E2E CI (Actions → DEV10-v2 — PUR render) avec un pack
+PERTURABO joignable. SFX mp3 optionnels dans
+`F03_PICTOR/CODEBASE/public/sfx/` (impact / whoosh).
 
 Si le run E2E casse : corriger la frégate fautive, pas le pack.
 

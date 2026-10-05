@@ -98,3 +98,23 @@ def test_broll_flash_only_on_entry():
     assert extra == 1
     assert "drawbox" in graph
     assert graph.count("drawbox") == 1
+
+
+def test_duck_windows_sfx_and_smash():
+    windows = hz.duck_windows(
+        [{"out_sec": 1.0}],
+        [{"out_in_sec": 2.0, "out_out_sec": 2.5, "duck": True}],
+        [4.0],
+    )
+    assert windows[0][0] == pytest.approx(1.0)
+    assert any(a == pytest.approx(2.0) and b == pytest.approx(2.5) for a, b in windows)
+    assert any(a == pytest.approx(4.0) for a, b in windows)
+
+
+def test_build_filter_ducks_voice_under_sfx():
+    segs = [{"in_sec": 0.0, "out_sec": 3.0, "mode": "normal", "scale": 1.0}]
+    sfx = [{"out_sec": 1.0, "volume": 0.5}]
+    graph, extra = hz.build_filter(segs, 1080, 1920, True, [], sfx, 30, [2.0])
+    assert extra == 1
+    assert "volume=0.35" in graph
+    assert "amix=" in graph

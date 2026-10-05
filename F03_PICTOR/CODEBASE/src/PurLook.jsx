@@ -20,6 +20,7 @@ export function PurLook({ purManifest, session, entryIndex = 0, muted = false })
       session={session}
       entryIndex={entryIndex}
       muted={muted}
+      fontUrl={staticFile('fonts/Montserrat-ExtraBold.ttf')}
     />
   );
 }
