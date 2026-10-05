@@ -9,6 +9,6 @@ Sortie = livrable.
 |--|--------|
 | IN | `IN/` (MP4 F05, jamais commite) |
 | OUT | `OUT/` livrable (jamais commite) |
-| Code (a venir) | `CODEBASE/lac_f06_luther.py` |
+| Code | `CODEBASE/lac_f06_luther.py` (`--input` ou `--batch`) |
 
 Voir `TRACKING/GUIDE_UTILISATION.md`.

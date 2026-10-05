@@ -9,7 +9,7 @@ Validation visuelle (porte P1). Vite + player. Trois styles uniquement :
 |--|--------|
 | IN | `pur_manifest.json` + clips F00_PUR |
 | OUT | manifeste valide par l'operateur |
-| Code (a venir) | `CODEBASE/` (Vite) |
+| Code | `CODEBASE/` (Vite + Remotion player) |
 
 ## Interdits
 

@@ -10,7 +10,7 @@ segment** (`yt-dlp --download-sections`), jamais la VOD complete.
 |--|--------|
 | IN | pack PUR (via Bridge) |
 | OUT | `OUT/pur_<angle>.mp4` + `OUT/pur_sources.json` |
-| Code (a venir) | `CODEBASE/f00_pur.py` |
+| Code | `CODEBASE/f00_pur.py` |
 
 ## Gates
 

@@ -1,7 +1,7 @@
 # Guide d'utilisation — LACRIMAE dev10-v2
 
-Branche squelette. Les commandes ci-dessous sont le contrat cible.
-Elles ne tournent pas tant que le code n'est pas pose (GO Warsmith).
+A–D poses : Bridge, F00_PUR, Preview, F05, F06 tournent en local.
+PICTOR, Heisenberg et le workflow CI restent le contrat cible (E/F/G).
 
 ## Vocabulaire
 
@@ -40,10 +40,10 @@ python3 F04_HEISENBERG/CODEBASE/heisenberg.py \
 # 6. Camouflage + luther
 python3 F05_CAMOUFLAGE/CODEBASE/lac_f05_camouflage.py \
   --input F04_HEISENBERG/OUT/pur_A01.mp4 \
-  --out F05_CAMOUFLAGE/OUT
+  --output F05_CAMOUFLAGE/OUT
 python3 F06_LUTHER/CODEBASE/lac_f06_luther.py \
   --input F05_CAMOUFLAGE/OUT/pur_A01.mp4 \
-  --out F06_LUTHER/OUT
+  --output F06_LUTHER/OUT
 ```
 
 ## CI (cible)

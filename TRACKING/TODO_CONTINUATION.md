@@ -3,7 +3,7 @@
 > Point d'entree obligatoire apres toute reprise.
 > Derniere mise a jour : 2026-10-05.
 > Branche : `dev10-v2` sur `jfbjfojfonf/LACRIMAE`.
-> Statut : squelette documentaire. Aucun code de frégate.
+> Statut : A–D poses (F05/F06, F00_PUR, Bridge, Preview LOOK). E/F/G a venir.
 
 ## Etat confirme
 
@@ -22,14 +22,14 @@ Doctrine figee :
 
 ## Priorites
 
-1. **Docs** (cette livraison) — arbre + contrats + portes. FAIT.
-2. **BRIDGE + F00_PUR** — fetch pack, G0–G3, segment VOD. PAS COMMENCE.
-3. **F03_PREVIEW + F03_PICTOR** — moteur unique, look only, parite
-   preview/render. PAS COMMENCE.
-4. **F04_HEISENBERG** — jump cuts, SFX, B-roll, flash, punch-in-cut.
-   Sort un MP4 reel. PAS COMMENCE.
-5. **F05 + F06** — camouflage puis luther. PAS COMMENCE.
-6. **CI** — un seul workflow `dev10_pur_render.yml`. PAS COMMENCE.
+1. **Docs** — arbre + contrats + portes. FAIT.
+2. **A F05 + F06** — camouflage H.264/loudnorm + luther YouTube, `--batch`. FAIT.
+3. **B F00_PUR** — yt-dlp segment, G0–G3, `pur_aggregate.py`, converter G0-S. FAIT.
+4. **C BRIDGE** — fetch PUR-only, G0, convert, transit preview/PICTOR. FAIT.
+5. **D F03_PREVIEW** — LOOK Vite, 3 styles, 0 zoom, overlay. FAIT.
+6. **E F03_PICTOR** — miroir Remotion de la preview. PAS COMMENCE.
+7. **F F04_HEISENBERG** — jump cuts, SFX, B-roll, flash, punch-in-cut → MP4. PAS COMMENCE.
+8. **G CI** — un seul workflow `dev10_pur_render.yml`. PAS COMMENCE.
 
 Chaque etape = GO Warsmith separe. Pas d'implementation sans GO.
 
@@ -52,15 +52,11 @@ Chaque etape = GO Warsmith separe. Pas d'implementation sans GO.
 
 ## Prochaine etape exacte
 
-Attendre GO Warsmith pour l'implementation, dans cet ordre :
+A–D poses localement. Commit + push `dev10-v2` puis, dans cet ordre :
 
-1. BRIDGE_PERTURABO (conversion pack → manifeste)
-2. F00_PUR (segment VOD + gates G0–G3)
-3. F03_PREVIEW (3 styles, overlay, 0 zoom)
-4. F03_PICTOR (miroir preview)
-5. F04_HEISENBERG (execution temporelle → MP4)
-6. F05 puis F06
-7. Workflow unique + agregeur strict
+1. E F03_PICTOR (miroir preview, LOOK, 0 zoom)
+2. F F04_HEISENBERG (execution temporelle → MP4 reel)
+3. G workflow unique `dev10_pur_render.yml` + agregeur strict
 
 ## Reprise sandbox
 

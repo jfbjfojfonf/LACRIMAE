@@ -9,7 +9,7 @@ convertit en manifeste `dev10.pur.v1`. Ne telecharge pas la video.
 |--|--------|
 | IN | `IN/production_pack_pur_*.json` (ou fetch distant PERTURABO EXPORT) |
 | OUT | `OUT/pur_manifest.json` |
-| Code (a venir) | `CODEBASE/lac_bridge_forge.py` |
+| Code | `CODEBASE/lac_bridge_forge.py` |
 
 ## Role
 
