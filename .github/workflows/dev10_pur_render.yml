@@ -1,0 +1,227 @@
+name: DEV10-v2 — PUR render
+
+on:
+  workflow_dispatch:
+    inputs:
+      pack_filter:
+        description: "Filtre pack PERTURABO (ex: pur_A01). Vide = tous les production_pack_pur_*.json"
+        required: false
+        default: ""
+      canvas:
+        description: "Canvas LOOK"
+        required: false
+        default: "9:16"
+        type: choice
+        options: ["9:16", "16:9", "1:1"]
+      perturabo_branch:
+        description: "Branche PERTURABO EXPORT"
+        required: false
+        default: "main"
+      style:
+        description: "Style LOOK force (G0-S). Vide = style declare par le pack."
+        required: false
+        default: "blur"
+        type: choice
+        options: ["blur", "split_scene", "reframing"]
+      max_parallel:
+        description: "Jobs paralleles max"
+        required: false
+        default: "5"
+      max_duration:
+        description: "Duree max segment (info, G0 reste 150s)"
+        required: false
+        default: "60"
+
+concurrency:
+  group: dev10-v2-pur-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prepare:
+    name: prepare (fetch + G0 + matrix)
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      count: ${{ steps.matrix.outputs.count }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Fetch PUR packs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PERTURABO_BRANCH: ${{ github.event.inputs.perturabo_branch }}
+          PACK_FILTER: ${{ github.event.inputs.pack_filter }}
+        run: |
+          set -euo pipefail
+          mkdir -p BRIDGE_PERTURABO/IN BRIDGE_PERTURABO/OUT
+          python3 - <<'PY'
+          import json, os, urllib.request
+          from pathlib import Path
+          repo = "kioka8877-ux/PERTURABO"
+          branch = os.environ.get("PERTURABO_BRANCH") or "main"
+          export = "MONDES_FORGES/CLIPPING/EXPORT"
+          filt = (os.environ.get("PACK_FILTER") or "").strip().lower()
+          token = os.environ.get("GITHUB_TOKEN") or ""
+          headers = {"User-Agent": "LACRIMAE", "Accept": "application/vnd.github+json"}
+          if token:
+              headers["Authorization"] = f"Bearer {token}"
+          req = urllib.request.Request(
+              f"https://api.github.com/repos/{repo}/contents/{export}?ref={branch}",
+              headers=headers,
+          )
+          listing = json.loads(urllib.request.urlopen(req, timeout=90).read().decode())
+          packs = [f for f in listing if f.get("type") == "file"
+                   and f["name"].startswith("production_pack_pur_")
+                   and f["name"].endswith(".json")]
+          if filt:
+              packs = [f for f in packs if filt in f["name"].lower()]
+          if not packs:
+              raise SystemExit("aucun production_pack_pur_*.json")
+          dest = Path("BRIDGE_PERTURABO/IN")
+          dest.mkdir(parents=True, exist_ok=True)
+          for item in packs:
+              r = urllib.request.Request(item["download_url"], headers=headers)
+              (dest / item["name"]).write_bytes(urllib.request.urlopen(r, timeout=180).read())
+              print("fetched", item["name"])
+          PY
+      - name: Convert packs (G0-S)
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          PACKS=(BRIDGE_PERTURABO/IN/production_pack_pur_*.json)
+          if [ ${#PACKS[@]} -eq 0 ]; then
+            echo "aucun pack" >&2
+            exit 1
+          fi
+          JOIN=$(IFS=,; echo "${PACKS[*]}")
+          node tools/convert_pur_pack.mjs \
+            --packs "$JOIN" \
+            --out BRIDGE_PERTURABO/OUT/pur_manifest.json \
+            --canvas "${{ github.event.inputs.canvas }}" \
+            --style "${{ github.event.inputs.style }}"
+      - name: Build matrix
+        id: matrix
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          man = json.loads(Path("BRIDGE_PERTURABO/OUT/pur_manifest.json").read_text())
+          entries = man.get("entries") or []
+          items = []
+          for i, e in enumerate(entries):
+              raw = str(e.get("angle_id") or e.get("source_id") or f"clip{i+1}")
+              angle = raw[4:] if raw.lower().startswith("pur_") and len(raw) > 4 else raw
+              items.append({"index": i, "angle": angle})
+          if not items:
+              raise SystemExit("matrix vide")
+          print("count", len(items))
+          with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
+              fh.write("count=" + str(len(items)) + "\n")
+              fh.write("matrix=" + json.dumps({"include": items}) + "\n")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pur-prepare
+          path: |
+            BRIDGE_PERTURABO/IN/
+            BRIDGE_PERTURABO/OUT/pur_manifest.json
+
+  render:
+    name: render ${{ matrix.angle }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: ${{ fromJSON(github.event.inputs.max_parallel) }}
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: ffmpeg + yt-dlp
+        run: |
+          sudo apt-get update -y
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ffmpeg
+          pip3 install --break-system-packages yt-dlp
+      - uses: actions/download-artifact@v4
+        with:
+          name: pur-prepare
+          path: .
+      - name: F00_PUR segment
+        run: |
+          set -euo pipefail
+          PACK=$(ls BRIDGE_PERTURABO/IN/production_pack_pur_*${{ matrix.angle }}*.json | head -1)
+          python3 F00_PUR/CODEBASE/f00_pur.py --pack "$PACK" --out F00_PUR/OUT --clip-name "pur_${{ matrix.angle }}.mp4"
+      - name: F03_PICTOR LOOK
+        run: |
+          set -euo pipefail
+          cd F03_PICTOR/CODEBASE
+          npm install --no-fund --no-audit
+          npx remotion browser ensure
+          node render_pictor.mjs \
+            --manifest ../../BRIDGE_PERTURABO/OUT/pur_manifest.json \
+            --clips ../../F00_PUR/OUT \
+            --out ../../F03_PICTOR/OUT \
+            --entry ${{ matrix.index }}
+      - name: F04_HEISENBERG TEMPS
+        run: |
+          python3 F04_HEISENBERG/CODEBASE/heisenberg.py \
+            --input F03_PICTOR/OUT \
+            --manifest BRIDGE_PERTURABO/OUT/pur_manifest.json \
+            --out F04_HEISENBERG/OUT \
+            --entry ${{ matrix.index }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pur-result-${{ matrix.angle }}
+          path: |
+            F04_HEISENBERG/OUT/pur_${{ matrix.angle }}.mp4
+            F03_PICTOR/OUT/pur_${{ matrix.angle }}_look.mp4
+
+  aggregate:
+    name: aggregate + F05/F06
+    needs: [prepare, render]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: ffmpeg
+        run: |
+          sudo apt-get update -y
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ffmpeg
+      - uses: actions/download-artifact@v4
+        with:
+          name: pur-prepare
+          path: .
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: pur-result-*
+          path: RUNNER_TEMP/results
+          merge-multiple: true
+      - name: P-AGG MULTI
+        run: |
+          python3 tools/pur_aggregate.py \
+            --manifest BRIDGE_PERTURABO/OUT/pur_manifest.json \
+            --results RUNNER_TEMP/results \
+            --out F04_HEISENBERG/OUT
+      - name: F05 + F06 batch
+        run: |
+          python3 F05_CAMOUFLAGE/CODEBASE/lac_f05_camouflage.py --batch F04_HEISENBERG/OUT --output F05_CAMOUFLAGE/OUT
+          python3 F06_LUTHER/CODEBASE/lac_f06_luther.py --batch F05_CAMOUFLAGE/OUT --output F06_LUTHER/OUT
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pur-bundle
+          path: |
+            F06_LUTHER/OUT/
+            F05_CAMOUFLAGE/OUT/camouflage_batch_report.json
+            F04_HEISENBERG/OUT/pur_aggregate_report.json

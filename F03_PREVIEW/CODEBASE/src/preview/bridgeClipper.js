@@ -119,19 +119,52 @@ export function inferPurStyle(mi = {}) {
 export function normalizePurSfx(mi = {}) {
   const body = mi.body || {};
   const zooms = Array.isArray(body.zooms) ? body.zooms : [];
+  const cuts = Array.isArray(body.cuts) ? body.cuts : [];
   const list = [];
-  for (const z of zooms) {
-    const sync = String(z.sfx_sync || '');
-    if (!sync) continue;
-    const volMatch = sync.match(/([0-9]+(?:\.[0-9]+)?)\s*%/);
-    const typeMatch = sync.match(/^(impact|whoosh|boom|riser|hit|sub_drop)/i);
+  const pushSfx = (sync, momentSec) => {
+    const text = String(sync || '');
+    if (!text) return;
+    const volMatch = text.match(/([0-9]+(?:\.[0-9]+)?)\s*%/);
+    const typeMatch = text.match(/(impact|whoosh|boom|riser|hit|sub_drop)/i);
     list.push({
-      moment_frame: Math.round(Number(z.moment_sec || 0) * 30),
+      moment_sec: Number(momentSec || 0),
+      moment_frame: Math.round(Number(momentSec || 0) * 30),
       type: typeMatch ? typeMatch[1].toLowerCase() : 'impact',
       volume: volMatch ? clamp(Number(volMatch[1]) / 100, 0.1, 1) : 0.55,
     });
-  }
+  };
+  for (const z of zooms) pushSfx(z.sfx_sync, z.moment_sec);
+  for (const c of cuts) pushSfx(c.sfx_sync, c.moment_sec);
   return list;
+}
+
+export function normalizePurCuts(cuts = [], fps = 30) {
+  const list = Array.isArray(cuts) ? cuts : [];
+  return list.map((c) => ({
+    type: c.type || 'cut',
+    moment_sec: Number(c.moment_sec || 0),
+    moment_frame: Math.round(Number(c.moment_sec || 0) * fps),
+    word_anchor: c.word_anchor || '',
+    technique: c.technique || '',
+    sfx_sync: c.sfx_sync || '',
+  }));
+}
+
+export function normalizePurBroll(body = {}, fps = 30) {
+  const raw = body.broll || body.b_roll || body.memes || [];
+  const list = Array.isArray(raw) ? raw : [];
+  return list.map((b) => {
+    const inSec = Number(b.in_sec ?? b.moment_sec ?? 0);
+    const duration = Number(b.duration_sec ?? 0.4);
+    return {
+      file: b.file || b.src || '',
+      in_sec: inSec,
+      out_sec: Number(b.out_sec ?? (inSec + duration)),
+      in_frame: Math.round(inSec * fps),
+      flash_in: b.flash_in !== false,
+      duck: b.duck !== false,
+    };
+  });
 }
 
 function buildPurOverlay(lines, mainTitle = {}, hookDuration, fps, overlayParams) {
@@ -197,6 +230,15 @@ export function parsePurPack(pack, options = {}) {
   const aspect = options.canvas || platformRules.aspect_ratio || '9:16';
   const canvas = PUR_CANVAS[aspect] || PUR_CANVAS['9:16'];
 
+  const cuts = normalizePurCuts(body.cuts, fps);
+  const broll = normalizePurBroll(body, fps);
+  const punchIns = zooms.map((z) => ({
+    in_sec: Number(z.moment_sec || 0),
+    out_sec: Number(z.moment_sec || 0) + (Number(z.frames || 1) / fps),
+    scale: Math.max(Number(z.scale_from || 1), Number(z.scale_to || 1)),
+    sfx_sync: z.sfx_sync || '',
+    type: z.type || 'punch_in_cut',
+  }));
   const entry = {
     source_id: `pur_${pack.identite?.angle_id || pack.pack_id || 'clip'}`,
     clip_file: clipFile,
@@ -205,6 +247,9 @@ export function parsePurPack(pack, options = {}) {
     role: 'pur_clip',
     anti_detection: antiDetection,
     zooms,
+    punch_ins: punchIns,
+    cuts,
+    broll,
     sfx_list: normalizePurSfx(mi),
   };
 

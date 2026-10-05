@@ -1,7 +1,6 @@
 # Guide d'utilisation — LACRIMAE dev10-v2
 
-A–D poses : Bridge, F00_PUR, Preview, F05, F06 tournent en local.
-PICTOR, Heisenberg et le workflow CI restent le contrat cible (E/F/G).
+A–G poses : Bridge, F00_PUR, Preview, PICTOR, Heisenberg, F05, F06, CI.
 
 ## Vocabulaire
 
@@ -10,64 +9,65 @@ PICTOR, Heisenberg et le workflow CI restent le contrat cible (E/F/G).
 - **LOOK** : F03_PREVIEW + F03_PICTOR (blur / split / reframing, overlay)
 - **TEMPS** : F04_HEISENBERG (cuts, SFX, B-roll, flash, punch-in-cut)
 
-## Local (cible)
+## Local
 
 ```bash
-# 1. Bridge : pack PERTURABO → manifeste
-python3 BRIDGE_PERTURABO/CODEBASE/lac_bridge_forge.py --pur --pack-filter pur_A01
+python3 BRIDGE_PERTURABO/CODEBASE/lac_bridge_forge.py --pur --pack-filter pur_A01 --style blur
 
-# 2. Segment VOD uniquement
 python3 F00_PUR/CODEBASE/f00_pur.py \
   --pack BRIDGE_PERTURABO/IN/production_pack_pur_A01.json \
   --out F00_PUR/OUT
 
-# 3. Preview
 cd F03_PREVIEW/CODEBASE
 npm ci
 npm run dev
 
-# 4. Rendu LOOK
 cd F03_PICTOR/CODEBASE
 npm ci
-npm run render
+node render_pictor.mjs \
+  --manifest ../../BRIDGE_PERTURABO/OUT/pur_manifest.json \
+  --clips ../../F00_PUR/OUT \
+  --out ../../F03_PICTOR/OUT
 
-# 5. Execution TEMPS (MP4 reel)
 python3 F04_HEISENBERG/CODEBASE/heisenberg.py \
   --input F03_PICTOR/OUT/pur_A01_look.mp4 \
   --manifest BRIDGE_PERTURABO/OUT/pur_manifest.json \
   --out F04_HEISENBERG/OUT
 
-# 6. Camouflage + luther
 python3 F05_CAMOUFLAGE/CODEBASE/lac_f05_camouflage.py \
   --input F04_HEISENBERG/OUT/pur_A01.mp4 \
   --output F05_CAMOUFLAGE/OUT
 python3 F06_LUTHER/CODEBASE/lac_f06_luther.py \
-  --input F05_CAMOUFLAGE/OUT/pur_A01.mp4 \
+  --input F05_CAMOUFLAGE/OUT/short_camouflaged.mp4 \
   --output F06_LUTHER/OUT
 ```
 
-## CI (cible)
+## CI
 
 Un seul workflow : `.github/workflows/dev10_pur_render.yml`
 
-Inputs prevus : `pack_filter`, `canvas`, `perturabo_branch`, `style`,
+Actions → DEV10-v2 — PUR render → Run workflow.
+
+Inputs : `pack_filter`, `canvas`, `perturabo_branch`, `style`,
 `max_parallel`, `max_duration`.
 
-Flux : prepare (fetch + G0) → matrix 1 asset / 1 job → PICTOR →
-Heisenberg → agregeur strict → F05/F06.
+Flux : prepare (fetch + G0-S) → matrix 1 asset / 1 job → F00_PUR →
+PICTOR → Heisenberg → agregeur strict → F05/F06.
 
 ## Fichiers jamais commites
 
 Clips, OUT/, `pur_manifest.json` genere, `codex.json` local.
 Transit par artifacts CI ou GitHub Releases.
 
-## En cas de probleme (cible)
+## En cas de probleme
 
 | Symptome | Cause | Action |
 |----------|-------|--------|
 | G0 echoue | pack incomplet | retour PERTURABO |
+| G0-S exit 2 | style absent / ranking | `--style blur\|split_scene\|reframing` |
 | G1 echoue | VOD expiree | clip en Release, rejouer |
 | G2 echoue | derive timestamps | verifier start/end_sec |
-| CLIP PUR MANQUANT | F00_PUR pas lance | etape 2 |
+| CLIP PUR MANQUANT | F00_PUR pas lance | etape F00 |
 | Zoom visible | P-ZOOM ZERO | revert, ne pas ship |
 | Heisenberg JSON only | frégate incomplete | job rouge, pas de livraison |
+| Agregation incomplete | un asset manque | P-AGG, zip refuse |

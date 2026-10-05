@@ -5,14 +5,13 @@ nouveau MP4**. Pas du JSON advisory. Pas Signum.
 
 ## Ce qu'il execute
 
-- Jump cuts (silences)
+- Jump cuts (silences `breath_cut` / `idea_cut` : skip 80 ms)
 - Punch-in **par cut** : a `in`, coupe et joue uniquement `[in, out]`
   recadre plus serre (crop + scale du **segment**, pas de l'image animee) ;
   a `out`, coupe et revient au framing normal
-- B-roll / memes
-- Flash blanc a l'ENTREE d'un B-roll uniquement (jamais a la sortie)
-- SFX cales sur la meme frame, sous la voix
-- Ducking / smash audio
+- B-roll / memes (overlay, flash blanc a l'ENTREE uniquement)
+- SFX cales sur la meme frame, sous la voix (si fichiers presents)
+- Ducking / smash audio via amix volume
 
 ## Contrats
 
@@ -20,11 +19,20 @@ nouveau MP4**. Pas du JSON advisory. Pas Signum.
 |--|--------|
 | IN | MP4 PICTOR + `pur_manifest.json` |
 | OUT | `OUT/pur_<angle>.mp4` (fichier video reel) |
-| Code (a venir) | `CODEBASE/heisenberg.py` |
+| Code | `CODEBASE/heisenberg.py` |
+
+```bash
+python3 F04_HEISENBERG/CODEBASE/heisenberg.py \
+  --input F03_PICTOR/OUT/pur_A01_look.mp4 \
+  --manifest BRIDGE_PERTURABO/OUT/pur_manifest.json \
+  --out F04_HEISENBERG/OUT
+```
+
+`--dry-run` ecrit le plan JSON sans ffmpeg.
 
 ## Interdits
 
-- Zoom / swell / scale anime
+- Zoom / swell / scale anime / zoompan
 - Sortie JSON sans MP4
 - Modifier le look (blur / split / overlay) — deja fige par PICTOR
 

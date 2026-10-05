@@ -3,7 +3,7 @@
 > Point d'entree obligatoire apres toute reprise.
 > Derniere mise a jour : 2026-10-05.
 > Branche : `dev10-v2` sur `jfbjfojfonf/LACRIMAE`.
-> Statut : A–D poses (F05/F06, F00_PUR, Bridge, Preview LOOK). E/F/G a venir.
+> Statut : A–G poses (F05/F06, F00_PUR, Bridge, Preview, PICTOR, Heisenberg, CI).
 
 ## Etat confirme
 
@@ -27,11 +27,9 @@ Doctrine figee :
 3. **B F00_PUR** — yt-dlp segment, G0–G3, `pur_aggregate.py`, converter G0-S. FAIT.
 4. **C BRIDGE** — fetch PUR-only, G0, convert, transit preview/PICTOR. FAIT.
 5. **D F03_PREVIEW** — LOOK Vite, 3 styles, 0 zoom, overlay. FAIT.
-6. **E F03_PICTOR** — miroir Remotion de la preview. PAS COMMENCE.
-7. **F F04_HEISENBERG** — jump cuts, SFX, B-roll, flash, punch-in-cut → MP4. PAS COMMENCE.
-8. **G CI** — un seul workflow `dev10_pur_render.yml`. PAS COMMENCE.
-
-Chaque etape = GO Warsmith separe. Pas d'implementation sans GO.
+6. **E F03_PICTOR** — miroir Remotion de la preview. FAIT.
+7. **F F04_HEISENBERG** — jump cuts, SFX, B-roll, flash, punch-in-cut → MP4. FAIT.
+8. **G CI** — un seul workflow `dev10_pur_render.yml`. FAIT.
 
 ## Contrats a preserver
 
@@ -52,11 +50,11 @@ Chaque etape = GO Warsmith separe. Pas d'implementation sans GO.
 
 ## Prochaine etape exacte
 
-A–D poses localement. Commit + push `dev10-v2` puis, dans cet ordre :
+E/F/G poses. Premier E2E CI (Actions → DEV10-v2 — PUR render) avec un
+pack PERTURABO joignable. SFX mp3 a deposer dans
+`F03_PICTOR/CODEBASE/public/sfx/` (impact / whoosh) si le pack en demande.
 
-1. E F03_PICTOR (miroir preview, LOOK, 0 zoom)
-2. F F04_HEISENBERG (execution temporelle → MP4 reel)
-3. G workflow unique `dev10_pur_render.yml` + agregeur strict
+Si le run E2E casse : corriger la frégate fautive, pas le pack.
 
 ## Reprise sandbox
 

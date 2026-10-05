@@ -1,0 +1,18 @@
+{
+  "name": "lacrimae-f03-pictor",
+  "version": "2.0.0",
+  "description": "LACRIMAE F03 PICTOR — PUR LOOK render (mirror of F03_PREVIEW)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio src/index.jsx",
+    "render": "node render_pictor.mjs"
+  },
+  "dependencies": {
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "remotion": "^4.0.0",
+    "@remotion/cli": "^4.0.0",
+    "@remotion/renderer": "^4.0.0"
+  }
+}

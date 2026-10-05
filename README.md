@@ -5,9 +5,9 @@
 Bras arme du mode PUR de PERTURABO. Pack in, MP4 out. Arbre neuf : aucune
 heritage ranking / reveal / hybrid / Signum.
 
-Branche `dev10-v2` : contrat + portes figes, puis salvage A–D (F05/F06,
-F00_PUR, Bridge PUR, F03_PREVIEW LOOK). PICTOR, Heisenberg et le workflow
-CI restent a poser.
+Branche `dev10-v2` : contrat + portes figes, salvage A–G (F05/F06,
+F00_PUR, Bridge PUR, F03_PREVIEW LOOK, F03_PICTOR, F04_HEISENBERG,
+workflow `dev10_pur_render.yml`).
 
 ## Doctrine
 

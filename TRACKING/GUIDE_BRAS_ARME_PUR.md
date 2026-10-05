@@ -71,6 +71,15 @@ Onglet PUR :
 Rendu Remotion, meme moteur que la preview. Framing fixe. Zero zoom.
 Sortie : MP4 compose (look applique, timeline encore "plate").
 
+```bash
+cd F03_PICTOR/CODEBASE
+npm ci
+node render_pictor.mjs \
+  --manifest ../../BRIDGE_PERTURABO/OUT/pur_manifest.json \
+  --clips ../../F00_PUR/OUT \
+  --out ../../F03_PICTOR/OUT
+```
+
 ## Etape 5 — Heisenberg (P3 TEMPS)
 
 Heisenberg prend le MP4 PICTOR + le manifeste et **ecrit un nouveau MP4**.
@@ -84,6 +93,13 @@ Il execute, dans l'ordre du pack :
 - flash blanc d'entree (jamais de sortie)
 - SFX cales sur la meme frame, sous la voix
 - ducking / smash audio
+
+```bash
+python3 F04_HEISENBERG/CODEBASE/heisenberg.py \
+  --input F03_PICTOR/OUT/pur_A01_look.mp4 \
+  --manifest BRIDGE_PERTURABO/OUT/pur_manifest.json \
+  --out F04_HEISENBERG/OUT
+```
 
 Pas de JSON advisory. Pas de scale anime. Si Heisenberg ne sort pas un
 MP4 lisible, le job echoue.

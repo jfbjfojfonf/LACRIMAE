@@ -45,7 +45,7 @@ function ensurePurFont() {
   face.load().then((f) => document.fonts.add(f)).catch(() => {});
 }
 
-export function PurPackComposition({ purManifest, session: sessionProp, entryIndex = 0 }) {
+export function PurPackComposition({ purManifest, session: sessionProp, entryIndex = 0, muted = true }) {
   ensurePurFont();
   const frame = useCurrentFrame();
   const { fps, durationInFrames, width: canvasWidth } = useVideoConfig();
@@ -108,10 +108,16 @@ export function PurPackComposition({ purManifest, session: sessionProp, entryInd
       }
     : {};
 
-  const videoProps = {
+  const videoPropsSilent = {
     src: videoUrl,
     startFrom: 0,
     muted: true,
+    playbackRate: speed,
+  };
+  const videoPropsAudio = {
+    src: videoUrl,
+    startFrom: 0,
+    muted,
     playbackRate: speed,
   };
 
@@ -135,22 +141,22 @@ export function PurPackComposition({ purManifest, session: sessionProp, entryInd
         {videoUrl ? (
           styleLayout === 'blur' ? (
             <>
-              <Video {...videoProps}
+              <Video {...videoPropsSilent}
                 style={{ width: '100%', height: '100%', objectFit: 'cover', filter: `blur(${Number(sp.degree || 24)}px) brightness(0.6)`, transform: `scale(${(Number(sp.bg_scale || 118) / 100).toFixed(4)})` }} />
               <div style={{ position: 'absolute', left: 0, right: 0, top: `${Number(sp.fg_y_pct ?? 62)}%`, height: `${Number(sp.fg_scale || 72)}%`, transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Video {...videoProps}
+                <Video {...videoPropsAudio}
                   style={{ width: '100%', height: '100%', objectFit: 'cover', boxShadow: '0 12px 48px rgba(0,0,0,0.65)' }} />
               </div>
             </>
           ) : styleLayout === 'split' ? (
             <>
               <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: `${Number(sp.top_scale || 62)}%`, overflow: 'hidden' }}>
-                <Video {...videoProps} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <Video {...videoPropsAudio} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
               <div style={{ position: 'absolute', left: 0, top: `${Number(sp.top_scale || 62)}%`, width: '100%', height: `${Number(sp.bottom_scale || 38)}%`, background: 'linear-gradient(180deg, #0a0a12 0%, #050505 100%)', borderTop: '2px solid rgba(255,255,255,0.12)' }} />
             </>
           ) : (
-            <Video {...videoProps}
+            <Video {...videoPropsAudio}
               style={{ width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${(Number(sp.scale || 130) / 100).toFixed(4)}) translate(${Number(sp.offset_x_pct || 0)}%, ${Number(sp.offset_y_pct || 0)}%)` }} />
           )
         ) : (
