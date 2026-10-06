@@ -1,0 +1,52 @@
+name: dev6-F LUT render
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Plan only, no ffmpeg encode
+        type: boolean
+        default: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install modal (import only)
+        run: pip install modal
+      - name: Unit tests
+        run: python3 -m unittest F01_INGEST.tests.test_ingest F02_RENDER.tests.test_lut F02_RENDER.tests.test_modal_app -v
+
+  render:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install modal
+        run: pip install modal
+      - name: Auth Modal
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          if [ -z "$MODAL_TOKEN_ID" ] || [ -z "$MODAL_TOKEN_SECRET" ]; then
+            echo "Missing GitHub secrets MODAL_TOKEN_ID / MODAL_TOKEN_SECRET"
+            exit 1
+          fi
+          modal token set --token-id "$MODAL_TOKEN_ID" --token-secret "$MODAL_TOKEN_SECRET"
+      - name: Deploy F02_RENDER
+        run: modal deploy F02_RENDER/CODEBASE/modal_app.py
+      - name: Run LUT
+        run: |
+          if [ "${{ inputs.dry_run }}" = "false" ]; then
+            modal run F02_RENDER/CODEBASE/modal_app.py --no-dry-run
+          else
+            modal run F02_RENDER/CODEBASE/modal_app.py --dry-run
+          fi

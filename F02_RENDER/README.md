@@ -21,4 +21,21 @@ python3 F02_RENDER/CODEBASE/lut.py \
 ```
 
 G0 : `.cube` obligatoire. Un item = un job. CPU, pas GPU.
-P3 : `CODEBASE/modal_app.py` (pas encore).
+
+## Modal (P3)
+
+App : `lacrimae-dev6f-lut`. Volume : `lacrimae-dev6f`.
+
+| Volume | Chemin |
+|--|--|
+| LUT | `/data/lut/Cinematic.cube` |
+| Inbox mp4 | `/data/inbox/` |
+| Outbox | `/data/outbox/` |
+
+```
+modal deploy F02_RENDER/CODEBASE/modal_app.py
+modal run F02_RENDER/CODEBASE/modal_app.py --dry-run
+```
+
+Secrets GitHub : `MODAL_TOKEN_ID`, `MODAL_TOKEN_SECRET`.
+Workflow : `.github/workflows/dev6f_lut_render.yml` (`workflow_dispatch`).

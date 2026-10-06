@@ -9,7 +9,7 @@ Copie de `dev6-E` @ `24a719d`. Pivot LUT (FFmpeg `lut3d`), plus de Nexrender.
 | P0 docs + arbre | ✅ |
 | P1 copie F05/F06 | ✅ verbatim `dev10-v2` |
 | P2 F01+F02 LUT | ✅ ingest.py + lut.py, 10 tests, Nexrender purge |
-| P3 Modal + Actions | bloque : `.cube` + `MODAL_TOKEN` (humain) |
+| P3 Modal + Actions | ✅ modal_app.py CPU + workflow + volume LUT |
 | P4 cablage F05/F06 | apres 1 rendu LUT OK |
 
 ## Noms figes
@@ -42,4 +42,5 @@ Tests :
 python3 -m unittest F01_INGEST.tests.test_ingest F02_RENDER.tests.test_lut -v
 ```
 
-Doit faire 10/10. P3 : ne pas coder tant que `.cube` + `MODAL_TOKEN` absents.
+Doit faire 12/12. Secrets GitHub : `MODAL_TOKEN_ID`, `MODAL_TOKEN_SECRET`.
+`.cube` local gitignore : `SHARED/IN/Cinematic.cube`. Volume Modal : `lacrimae-dev6f`.
