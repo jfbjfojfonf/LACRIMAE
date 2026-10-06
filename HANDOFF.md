@@ -6,8 +6,8 @@ Copie de `dev6-E` @ `24a719d`. Pivot LUT (FFmpeg `lut3d`), plus de Nexrender.
 
 | Phase | Statut |
 |---|---|
-| P0 docs + arbre | en cours / faite selon commit |
-| P1 copie F05/F06 | ensuite |
+| P0 docs + arbre | ✅ |
+| P1 copie F05/F06 | ✅ verbatim `dev10-v2` |
 | P2 F01+F02 LUT | ensuite |
 | P3 Modal + Actions | bloque : `.cube` + `MODAL_TOKEN` (humain) |
 | P4 cablage F05/F06 | apres 1 rendu LUT OK |
