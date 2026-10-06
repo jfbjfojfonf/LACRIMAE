@@ -6,7 +6,15 @@ on:
       dry_run:
         description: Plan only, no ffmpeg encode
         type: boolean
-        default: true
+        default: false
+  push:
+    branches: [dev6-F]
+    paths:
+      - ".github/workflows/dev6f_lut_render.yml"
+      - "F01_INGEST/**"
+      - "F02_RENDER/**"
+      - "F05_CAMOUFLAGE/**"
+      - "F06_LUTHER/**"
 
 jobs:
   test:
@@ -43,10 +51,23 @@ jobs:
           modal token set --token-id "$MODAL_TOKEN_ID" --token-secret "$MODAL_TOKEN_SECRET"
       - name: Deploy F02_RENDER
         run: modal deploy F02_RENDER/CODEBASE/modal_app.py
-      - name: Run LUT
+      - name: Run LUT then F05 F06
         run: |
-          if [ "${{ inputs.dry_run }}" = "false" ]; then
-            modal run F02_RENDER/CODEBASE/modal_app.py --no-dry-run
-          else
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
             modal run F02_RENDER/CODEBASE/modal_app.py --dry-run
+          else
+            modal run F02_RENDER/CODEBASE/modal_app.py --no-dry-run
           fi
+      - name: Pull F06 livrable
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          mkdir -p F06_LUTHER/OUT
+          modal volume get lacrimae-dev6f f06 F06_LUTHER/OUT
+          test -n "$(find F06_LUTHER/OUT -name '*.mp4' -print -quit)"
+      - name: Upload F06 artifact
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: lac-dev6f-luther
+          path: F06_LUTHER/OUT/
+          retention-days: 14

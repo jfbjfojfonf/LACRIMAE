@@ -30,10 +30,11 @@ Tests :
 python3 -m unittest F01_INGEST.tests.test_ingest F02_RENDER.tests.test_lut -v
 ```
 
-## CI / Modal (P3, pas encore)
+## CI / Modal (P3 + P4)
 
-Workflow prevu : `.github/workflows/dev6f_lut_render.yml`
-Secret : `MODAL_TOKEN`. Humain fournit le `.cube`.
+Workflow : `.github/workflows/dev6f_lut_render.yml`
+Secrets : `MODAL_TOKEN_ID`, `MODAL_TOKEN_SECRET`.
+Chaine : LUT → F05 `--batch` → F06 `--batch`. Livrable : volume `/data/f06/` + artifact `lac-dev6f-luther`.
 
 ## Fichiers jamais commites
 

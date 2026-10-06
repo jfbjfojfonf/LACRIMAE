@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import json
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -16,14 +18,21 @@ LUT_REMOTE = f"{VOLUME_MOUNT}/lut/Cinematic.cube"
 INBOX_REMOTE = f"{VOLUME_MOUNT}/inbox"
 OUTBOX_REMOTE = f"{VOLUME_MOUNT}/outbox"
 QUEUE_REMOTE = f"{VOLUME_MOUNT}/queue"
+F02_OK_REMOTE = f"{VOLUME_MOUNT}/f02_ok"
+F05_REMOTE = f"{VOLUME_MOUNT}/f05"
+F06_REMOTE = f"{VOLUME_MOUNT}/f06"
 HERE = Path(__file__).resolve().parent
 INGEST_PY = HERE.parent.parent / "F01_INGEST" / "CODEBASE" / "ingest.py"
+F05_PY = HERE.parent.parent / "F05_CAMOUFLAGE" / "CODEBASE" / "lac_f05_camouflage.py"
+F06_PY = HERE.parent.parent / "F06_LUTHER" / "CODEBASE" / "lac_f06_luther.py"
 
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .apt_install("ffmpeg")
     .add_local_file(str(HERE / "lut.py"), "/app/lut.py", copy=True)
     .add_local_file(str(INGEST_PY), "/app/ingest.py", copy=True)
+    .add_local_file(str(F05_PY), "/app/lac_f05_camouflage.py", copy=True)
+    .add_local_file(str(F06_PY), "/app/lac_f06_luther.py", copy=True)
 )
 
 volume = modal.Volume.from_name(VOLUME_NAME, create_if_missing=True)
@@ -46,6 +55,59 @@ def plan_jobs(inbox_dir: Path, outbox_dir: Path, cube: Path) -> list[dict]:
             }
         )
     return jobs
+
+
+def _reset_dir(path: Path) -> None:
+    path.mkdir(parents=True, exist_ok=True)
+    for item in path.iterdir():
+        if item.is_file():
+            item.unlink()
+
+
+def chain_f05_f06(lut_mp4s: list[Path]) -> dict:
+    staging = Path(F02_OK_REMOTE)
+    f05 = Path(F05_REMOTE)
+    f06 = Path(F06_REMOTE)
+    _reset_dir(staging)
+    _reset_dir(f05)
+    _reset_dir(f06)
+    for src in lut_mp4s:
+        shutil.copy2(src, staging / src.name)
+    r5 = subprocess.run(
+        [
+            sys.executable,
+            "/app/lac_f05_camouflage.py",
+            "--batch",
+            str(staging),
+            "--output",
+            str(f05),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    r6 = subprocess.run(
+        [
+            sys.executable,
+            "/app/lac_f06_luther.py",
+            "--batch",
+            str(f05),
+            "--output",
+            str(f06),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    return {
+        "f05_returncode": r5.returncode,
+        "f06_returncode": r6.returncode,
+        "f05_stdout": (r5.stdout or "")[-2000:],
+        "f05_stderr": (r5.stderr or "")[-2000:],
+        "f06_stdout": (r6.stdout or "")[-2000:],
+        "f06_stderr": (r6.stderr or "")[-2000:],
+        "f05_mp4": sorted(p.name for p in f05.glob("*.mp4")),
+        "f06_mp4": sorted(p.name for p in f06.glob("*.mp4")),
+        "qa_pass": r5.returncode == 0 and r6.returncode == 0,
+    }
 
 
 @app.function(
@@ -118,8 +180,17 @@ def render(dry_run: bool = True) -> dict:
         outbox_dir=outbox,
         dry_run=False,
     )
-    volume.commit()
+    ok_mp4s = [
+        Path(row["output"])
+        for row in summary.get("results") or []
+        if row.get("status") == "success" and Path(row["output"]).is_file()
+    ]
     summary["ingest_items"] = len(manifest.get("items") or [])
+    if ok_mp4s:
+        summary["f05_f06"] = chain_f05_f06(ok_mp4s)
+    else:
+        summary["f05_f06"] = {"qa_pass": False, "reason": "no successful LUT mp4"}
+    volume.commit()
     return summary
 
 

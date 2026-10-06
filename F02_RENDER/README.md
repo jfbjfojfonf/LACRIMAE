@@ -37,5 +37,8 @@ modal deploy F02_RENDER/CODEBASE/modal_app.py
 modal run F02_RENDER/CODEBASE/modal_app.py --dry-run
 ```
 
+Apres LUT : F05 `--batch` puis F06 `--batch` (scripts verbatim `dev10-v2`).
+Livrable volume : `/data/f06/*.mp4`.
+
 Secrets GitHub : `MODAL_TOKEN_ID`, `MODAL_TOKEN_SECRET`.
 Workflow : `.github/workflows/dev6f_lut_render.yml` (`workflow_dispatch`).

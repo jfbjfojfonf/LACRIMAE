@@ -5,7 +5,15 @@ from pathlib import Path
 CODE = Path(__file__).resolve().parent.parent / "CODEBASE"
 sys.path.insert(0, str(CODE))
 
-from modal_app import APP_NAME, LUT_REMOTE, VOLUME_MOUNT, VOLUME_NAME, plan_jobs  # noqa: E402
+from modal_app import (  # noqa: E402
+    APP_NAME,
+    F05_REMOTE,
+    F06_REMOTE,
+    LUT_REMOTE,
+    VOLUME_MOUNT,
+    VOLUME_NAME,
+    plan_jobs,
+)
 
 
 class ModalAppTests(unittest.TestCase):
@@ -14,6 +22,8 @@ class ModalAppTests(unittest.TestCase):
         self.assertEqual(VOLUME_NAME, "lacrimae-dev6f")
         self.assertTrue(LUT_REMOTE.startswith(VOLUME_MOUNT))
         self.assertTrue(LUT_REMOTE.endswith(".cube"))
+        self.assertTrue(F05_REMOTE.startswith(VOLUME_MOUNT))
+        self.assertTrue(F06_REMOTE.startswith(VOLUME_MOUNT))
 
     def test_plan_jobs(self):
         tmp = Path("/tmp/lacrimae_f_modal_plan")

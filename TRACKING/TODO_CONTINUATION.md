@@ -25,7 +25,7 @@ GitHub Actions, execution Modal. Puis F05/F06 (copie `dev10-v2`).
 | P1 | Copie F05/F06 depuis `dev10-v2` | ✅ |
 | P2 | Code F01 + F02 LUT, tests, purge Nexrender | ✅ |
 | P3 | Modal app + workflow Actions | ✅ |
-| P4 | Cablage F02 OUT → F05 → F06 | ⬜ |
+| P4 | Cablage F02 OUT → F05 → F06 | ✅ |
 
 ## Contrats
 
@@ -43,8 +43,8 @@ GitHub Actions, execution Modal. Puis F05/F06 (copie `dev10-v2`).
 ## Prochaine etape exacte
 
 G1 accepte 1920x1080 **et** 1080x1920 (pas de transpose).
-P4 (agent) : brancher F02 OUT → F05 `--batch` → F06 `--batch` apres 1 rendu LUT OK.
-Humain : uploader N mp4 dans le volume (`inbox/`) + declencher le workflow (dry_run=false).
+P4 : F02 OUT → F05 `--batch` → F06 `--batch` (scripts F05/F06 verbatim).
+Livrable volume : `/data/f06/*.mp4`. Workflow `dev6f_lut_render.yml`.
 
 ## Reprise sandbox
 
