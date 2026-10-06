@@ -160,7 +160,15 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: pur-prepare
-          path: .
+          path: RUNNER_TEMP/prepare
+      - name: Restore prepare tree
+        run: |
+          set -euo pipefail
+          mkdir -p BRIDGE_PERTURABO/IN BRIDGE_PERTURABO/OUT
+          find RUNNER_TEMP/prepare -type f -print
+          find RUNNER_TEMP/prepare -name 'production_pack_*.json' -exec cp -f {} BRIDGE_PERTURABO/IN/ \;
+          find RUNNER_TEMP/prepare -name 'pur_manifest.json' -exec cp -f {} BRIDGE_PERTURABO/OUT/ \;
+          ls -la BRIDGE_PERTURABO/IN BRIDGE_PERTURABO/OUT
       - name: F00_PUR segment
         run: |
           set -euo pipefail
@@ -169,7 +177,7 @@ jobs:
           PACK=${PACKS[0]:-}
           if [ -z "$PACK" ]; then
             echo "pack introuvable pour ${{ matrix.angle }}" >&2
-            ls BRIDGE_PERTURABO/IN/ >&2 || true
+            ls -la BRIDGE_PERTURABO/IN/ >&2 || true
             exit 1
           fi
           python3 F00_PUR/CODEBASE/f00_pur.py --pack "$PACK" --out F00_PUR/OUT --clip-name "pur_${{ matrix.angle }}.mp4"
@@ -214,7 +222,13 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: pur-prepare
-          path: .
+          path: RUNNER_TEMP/prepare
+      - name: Restore prepare tree
+        run: |
+          set -euo pipefail
+          mkdir -p BRIDGE_PERTURABO/IN BRIDGE_PERTURABO/OUT
+          find RUNNER_TEMP/prepare -name 'production_pack_*.json' -exec cp -f {} BRIDGE_PERTURABO/IN/ \;
+          find RUNNER_TEMP/prepare -name 'pur_manifest.json' -exec cp -f {} BRIDGE_PERTURABO/OUT/ \;
       - uses: actions/download-artifact@v4
         with:
           pattern: pur-result-*
