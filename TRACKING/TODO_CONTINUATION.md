@@ -3,7 +3,7 @@
 > Point d'entree obligatoire apres toute reprise.
 > Derniere mise a jour : 2026-10-06.
 > Branche : `dev11-F07` (base `dev10-v2`) sur `jfbjfojfonf/LACRIMAE`.
-> Statut : A–G poses. H0 F07_CAPTION pose (scaffold + docs, zero moteur).
+> Statut : A–G poses. H0–H4 F07_CAPTION poses.
 
 ## Etat confirme
 
@@ -30,7 +30,8 @@ Doctrine figee :
 6. **E F03_PICTOR** — miroir Remotion de la preview. FAIT.
 7. **F F04_HEISENBERG** — jump cuts, SFX, B-roll, flash, punch-in-cut → MP4. FAIT.
 8. **G CI** — un seul workflow `dev10_pur_render.yml`. FAIT.
-9. **H0 F07_CAPTION** — arbre TRAVAIL/PREVIEW + IN/OUT + gates caption. FAIT (docs only).
+9. **H0 F07_CAPTION** — arbre TRAVAIL/PREVIEW + IN/OUT + gates caption. FAIT.
+10. **H1–H4 F07_CAPTION** — preview Vite, Whisper GHA, proof Modal, overlay+F05/F06. FAIT.
 
 ## Contrats a preserver
 
@@ -57,16 +58,14 @@ Sous-titres 3D mot-a-mot. Une frégate, deux halves (TRAVAIL / PREVIEW).
 | Palier | Contenu | Statut |
 |--------|---------|--------|
 | H0 | dirs + README + CAPTION_GATES + GUIDE_CAPTION | FAIT |
-| H1 | PREVIEW coque Vite (drop transcript + video, sliders, export s1) | ATTEND GO |
-| H2 | Whisper GHA : IN -> `transcript.json` | ATTEND GO |
-| H3 | proof frame Modal : 1 mot, 1–3 PNG | ATTEND GO |
-| H4 | Blender full + overlay ffmpeg, hook F05/F06 | ATTEND GO |
-
-H1–H4 = GO separes. Pas de moteur avant GO H1.
+| H1 | PREVIEW coque Vite (drop transcript + video, sliders, export s1) | FAIT |
+| H2 | Whisper GHA : IN -> `transcript.json` | FAIT |
+| H3 | proof frame Modal : 1 mot, 1–3 PNG | FAIT |
+| H4 | Blender full + overlay ffmpeg, hook F05/F06 | FAIT |
 
 ## Prochaine etape exacte
 
-**F07** : attendre GO H1 (coque preview). Pas de Whisper / Blender avant.
+**F07** : premier tir d'essais Actions `DEV11 — F07 CAPTION` (`job=whisper` puis `proof` puis `render`) avec une video IN. Corriger la frégate fautive, pas le pack `s1`.
 
 **PUR** (inchange) : premier E2E CI (`dev10_pur_render.yml`) avec un pack
 PERTURABO joignable. Si le run E2E casse : corriger la frégate fautive,

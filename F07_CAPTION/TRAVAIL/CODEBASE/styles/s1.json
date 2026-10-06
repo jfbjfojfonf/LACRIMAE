@@ -1,0 +1,21 @@
+{
+  "schema_version": "dev11.caption.style.v1",
+  "id": "s1",
+  "font": "Montserrat-ExtraBold.ttf",
+  "position": {
+    "x_pct": 50,
+    "y_pct": 78
+  },
+  "size": 72,
+  "color": "#FFFFFF",
+  "outline": {
+    "width": 4,
+    "color": "#000000"
+  },
+  "glow": {
+    "intensity": 1.2,
+    "color": "#FFFFFF"
+  },
+  "motion": "pop-in",
+  "canvas": "9:16"
+}

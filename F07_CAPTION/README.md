@@ -6,7 +6,7 @@ Coloring LUT (`.cube`) et LOOK F03 ne passent pas ici.
 Une frégate, deux halves : TRAVAIL (Whisper / Blender / overlay) et
 PREVIEW (coque JS, proof frame). IN/OUT a la racine, comme les autres.
 
-H0 = scaffold + contrats. Aucun moteur.
+H0–H4 poses. Preview coque Vite. Whisper GHA. Proof + rendu Modal Blender. Overlay + hook F05/F06.
 
 ## Arbre
 
@@ -31,7 +31,31 @@ Mouvement = enum uniquement : `pop-in` / `bounce` / `slide`. Pas de formule libr
 
 `s1` n'est pas par video. Un style valide s'applique a N transcripts.
 
-## Chaine (paliers H1–H4, pas H0)
+## Commandes
+
+```bash
+# H1 preview locale
+cd F07_CAPTION/PREVIEW/CODEBASE
+npm ci
+npm run dev
+
+# H2 Whisper (C0 -> C1)
+python3 F07_CAPTION/TRAVAIL/CODEBASE/whisper_transcribe.py \
+  --input F07_CAPTION/IN \
+  --out F07_CAPTION/OUT \
+  --model base
+
+# H3 proof 1 mot (Modal GPU)
+modal run F07_CAPTION/TRAVAIL/CODEBASE/modal_app.py --mode proof --word HOE
+
+# H4 calque + overlay + F05/F06 (Modal GPU)
+modal run F07_CAPTION/TRAVAIL/CODEBASE/modal_app.py --mode render
+```
+
+CI : `.github/workflows/dev11_caption.yml` (`job=whisper|proof|render`).
+Tests : `python3 -m pytest -q F07_CAPTION/TRAVAIL/tests`.
+
+## Chaine
 
 ```text
 IN/video

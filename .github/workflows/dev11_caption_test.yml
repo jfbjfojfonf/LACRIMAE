@@ -1,0 +1,21 @@
+name: DEV11 — F07 CAPTION tests
+
+on:
+  push:
+    branches: [dev11-F07]
+    paths:
+      - "F07_CAPTION/**"
+      - ".github/workflows/dev11_caption.yml"
+      - ".github/workflows/dev11_caption_test.yml"
+  workflow_dispatch:
+
+jobs:
+  schema:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Schema + blender args
+        run: python3 -m pytest -q F07_CAPTION/TRAVAIL/tests

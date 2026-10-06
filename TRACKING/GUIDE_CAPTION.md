@@ -1,7 +1,7 @@
 # Guide Operateur — F07_CAPTION
 
 > Sous-titres 3D mot-a-mot. Pas le flux PUR.
-> H0 : structure seulement. Les commandes H1–H4 arriveront avec le code.
+> H1–H4 poses. Operateur = portes C0–C4.
 
 ## Principe en 3 lignes
 
@@ -16,13 +16,28 @@
 - Tu ne touches pas F03 (LOOK) ni le coloring `.cube`.
 - Tu ne commites pas les mp4 / PNG de preuve.
 
-## Checklist (quand le code existera)
+## Checklist
 
 - Video dans `F07_CAPTION/IN/` (C0)
-- Transcript `OUT/transcript.json` (C1)
-- `s1` exporte `OUT/style.json` (C2)
-- Proof PNG valide visuellement (C3)
-- Puis seulement : calque alpha + overlay (C4) → F05 → F06
+- Transcript `OUT/transcript.json` (C1) — Whisper GHA `job=whisper`
+- `s1` exporte `OUT/style.json` (C2) — preview `npm run dev`
+- Proof PNG valide visuellement (C3) — GHA `job=proof` ou bouton preview
+- Puis seulement : calque alpha + overlay (C4) — GHA `job=render` → F05 → F06
+
+## Commandes
+
+```bash
+cd F07_CAPTION/PREVIEW/CODEBASE && npm ci && npm run dev
+
+python3 F07_CAPTION/TRAVAIL/CODEBASE/whisper_transcribe.py \
+  --input F07_CAPTION/IN --out F07_CAPTION/OUT --model base
+
+modal run F07_CAPTION/TRAVAIL/CODEBASE/modal_app.py --mode proof --word HOE
+modal run F07_CAPTION/TRAVAIL/CODEBASE/modal_app.py --mode render
+```
+
+Actions → DEV11 — F07 CAPTION → `job` = whisper | proof | render.
+Secrets : `MODAL_TOKEN_ID` / `MODAL_TOKEN_SECRET` (deja poses pour dev6-F).
 
 ## Preview
 

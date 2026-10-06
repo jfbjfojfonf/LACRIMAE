@@ -1,0 +1,167 @@
+name: DEV11 — F07 CAPTION
+
+on:
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Palier : whisper (H2) / proof (H3) / render (H4)"
+        required: true
+        default: "whisper"
+        type: choice
+        options: ["whisper", "proof", "render"]
+      video_url:
+        description: "URL mp4 cible (C0). Requis pour whisper et render."
+        required: false
+        default: ""
+      word:
+        description: "Mot proof H3"
+        required: false
+        default: "HOE"
+      model:
+        description: "Modele Whisper"
+        required: false
+        default: "base"
+      luther:
+        description: "H4 : enchainer F05/F06"
+        type: boolean
+        default: true
+
+concurrency:
+  group: dev11-f07-caption-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  whisper:
+    if: ${{ github.event.inputs.job == 'whisper' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: ffmpeg + faster-whisper
+        run: |
+          sudo apt-get update -y
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ffmpeg
+          pip3 install --break-system-packages faster-whisper
+      - name: C0 download video
+        env:
+          VIDEO_URL: ${{ github.event.inputs.video_url }}
+        run: |
+          set -euo pipefail
+          mkdir -p F07_CAPTION/IN F07_CAPTION/OUT
+          if [ -z "$VIDEO_URL" ]; then
+            echo "C0: video_url requis" >&2
+            exit 1
+          fi
+          curl -L --fail --max-time 180 -o F07_CAPTION/IN/target.mp4 "$VIDEO_URL"
+          test -s F07_CAPTION/IN/target.mp4
+      - name: H2 Whisper mot-a-mot
+        run: |
+          python3 F07_CAPTION/TRAVAIL/CODEBASE/whisper_transcribe.py \
+            --input F07_CAPTION/IN/target.mp4 \
+            --out F07_CAPTION/OUT \
+            --model "${{ github.event.inputs.model }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: f07-transcript
+          path: F07_CAPTION/OUT/transcript.json
+          retention-days: 14
+
+  proof:
+    if: ${{ github.event.inputs.job == 'proof' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install modal
+        run: pip3 install --break-system-packages modal
+      - name: Auth Modal
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          if [ -z "$MODAL_TOKEN_ID" ] || [ -z "$MODAL_TOKEN_SECRET" ]; then
+            echo "Missing GitHub secrets MODAL_TOKEN_ID / MODAL_TOKEN_SECRET"
+            exit 1
+          fi
+          modal token set --token-id "$MODAL_TOKEN_ID" --token-secret "$MODAL_TOKEN_SECRET"
+      - name: H3 proof 1 mot
+        run: |
+          mkdir -p F07_CAPTION/OUT
+          cp -f F07_CAPTION/TRAVAIL/CODEBASE/styles/s1.json F07_CAPTION/OUT/style.json
+          modal run F07_CAPTION/TRAVAIL/CODEBASE/modal_app.py --mode proof --word "${{ github.event.inputs.word }}"
+      - name: Pull proof PNG
+        run: |
+          mkdir -p F07_CAPTION/OUT/proof
+          modal volume get lacrimae-dev11-caption proof/out F07_CAPTION/OUT/proof || true
+          find F07_CAPTION/OUT/proof -name 'proof_*.png' | head
+      - uses: actions/upload-artifact@v4
+        with:
+          name: f07-proof
+          path: |
+            F07_CAPTION/OUT/proof/
+            F07_CAPTION/OUT/style.json
+          retention-days: 14
+
+  render:
+    if: ${{ github.event.inputs.job == 'render' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install modal
+        run: pip3 install --break-system-packages modal
+      - name: Auth Modal
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          if [ -z "$MODAL_TOKEN_ID" ] || [ -z "$MODAL_TOKEN_SECRET" ]; then
+            echo "Missing GitHub secrets MODAL_TOKEN_ID / MODAL_TOKEN_SECRET"
+            exit 1
+          fi
+          modal token set --token-id "$MODAL_TOKEN_ID" --token-secret "$MODAL_TOKEN_SECRET"
+      - name: ffmpeg + faster-whisper
+        run: |
+          sudo apt-get update -y
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ffmpeg
+          pip3 install --break-system-packages faster-whisper
+      - name: C0 video + C1 Whisper + s1
+        env:
+          VIDEO_URL: ${{ github.event.inputs.video_url }}
+        run: |
+          set -euo pipefail
+          mkdir -p F07_CAPTION/IN F07_CAPTION/OUT
+          if [ -z "$VIDEO_URL" ]; then
+            echo "C0: video_url requis pour render" >&2
+            exit 1
+          fi
+          curl -L --fail --max-time 180 -o F07_CAPTION/IN/target.mp4 "$VIDEO_URL"
+          python3 F07_CAPTION/TRAVAIL/CODEBASE/whisper_transcribe.py \
+            --input F07_CAPTION/IN/target.mp4 \
+            --out F07_CAPTION/OUT \
+            --model "${{ github.event.inputs.model }}"
+          cp -f F07_CAPTION/TRAVAIL/CODEBASE/styles/s1.json F07_CAPTION/OUT/style.json
+          modal volume put lacrimae-dev11-caption F07_CAPTION/IN/target.mp4 inbox/target.mp4
+      - name: H4 Blender + overlay + F05/F06
+        run: |
+          modal run F07_CAPTION/TRAVAIL/CODEBASE/modal_app.py --mode render
+      - name: Pull livrable
+        run: |
+          mkdir -p F07_CAPTION/OUT/f06 F07_CAPTION/OUT/overlay
+          modal volume get lacrimae-dev11-caption render/overlay F07_CAPTION/OUT/overlay || true
+          modal volume get lacrimae-dev11-caption render/f06 F07_CAPTION/OUT/f06 || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: f07-caption-luther
+          path: |
+            F07_CAPTION/OUT/overlay/
+            F07_CAPTION/OUT/f06/
+            F07_CAPTION/OUT/style.json
+            F07_CAPTION/OUT/transcript.json
+          retention-days: 14

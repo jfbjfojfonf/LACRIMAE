@@ -72,10 +72,10 @@ Deux JSON, jamais un seul fichier mixte :
 
 ## Paliers code (hors H0)
 
-| Palier | Contenu |
-|--------|---------|
-| H0 | dirs + docs — **ce palier** |
-| H1 | PREVIEW coque Vite (drop transcript + video, sliders, export s1) |
-| H2 | Whisper GHA : IN -> `transcript.json` |
-| H3 | proof frame Modal : 1 mot, 1–3 PNG |
-| H4 | Blender full + overlay ffmpeg, hook F05/F06 |
+| Palier | Contenu | Statut |
+|--------|---------|--------|
+| H0 | dirs + docs | FAIT |
+| H1 | PREVIEW coque Vite | FAIT |
+| H2 | Whisper GHA | FAIT |
+| H3 | proof frame Modal | FAIT |
+| H4 | Blender full + overlay + F05/F06 | FAIT |

@@ -9,8 +9,8 @@ Branche `dev10-v2` : contrat + portes figes, salvage A–G (F05/F06,
 F00_PUR, Bridge PUR, F03_PREVIEW LOOK, F03_PICTOR, F04_HEISENBERG,
 workflow `dev10_pur_render.yml`).
 
-Branche `dev11-F07` : palier H0 — scaffold F07_CAPTION (sous-titres 3D),
-hors flux PUR jour 1. Aucun moteur.
+Branche `dev11-F07` : F07_CAPTION H0–H4 (preview, Whisper, proof Blender,
+overlay + F05/F06). Hors flux PUR jour 1.
 
 ## Doctrine
 

@@ -1,7 +1,8 @@
 # Guide d'utilisation — LACRIMAE dev10-v2
 
 A–G poses : Bridge, F00_PUR, Preview, PICTOR, Heisenberg, F05, F06, CI.
-H0 pose : F07_CAPTION scaffold (hors PUR). Guide : `TRACKING/GUIDE_CAPTION.md`.
+H0–H4 poses : F07_CAPTION (hors PUR). Guide : `TRACKING/GUIDE_CAPTION.md`.
+CI caption : `.github/workflows/dev11_caption.yml`.
 
 ## Vocabulaire
 
