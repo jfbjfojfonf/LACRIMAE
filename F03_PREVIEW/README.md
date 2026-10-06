@@ -1,6 +1,8 @@
-# F03 PREVIEW — dev9 (Ranking Compilation)
+# F03 PREVIEW — dev10 (mode PUR)
 
-F03_PREVIEW est la salle de contrôle interactive du Short LACRIMAE. En mode **ranking_compilation**, elle affiche des clips vidéo classés par rang avec texte animé, SFX par transition, et son des clips.
+F03_PREVIEW est la salle de contrôle interactive du Short LACRIMAE. En 2026-10-06, les onglets Ranking et Reveal sont masqués. Le mode par défaut est **pur_pack**. Le double-clic sur la vidéo pose le logo (conservé). Zoom respiration et zooms ponctuels sont désactivés.
+
+Le moteur ranking/reveal reste dans le code (héritage) mais n'est plus routé depuis l'UI.
 
 ## Mode de fonctionnement
 

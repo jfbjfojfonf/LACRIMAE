@@ -239,3 +239,10 @@ overlay boxé unique 44px à y 11%.
 - Doctrine rappelée : Heisenberg propose ; PERTURABO tranche le OÙ/QUOI ;
   Warsmith valide au gate. Prochain groupe (3) : le rendu narratif —
   B-roll numéroté au rendu, jump cuts, ducking.
+
+### 2026-10-06 — Preview F03 (pas de run CI)
+
+- Restauration de la preview origin/dev10. Ranking / Reveal / zoom (breathing + ponctuels) retirés de l'UI et du moteur preview PUR.
+- Double-clic logo conservé et branché sur PurPackComposition.
+- **Aucun gate sauté. PICTOR non lancé.** P1 en attente du Warsmith sur cette preview.
+- Pack cible : `asf_c3` (PERTURABO `v2-live-vox-c`).

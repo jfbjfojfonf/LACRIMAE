@@ -451,7 +451,7 @@ export function normalizePurAntiDetection(mi = {}) {
   const out = {
     mirror: false,
     speed: 1.0,
-    breathing_zoom: { enabled: true, min_scale: 1.02, max_scale: 1.08, cycle_seconds: 8 },
+      breathing_zoom: { enabled: false, min_scale: 1.02, max_scale: 1.08, cycle_seconds: 8 },
     crop_pct: 0,
     principle: block.principle || '',
   };

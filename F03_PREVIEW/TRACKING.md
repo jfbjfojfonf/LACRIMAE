@@ -107,3 +107,12 @@ Limite volontaire : dev8 ne contient pas de pack média réel. Le premier test r
 Gates validés : syntaxe F00-F, tests unitaires F00-F et Reveal (`7 passed`), build Vite F03. Le check Remotion PICTOR a été remplacé par un bundling esbuild local lorsque le téléchargement de Chromium Headless Shell n’est pas disponible ; le bundling PICTOR et la compilation Python sont valides.
 
 À valider sur un test réel : six clips F00-E, au moins une source horizontale, un miroir, un SFX activé et un rang 1 final.
+
+## 2026-10-06 — Preview PUR : ranking / reveal / zoom masqués
+
+La preview dev10 est conservée. Changements opérateur uniquement :
+
+- Onglets Ranking et Reveal retirés de la barre. Le mode forcé est `pur_pack`.
+- Zoom respiration et zooms ponctuels désactivés (preview). Miroir / crop / speed inchangés.
+- Double-clic sur la vidéo pour poser le logo : **conservé** (modale Oui/Non, `session.logo.position = custom`). Le logo s'affiche aussi en mode PUR.
+- PICTOR n'est pas lancé depuis cette preview. Validation visuelle P1 = GO Warsmith.

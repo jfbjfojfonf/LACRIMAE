@@ -18,12 +18,8 @@ import { activeFlashTextUnit, flashTextStyle } from './flashText';
 import { hybridTimelineFrame, hybridEgoStyle, hybridTextStyle } from './hybridNarrative';
 import { buildAudioSegments, normalizeMusicTimeline } from './audioTimeline';
 import { normalizeRevealManifest, revealSceneAtFrame, revealSourceForScene, revealMotionTransform } from './revealCompilation';
-import { normalizeRankingManifest, rankingEntryAtFrame, rankingActiveRows, rankingMotionTransform } from './rankingCompilation';
-import { RankingCompilationComposition } from './_rankingComposition';
-import { RankingSplitComposition } from './_rankingSplitComposition';
 import { BlurComposition } from './_blurComposition';
 import { reframingPushInScale, reframingVideoStyle, REFRAMING_DEFAULTS } from './reframingMode';
-import { parseMontageInstructions, parseProductionPack } from './bridgeClipper';
 import { PurPackComposition } from './_purPackComposition';
 
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -140,17 +136,6 @@ export const OmniComposition = ({ codex, videoSrc, session: sessionProp, sequenc
   // PUR mode — packs PERTURABO convertis (manifeste dev10.pur.v1/v2 multi-vidéos)
   if (sessionProp?.review_mode === 'pur_pack' || purManifest?.mode === 'pur_pack') {
     return <PurPackComposition purManifest={purManifest} session={sessionProp} entryIndex={purEntryIndex} />;
-  }
-
-  if (sessionProp?.review_mode === 'ranking_compilation' || revealManifest?.mode === 'ranking_compilation') {
-    const layout = (revealManifest?.narrative?.global_controls?.layout) || (sessionProp?.ranking?.narrative?.global_controls?.layout) || 'fullscreen';
-    if (layout === 'split') {
-      return <RankingSplitComposition session={sessionProp} rankingManifest={revealManifest || codex?.ranking_manifest || sessionProp?.ranking} />;
-    }
-    return <RankingCompilationComposition session={sessionProp} rankingManifest={revealManifest || codex?.ranking_manifest || sessionProp?.ranking} musicTimeline={musicTimeline} />;
-  }
-  if (revealManifest?.mode === 'reveal_compilation' || sessionProp?.review_mode === 'reveal_compilation') {
-    return <RevealCompilationComposition codex={codex} session={sessionProp} revealManifest={revealManifest || sessionProp?.reveal} musicTimeline={musicTimeline} />;
   }
   const frame = useCurrentFrame();
   const { fps, durationInFrames, width, height } = useVideoConfig();

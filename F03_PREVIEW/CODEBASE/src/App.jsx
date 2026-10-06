@@ -95,7 +95,19 @@ export default function App() {
         const clipFirst = full.clips?.[0] || full;
         setCodex(full);
         setClip(clipFirst);
-        setSession(full.session || {});
+        const sessionData = { ...(full.session || {}) };
+        if (sessionData.review_mode === 'ranking_compilation' || sessionData.review_mode === 'reveal_compilation' || !sessionData.review_mode) {
+          sessionData.review_mode = 'pur_pack';
+        }
+        sessionData.logo = {
+          src: 'logo.png',
+          width_pct: 20,
+          position: 'bottom_left',
+          opacity: 1,
+          ...(sessionData.logo || {}),
+        };
+        if (!sessionData.logo.src) sessionData.logo.src = 'logo.png';
+        setSession(sessionData);
         let loadedMusic = null;
         try {
           const musicResp = await fetch('./music_timeline.json');
@@ -118,14 +130,28 @@ export default function App() {
         } catch (_) {
           if (full.session?.ranking) setRankingManifest(full.session.ranking);
         }
+        const disablePurZoom = (manifest) => {
+          if (!manifest || !Array.isArray(manifest.entries)) return manifest;
+          return {
+            ...manifest,
+            entries: manifest.entries.map((entry) => ({
+              ...entry,
+              zooms: [],
+              anti_detection: {
+                ...(entry.anti_detection || {}),
+                breathing_zoom: { ...(entry.anti_detection?.breathing_zoom || {}), enabled: false },
+              },
+            })),
+          };
+        };
         try {
           const purResp = await fetch('./pur_manifest.json');
-          if (purResp.ok) setPurManifest(await purResp.json());
-          else if (full.session?.pur_manifest) setPurManifest(full.session.pur_manifest);
+          if (purResp.ok) setPurManifest(disablePurZoom(await purResp.json()));
+          else if (full.session?.pur_manifest) setPurManifest(disablePurZoom(full.session.pur_manifest));
         } catch (_) {
-          if (full.session?.pur_manifest) setPurManifest(full.session.pur_manifest);
+          if (full.session?.pur_manifest) setPurManifest(disablePurZoom(full.session.pur_manifest));
         }
-        setActiveTab(full.session?.review_mode === 'hybrid_narrative' ? 'hybrid' : full.session?.review_mode === 'reveal_compilation' ? 'reveal' : full.session?.review_mode === 'ranking_compilation' ? 'ranking' : full.session?.review_mode === 'pur_pack' ? 'pur' : 'text');
+        setActiveTab(sessionData.review_mode === 'hybrid_narrative' ? 'hybrid' : sessionData.review_mode === 'pur_pack' ? 'pur' : 'text');
         setVideoSrc(clipFirst.video?.source ? './' + clipFirst.video.source : './video_source.mp4');
         try {
           const motionResp = await fetch('./motion_slow_manifest.json');
@@ -256,13 +282,24 @@ export default function App() {
   const convertPurPack = (pack, canvas) => {
     if (!pack) return;
     const prev = purManifest;
-    const manifest = parsePurPack(pack, {
+    const parsed = parsePurPack(pack, {
       fps,
       canvas: canvas || purCanvas,
       clipFiles: [`clips/pur_${pack.identite?.angle_id || pack.pack_id || 'clip'}.mp4`],
       styleParams: prev?.style_params,
       overlayParams: prev?.narrative?.overlay?.style_params,
     });
+    const manifest = {
+      ...parsed,
+      entries: (parsed.entries || []).map((entry) => ({
+        ...entry,
+        zooms: [],
+        anti_detection: {
+          ...(entry.anti_detection || {}),
+          breathing_zoom: { ...(entry.anti_detection?.breathing_zoom || {}), enabled: false },
+        },
+      })),
+    };
     setPurManifest(manifest);
     setSession((s) => ({ ...s, review_mode: 'pur_pack', pur_manifest: manifest }));
     setActiveTab('pur');
@@ -272,13 +309,24 @@ export default function App() {
     if (list.length === 0) return;
     const prev = purManifest;
     const clipFiles = list.map((pack, i) => `clips/pur_${pack.identite?.angle_id || pack.pack_id || `clip${i + 1}`}.mp4`);
-    const manifest = parsePurPackMulti(list, {
+    const parsed = parsePurPackMulti(list, {
       fps,
       canvas: canvas || purCanvas,
       clipFiles,
       styleParams: prev?.style_params,
       overlayParams: prev?.narrative?.overlay?.style_params,
     });
+    const manifest = {
+      ...parsed,
+      entries: (parsed.entries || []).map((entry) => ({
+        ...entry,
+        zooms: [],
+        anti_detection: {
+          ...(entry.anti_detection || {}),
+          breathing_zoom: { ...(entry.anti_detection?.breathing_zoom || {}), enabled: false },
+        },
+      })),
+    };
     setPurManifest(manifest);
     setPurEntryIndex(0);
     setSession((s) => ({ ...s, review_mode: 'pur_pack', pur_manifest: manifest }));
@@ -327,8 +375,9 @@ export default function App() {
     setPurManifest((current) => {
       if (!current) return current;
       const entry = current.entries?.[0] || {};
-      const anti = { mirror: false, speed: 1, breathing_zoom: { enabled: true, min_scale: 1.02, max_scale: 1.08, cycle_seconds: 8 }, crop_pct: 0, ...(entry.anti_detection || {}) };
+      const anti = { mirror: false, speed: 1, breathing_zoom: { enabled: false, min_scale: 1.02, max_scale: 1.08, cycle_seconds: 8 }, crop_pct: 0, ...(entry.anti_detection || {}) };
       anti[key] = value;
+      if (anti.breathing_zoom) anti.breathing_zoom = { ...anti.breathing_zoom, enabled: false };
       const entries = [...(current.entries || [])];
       entries[0] = { ...entry, anti_detection: anti };
       const next = { ...current, entries };
@@ -340,8 +389,8 @@ export default function App() {
     setPurManifest((current) => {
       if (!current) return current;
       const entry = current.entries?.[0] || {};
-      const anti = { mirror: false, speed: 1, breathing_zoom: { enabled: true, min_scale: 1.02, max_scale: 1.08, cycle_seconds: 8 }, crop_pct: 0, ...(entry.anti_detection || {}) };
-      anti.breathing_zoom = { ...anti.breathing_zoom, [key]: value };
+      const anti = { mirror: false, speed: 1, breathing_zoom: { enabled: false, min_scale: 1.02, max_scale: 1.08, cycle_seconds: 8 }, crop_pct: 0, ...(entry.anti_detection || {}) };
+      anti.breathing_zoom = { ...anti.breathing_zoom, enabled: false, [key]: value };
       const entries = [...(current.entries || [])];
       entries[0] = { ...entry, anti_detection: anti };
       const next = { ...current, entries };
@@ -463,8 +512,9 @@ export default function App() {
     composition: { ...(s.composition || {}), [key]: value },
   }));
   const updateReviewMode = (value) => {
+    if (value === 'ranking_compilation' || value === 'reveal_compilation') return;
     setSession((s) => ({ ...s, review_mode: value }));
-    setActiveTab(value === 'hybrid_narrative' ? 'hybrid' : value === 'reveal_compilation' ? 'reveal' : value === 'ranking_compilation' ? 'ranking' : 'text');
+    setActiveTab(value === 'hybrid_narrative' ? 'hybrid' : value === 'pur_pack' ? 'pur' : 'text');
   };
 
   // ── Balise logo : double-clic sur la vidéo → poser ici ──
@@ -489,6 +539,7 @@ export default function App() {
       setSession((s) => ({
         ...s,
         logo: {
+          src: (s.logo || {}).src || 'logo.png',
           ...(s.logo || {}),
           position: 'custom',
           x_pct: logoPending.x_pct,
@@ -590,9 +641,9 @@ export default function App() {
     // clips[0] cohérente — le codex est la base des prochaines vidéos.
     const activeReviewMode = reviewMode === 'pur_pack' && purManifest
       ? 'pur_pack'
-      : activeRanking ? 'ranking_compilation'
-      : activeReveal ? 'reveal_compilation'
-      : session.review_mode || 'pur_pack';
+      : session.review_mode === 'ranking_compilation' || session.review_mode === 'reveal_compilation'
+        ? 'pur_pack'
+        : session.review_mode || 'pur_pack';
     const firstClip = {
       ...(codex?.clips?.[0] || clip || {}),
       review_mode: activeReviewMode,
@@ -770,12 +821,6 @@ export default function App() {
             </button>
             <button style={activeTab === 'hybrid' ? styles.tabActive : styles.tab} onClick={() => setActiveTab('hybrid')}>
               ◈ Hybrid / EGO
-            </button>
-            <button style={activeTab === 'reveal' ? styles.tabActive : styles.tab} onClick={() => { setActiveTab('reveal'); updateReviewMode('reveal_compilation'); }}>
-              ◇ Reveal
-            </button>
-            <button style={activeTab === 'ranking' ? styles.tabActive : styles.tab} onClick={() => { setActiveTab('ranking'); updateReviewMode('ranking_compilation'); }}>
-              # Ranking
             </button>
             <button style={activeTab === 'pur' ? styles.tabActive : styles.tab} onClick={() => { setActiveTab('pur'); if (reviewMode !== 'pur_pack') setSession((s) => ({ ...s, review_mode: 'pur_pack' })); }}>
               ⚡ PUR
@@ -1262,20 +1307,6 @@ export default function App() {
                       </label>
                       <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Vitesse</span><span style={{ color: '#ffd400' }}>{anti.speed || 1}x</span></label>
                       <input style={styles.slider} type="range" min="0.5" max="2" step="0.05" value={Number(anti.speed || 1)} onChange={(e) => updatePurAnti('speed', parseFloat(e.target.value))} />
-                      <label style={styles.label}>
-                        <input type="checkbox" style={{ marginRight: 8, accentColor: '#00ff88' }} checked={(anti.breathing_zoom?.enabled) !== false} onChange={(e) => updatePurAntiBreathing('enabled', e.target.checked)} />
-                        Zoom respiration
-                      </label>
-                      {(anti.breathing_zoom?.enabled) !== false && (
-                        <>
-                          <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Zoom min</span><span style={{ color: '#ffd400' }}>{anti.breathing_zoom?.min_scale ?? 1.02}x</span></label>
-                          <input style={styles.slider} type="range" min="1" max="1.2" step="0.01" value={Number(anti.breathing_zoom?.min_scale ?? 1.02)} onChange={(e) => updatePurAntiBreathing('min_scale', parseFloat(e.target.value))} />
-                          <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Zoom max</span><span style={{ color: '#ffd400' }}>{anti.breathing_zoom?.max_scale ?? 1.08}x</span></label>
-                          <input style={styles.slider} type="range" min="1" max="1.4" step="0.01" value={Number(anti.breathing_zoom?.max_scale ?? 1.08)} onChange={(e) => updatePurAntiBreathing('max_scale', parseFloat(e.target.value))} />
-                          <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Cycle (secondes)</span><span style={{ color: '#ffd400' }}>{anti.breathing_zoom?.cycle_seconds ?? 8}s</span></label>
-                          <input style={styles.slider} type="range" min="2" max="20" step="1" value={Number(anti.breathing_zoom?.cycle_seconds ?? 8)} onChange={(e) => updatePurAntiBreathing('cycle_seconds', parseInt(e.target.value, 10))} />
-                        </>
-                      )}
                       <label style={{ ...styles.label, display: 'flex', justifyContent: 'space-between' }}><span>Crop (anti-détection)</span><span style={{ color: '#ffd400' }}>{anti.crop_pct || 0}%</span></label>
                       <input style={styles.slider} type="range" min="0" max="15" step="0.5" value={Number(anti.crop_pct || 0)} onChange={(e) => updatePurAnti('crop_pct', parseFloat(e.target.value))} />
                       <div style={{ color: '#8ac', fontSize: 11, marginTop: 6, lineHeight: 1.5 }}>

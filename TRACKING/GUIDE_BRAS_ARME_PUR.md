@@ -93,8 +93,8 @@ Résultat : `clips/pur_A01.mp4` + `clips/pur_sources.json`.
 Lancer F03 Preview (Vite), ouvrir l'onglet **⚡ PUR** :
 
 - Déposer le `production_pack_pur_A01.json` → conversion instantanée.
-- Vérifier : hook 0-3 s (visage du speaker, PAS de texte), overlay
-  2 lignes après le hook, zooms frame-exacts, mirror/speed/crop.
+- Vérifier : overlay statique début→fin, blur/split/reframing, mirror/speed/crop.
+  Ranking, Reveal et zoom (respiration + ponctuels) sont **retirés** de cette preview.
 - Le canvas 9:16 / 16:9 / 1:1 est switchable en direct.
 - **Panneaux de configuration** (tous éditables en direct, écrits dans le
   manifeste `style_params` — le pack PERTURABO n'est jamais modifié) :
@@ -109,8 +109,8 @@ Lancer F03 Preview (Vite), ouvrir l'onglet **⚡ PUR** :
     Le texte est STATIQUE du début à la fin (règle hook abrogée).
   - 🌫️ **STYLE BLUR** / ✂️ **STYLE SPLIT** / 🎯 **STYLE REFRAMING** : le
     panneau du style actif apparaît seul (voir table ci-dessus).
-  - 🛡️ **ANTI-DÉTECTION** : miroir on/off, vitesse, zoom respiration
-    (min/max/cycle), crop %.
+  - 🛡️ **ANTI-DÉTECTION** : miroir on/off, vitesse, crop %. Zoom respiration retiré (2026-10-06).
+  - 🏷️ **LOGO** : double-clic sur la vidéo → « Poser le logo ici ? » → Oui. Taille/opacité dans l'onglet Fond & Logo.
 - Ces réglages survivent à la reconversion d'un pack et partent au rendu CI
   avec l'export du manifeste.
 

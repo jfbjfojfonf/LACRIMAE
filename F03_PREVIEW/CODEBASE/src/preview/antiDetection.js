@@ -1,7 +1,8 @@
 /* ═══════════════════════════════════════════════════════════════════
    antiDetection.js — Module partagé anti-detection pour Mode PUR
    
-   Utilisé par : blur, ranking_split, reframing, split_scene
+   Utilisé par : blur, reframing, split_scene
+   breathing_zoom desactive en preview (doctrine 2026-10-06)
    Source : PERTURABO ARCHIVUM/montage/patterns/anti_detection.json
    ═══════════════════════════════════════════════════════════════════ */
 

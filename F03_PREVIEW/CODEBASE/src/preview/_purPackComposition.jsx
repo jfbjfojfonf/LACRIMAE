@@ -12,22 +12,35 @@
    Miroir exact dans F03_PICTOR (F04) — parité par construction.
    ═══════════════════════════════════════════════════════════════════ */
 import React, { useMemo } from 'react';
-import { AbsoluteFill, Audio, Sequence, staticFile, useCurrentFrame, useVideoConfig, Video } from 'remotion';
-import { antiDetectionTransform, antiDetectionSpeed } from './antiDetection';
+import { AbsoluteFill, Audio, Img, Sequence, staticFile, useCurrentFrame, useVideoConfig, Video } from 'remotion';
+import { antiDetectionTransform } from './antiDetection';
 import { normalizePurOverlayParams, normalizePurStyleParams } from './bridgeClipper';
 
-/** Zoom ponctuel actif à ce frame ? → scale multipliant. */
-function purZoomAtFrame(zooms, frame) {
-  let scale = 1;
-  for (const z of zooms || []) {
-    const start = Number(z.moment_frame || 0);
-    const end = start + Number(z.frames || 3);
-    if (frame >= start && frame < end) {
-      const p = (frame - start) / Math.max(1, end - start);
-      scale *= z.easing === 'NONE' ? z.scale_to : (z.scale_from + (z.scale_to - z.scale_from) * p);
-    }
+function purLogoPosition(logo) {
+  const pad = 40;
+  const position = logo.position || 'bottom_left';
+  if (position === 'custom') {
+    return {
+      left: `${logo.x_pct ?? 50}%`,
+      top: `${logo.y_pct ?? 50}%`,
+      transform: 'translate(-50%, -50%)',
+    };
   }
-  return scale;
+  switch (position) {
+    case 'top_center':
+      return { top: pad, left: '50%', transform: 'translateX(-50%)' };
+    case 'top_right':
+      return { top: pad, right: pad };
+    case 'bottom_center':
+      return { bottom: pad, left: '50%', transform: 'translateX(-50%)' };
+    case 'bottom_right':
+      return { bottom: pad, right: pad };
+    case 'top_left':
+      return { top: pad, left: pad };
+    case 'bottom_left':
+    default:
+      return { bottom: pad, left: pad };
+  }
 }
 
 /** Crop offset depuis anti_detection.crop_pct (2.5% des bords). */
@@ -114,14 +127,12 @@ export function PurPackComposition({ purManifest, session: sessionProp, entryInd
   const localFrame = frame;
   const videoUrl = entry.clip_file ? entry.clip_file.replace(/^\.?\//, '') : null;
 
-  // Anti-detection
-  const anti = entry.anti_detection || {};
+  // Anti-detection — zoom respiration et zooms ponctuels retires (doctrine preview 2026-10-06)
+  const anti = { ...(entry.anti_detection || {}), breathing_zoom: { ...(entry.anti_detection?.breathing_zoom || {}), enabled: false } };
   const speed = Number(anti.speed || 1);
   const antiTransform = [antiDetectionTransform(anti, frame, fps), purCropTransform(anti.crop_pct)]
     .filter(Boolean).join(' ');
-
-  // Zooms ponctuels (brutal_impact / snap_zoom)
-  const zoomScale = purZoomAtFrame(entry.zooms, localFrame);
+  const logo = sessionProp?.logo || {};
 
   // v2 : texte STATIQUE — visible du début à la fin (static_text !== false),
   // sinon comportement legacy (après le hook). Pas d'animation.
@@ -163,8 +174,8 @@ export function PurPackComposition({ purManifest, session: sessionProp, entryInd
     : {};
 
   const videoProps = {
-    src: videoUrl,
-    startFrom: Math.round(localFrame * speed),
+    src: videoUrl ? staticFile(videoUrl) : undefined,
+    startFrom: 0,
     muted: true,
     playbackRate: speed,
   };
@@ -188,7 +199,7 @@ export function PurPackComposition({ purManifest, session: sessionProp, entryInd
 
       <AbsoluteFill
         style={{
-          transform: [antiTransform, `scale(${zoomScale.toFixed(4)})`].filter((t) => !t.includes('scale(1)') || t !== 'scale(1.0000)').join(' '),
+          transform: antiTransform || undefined,
           transformOrigin: 'center center',
         }}
       >
@@ -264,6 +275,14 @@ export function PurPackComposition({ purManifest, session: sessionProp, entryInd
                 {line}
               </div>
             ))}
+          </div>
+        </AbsoluteFill>
+      )}
+
+      {logo.src && (
+        <AbsoluteFill style={{ pointerEvents: 'none' }}>
+          <div style={{ position: 'absolute', ...purLogoPosition(logo), opacity: logo.opacity ?? 1 }}>
+            <Img src={staticFile(logo.src)} style={{ width: Math.round((canvasWidth || 1080) * ((logo.width_pct || 20) / 100)), height: 'auto' }} />
           </div>
         </AbsoluteFill>
       )}

@@ -224,3 +224,15 @@ cat TRACKING/TODO_CONTINUATION.md
 - **Prochaine etape** : Groupe 2 (Phase 3 rendu narratif) APRES pack de test PERTURABO
   + GO operateur : Jump Cuts (table source<->timeline + recalcul durees G2/aggregate),
   ducking is_climax, rupture overlay, rendu B-roll.
+
+---
+
+## 2026-10-06 — F03 Preview : ranking / reveal / zoom retires, double-clic logo conserve
+
+- Preview **dev10 restaurée telle quelle** (pas de version allégée).
+- Onglets **Ranking** et **Reveal** masqués. `review_mode` ranking/reveal force `pur_pack`.
+- **Zoom retiré** : breathing_zoom OFF, zooms ponctuels ignorés, panneau « Zoom respiration » retiré. Miroir + crop + speed conservés.
+- **Double-clic logo conservé** (balise → « Poser le logo ici ? ») et **rendu aussi en mode PUR**.
+- `startFrom: 0` côté preview (fix gel ~14 s déjà connu).
+- **PICTOR non lancé.** Gate P1 : GO Warsmith obligatoire avant tout rendu.
+- Pack de test prévu : `production_pack_asf_c3.json` (PERTURABO v2-live-vox-c) — à charger en preview après ce commit.
