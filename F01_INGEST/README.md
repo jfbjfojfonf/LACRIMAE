@@ -1,6 +1,6 @@
 # F01_INGEST
 
-Recupere les videos, valide 1920x1080, emet le manifeste pour F02_RENDER.
+Recupere les videos, valide 1920x1080 ou 1080x1920, emet le manifeste pour F02_RENDER.
 
 ## Contrats
 

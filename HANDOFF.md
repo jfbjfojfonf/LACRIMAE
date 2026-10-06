@@ -10,6 +10,7 @@ Copie de `dev6-E` @ `24a719d`. Pivot LUT (FFmpeg `lut3d`), plus de Nexrender.
 | P1 copie F05/F06 | ✅ verbatim `dev10-v2` |
 | P2 F01+F02 LUT | ✅ ingest.py + lut.py, 10 tests, Nexrender purge |
 | P3 Modal + Actions | ✅ modal_app.py CPU + workflow + volume LUT |
+| P3.1 G1 portrait | ✅ 1080x1920 accepte (pas de transpose) |
 | P4 cablage F05/F06 | apres 1 rendu LUT OK |
 
 ## Noms figes

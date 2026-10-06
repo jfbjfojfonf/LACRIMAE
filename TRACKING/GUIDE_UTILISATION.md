@@ -43,6 +43,6 @@ Secret : `MODAL_TOKEN`. Humain fournit le `.cube`.
 
 | Symptome | Cause | Action |
 |---|---|---|
-| SKIP resolution | pas 1920x1080 | conformer la source |
+| SKIP resolution | ni 1920x1080 ni 1080x1920 | conformer la source |
 | lut3d fail | `.cube` absent / casse | G0 |
 | Modal 401 | pas de `MODAL_TOKEN` | P3 humain |

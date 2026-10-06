@@ -88,11 +88,17 @@ def probe_video(path: Path) -> dict:
     }
 
 
+def allowed_resolutions(width: int, height: int) -> set[tuple[int, int]]:
+    return {(width, height), (height, width)}
+
+
 def validate_metadata(meta: Mapping, width: int, height: int) -> list[str]:
     errors = []
-    if meta.get("width") != width or meta.get("height") != height:
+    got = (meta.get("width"), meta.get("height"))
+    if got not in allowed_resolutions(width, height):
         errors.append(
-            f"resolution {meta.get('width')}x{meta.get('height')} != {width}x{height}"
+            f"resolution {got[0]}x{got[1]} not in "
+            f"{width}x{height} or {height}x{width}"
         )
     if not meta.get("duration_sec") or float(meta["duration_sec"]) <= 0:
         errors.append("duration missing or zero")

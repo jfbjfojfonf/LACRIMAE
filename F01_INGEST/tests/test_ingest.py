@@ -20,6 +20,17 @@ def fake_probe_ok(_path: Path) -> dict:
     }
 
 
+def fake_probe_portrait(_path: Path) -> dict:
+    return {
+        "width": 1080,
+        "height": 1920,
+        "fps": 30.0,
+        "duration_sec": 8.0,
+        "has_audio": False,
+        "size_bytes": 1234,
+    }
+
+
 def fake_probe_bad_res(_path: Path) -> dict:
     return {
         "width": 1280,
@@ -34,6 +45,11 @@ def fake_probe_bad_res(_path: Path) -> dict:
 class IngestTests(unittest.TestCase):
     def test_validate_ok(self):
         self.assertEqual(validate_metadata(fake_probe_ok(Path("x")), 1920, 1080), [])
+
+    def test_validate_ok_portrait(self):
+        self.assertEqual(
+            validate_metadata(fake_probe_portrait(Path("x")), 1920, 1080), []
+        )
 
     def test_validate_bad_res(self):
         errs = validate_metadata(fake_probe_bad_res(Path("x")), 1920, 1080)
@@ -58,6 +74,19 @@ class IngestTests(unittest.TestCase):
         written = json.loads((queue / "manifest.json").read_text(encoding="utf-8"))
         self.assertEqual(written["items"][0]["id"], item["id"])
         self.assertEqual(make_id(video), item["id"])
+
+    def test_ingest_accepts_portrait(self):
+        tmp = Path("/tmp/lacrimae_f_ingest_portrait")
+        source = tmp / "sources"
+        inbox = tmp / "inbox"
+        queue = tmp / "queue"
+        source.mkdir(parents=True, exist_ok=True)
+        (source / "vert.mp4").write_bytes(b"fake-mp4")
+        manifest = ingest(source, inbox, queue, probe_fn=fake_probe_portrait)
+        self.assertEqual(len(manifest["items"]), 1)
+        self.assertEqual(manifest["items"][0]["source_name"], "vert.mp4")
+        self.assertEqual(manifest["items"][0]["metadata"]["width"], 1080)
+        self.assertEqual(manifest["items"][0]["metadata"]["height"], 1920)
 
     def test_ingest_skips_bad_resolution(self):
         tmp = Path("/tmp/lacrimae_f_ingest_skip")
