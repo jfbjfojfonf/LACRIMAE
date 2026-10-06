@@ -1,39 +1,37 @@
-# HANDOFF — `dev6-E`
+# HANDOFF — `dev6-F`
 
-## Où on en est
+## Ou on en est
 
-Phases 0 → 1c **faites et pushées**.
-Prochain palier : **humain** (`ROADMAP_HUMAIN.md`). Pas de code tant que le VPS n'a pas un log d'erreur.
+Copie de `dev6-E` @ `24a719d`. Pivot LUT (FFmpeg `lut3d`), plus de Nexrender.
 
-## Repo
-
-| Chemin | Role |
+| Phase | Statut |
 |---|---|
-| `ROADMAP_HUMAIN.md` | Feuille de route VPS pour l'humain |
-| `pipeline.py` | F01 puis F02 |
-| `NEXRENDER/vps/*.ps1` | bootstrap, start-nexrender, run-pipeline |
-| `NEXRENDER/paths.json` | Chemins VPS |
-| `NEXRENDER/jobs/job.reference.json` | Job (AE 2023+ outputModule) |
-| `NEXRENDER/scripts/apply_cc2.jsx` | Preset a la volee |
-| `F01_INGEST/ingest.py` | Scan / valide / inbox / manifeste |
-| `F02_RENDER/render.py` | POST `/api/v1/jobs` + poll |
-| `tests/` | 10 tests sans VPS |
+| P0 docs + arbre | en cours / faite selon commit |
+| P1 copie F05/F06 | ensuite |
+| P2 F01+F02 LUT | ensuite |
+| P3 Modal + Actions | bloque : `.cube` + `MODAL_TOKEN` (humain) |
+| P4 cablage F05/F06 | apres 1 rendu LUT OK |
 
-## Decisions figées
+## Noms figes
 
-Calque `SRC`, comp `MAIN`, mp4 H.264, un job / video, plugin manquant = fail.
-API : `http://127.0.0.1:3000/api/v1/jobs`, header `nexrender-secret` (env `NEXRENDER_SECRET`).
-Pas de Polyester / OpenCV / F09. Pas de `*.ffx` `*.aep` `*.mp4` dans Git.
+- `F01_INGEST`
+- `F02_RENDER` (LUT a l'interieur, **pas** de rename)
+- `F05_CAMOUFLAGE` / `F06_LUTHER` copies verbatim `dev10-v2`
 
-## Tests
+## Interdits
+
+- Ne pas toucher `dev6-E`, `dev10-v2`, `main`
+- Ne pas importer PUR / Remotion / PICTOR / Heisenberg
+- Ne pas committer `.cube`, `.mp4`, tokens
+- F05/F06 : pas de rewrite
+
+## Reprise
 
 ```
-python3 -m unittest tests.test_ingest tests.test_render tests.test_pipeline -v
+git clone https://github.com/jfbjfojfonf/LACRIMAE.git
+cd LACRIMAE
+git fetch origin --prune
+git checkout dev6-F
 ```
 
-## Si un agent reprend
-
-1. Lire `CONTINUATION.md` puis ce fichier puis `ROADMAP_HUMAIN.md`.
-2. Ne coder que sur un bug Phase 4 (log nexrender/aerender fourni) ou Phase 5 demandee.
-3. Ne pas modifier `dev6`, `dev6-D`, `f09-output`, `main`.
-4. Ne jamais committer token / preset / aep / mp4.
+Lire `TRACKING/TODO_CONTINUATION.md` puis ce fichier.

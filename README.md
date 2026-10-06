@@ -1,7 +1,8 @@
-# LACRIMAE `dev6-E`
+# LACRIMAE `dev6-F`
 
-Flux videos existantes → Nexrender (VPS) → preset AE `cc2.ffx` → video finie.
+Batch LUT : N videos + 1 `.cube` → N mp4 colores. Pas d'After Effects.
 
-- Humain (VPS) : `ROADMAP_HUMAIN.md`
-- Agent suivant : `HANDOFF.md`
-- Suivi : `CONTINUATION.md`
+Frégates : `F01_INGEST` → `F02_RENDER` (lut3d). Pile : Modal + GitHub Actions.
+Plus tard : `F05_CAMOUFLAGE` → `F06_LUTHER` (copie `dev10-v2`).
+
+Lire `TRACKING/TODO_CONTINUATION.md`.

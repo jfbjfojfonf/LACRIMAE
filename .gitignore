@@ -1,26 +1,42 @@
-# dev6-E — règles de sécurité (alignées sur CONTINUATION.md)
+# dev6-F — secrets, media, LUTs
 
 # Secrets
 .env
 .env.*
 !.env.modal.example
 
-# Presets After Effects privés (règle projet : jamais committés)
-*.ffx
+# LUTs privees (jamais commitees)
+*.cube
+*.3dl
+*.csp
 
-# Projets After Effects binaires (restent sur le VPS)
+# Presets / projets AE (heritage E, restent ignores)
+*.ffx
 *.aep
 *.aepx
 
-# Vidéos sources et rendus
+# Videos
 *.mp4
 *.mov
 *.mkv
 *.avi
 
-# Dépendances et caches
+# Caches
 node_modules/
 __pycache__/
 *.pyc
 *.tsbuildinfo
 dist/
+
+# Dossiers runtime des fregates
+F01_INGEST/IN/*
+F01_INGEST/OUT/*
+F02_RENDER/IN/*
+F02_RENDER/OUT/*
+F05_CAMOUFLAGE/IN/*
+F05_CAMOUFLAGE/OUT/*
+F06_LUTHER/IN/*
+F06_LUTHER/OUT/*
+SHARED/IN/*
+!**/IN/.gitkeep
+!**/OUT/.gitkeep
