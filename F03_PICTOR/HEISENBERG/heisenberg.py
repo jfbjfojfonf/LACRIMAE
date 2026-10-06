@@ -41,6 +41,18 @@ from pathlib import Path
 HEISENBERG_ROOT = Path(__file__).resolve().parent
 SCHEMA_VERSION = "dev10.caviar.v1"
 
+JUMPCUT_GAP_SEC = 8.0
+JUMPCUT_WINDOW_MAX_SEC = 2.0
+JUMPCUT_WINDOW_DEFAULT_SEC = 1.5
+JUMPCUT_SCALE = 1.20
+HOOK_END_SEC = 3.0
+OUTRO_SEC = 1.0
+SILENCE_CUT_DEAD = 0.70
+SILENCE_CUT_LAG = 1.0
+SILENCE_KEEP_BREATH = 0.45
+FLASH_FRAMES = 5
+FLASH_FPS = 30.0
+
 # Le Budget d'Attention est ingéré depuis caviar_budget.json — UNE source de
 # vérité partagée avec PERTURABO (pas de constante dupliquée dans le code).
 _budget_cache: dict | None = None
@@ -185,6 +197,213 @@ def parse_broll_order(order: str) -> list[int]:
     return [int(n) for n in re.findall(r"\d+", order or "")]
 
 
+def load_pack(path: Path | None) -> dict:
+    if path is None:
+        return {}
+    return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+def numbered_brolls_from_pack(pack: dict) -> list[dict]:
+    """B-rolls Heisenberg = numéros du registre uniquement. BLUR-0x ignoré."""
+    partition = pack.get("caviar_partition") or {}
+    mi = pack.get("montage_instructions") or {}
+    body = mi.get("body") or {}
+    raw = list(partition.get("panels") or []) + list(body.get("panels") or [])
+    registry = load_registry().get("clips") or {}
+    files_dir = HEISENBERG_ROOT / "BROLL" / "FILES"
+    out: list[dict] = []
+    seen: set[tuple] = set()
+    for panel in raw:
+        num = None
+        if panel.get("broll_number") is not None:
+            try:
+                num = int(panel["broll_number"])
+            except (TypeError, ValueError):
+                num = None
+        if num is None:
+            bid = str(panel.get("broll_id") or panel.get("panel_id") or "")
+            m = re.search(r"^broll[#_]?(\d+)$", bid.strip(), re.I)
+            if not m:
+                continue
+            num = int(m.group(1))
+        if str(num) not in registry:
+            continue
+        start = float(panel.get("start_sec") or panel.get("at_sec") or 0)
+        key = (num, round(start, 2))
+        if key in seen:
+            continue
+        seen.add(key)
+        clip = registry[str(num)]
+        asset = files_dir / Path(clip.get("file") or f"broll_{num:02d}.mp4").name
+        out.append({
+            "broll_number": num,
+            "asset_ref": f"broll#{num}",
+            "start_sec": start,
+            "duration_frames": int(panel.get("duration_frames") or clip.get("duration_frames_max") or 36),
+            "entry_flash": True,
+            "flash_color": "white",
+            "sfx": clip.get("sfx") or "impact",
+            "file_ready": asset.is_file(),
+        })
+    return out
+
+
+def pack_punchins_ignored(pack: dict) -> list[dict]:
+    """Zoom / punch-in bannis (2026-10-06) — listés puis ignorés au rendu."""
+    partition = pack.get("caviar_partition") or {}
+    return list(partition.get("punch_ins") or [])
+
+
+def classify_silences(silences: list[dict], duration: float,
+                      smash_secs: list[float] | None = None,
+                      broll_windows: list[tuple[float, float]] | None = None) -> list[dict]:
+    """KEEP / CUT / HOLD — short ≠ mute total."""
+    smash_secs = smash_secs or []
+    broll_windows = broll_windows or []
+    classified: list[dict] = []
+    for s in silences:
+        start = float(s.get("start") or 0)
+        end = float(s.get("end") or start)
+        dur = float(s.get("duration_sec") or (end - start))
+        row = {"start": round(start, 3), "end": round(end, 3), "duration_sec": round(dur, 3)}
+        under_broll = any(start < w1 and end > w0 for w0, w1 in broll_windows)
+        under_smash = any(abs(((start + end) / 2) - sm) < 1.0 for sm in smash_secs)
+        in_hook = end <= HOOK_END_SEC
+        in_outro = start >= max(0.0, duration - OUTRO_SEC)
+        if in_hook or in_outro:
+            row.update(verdict="KEEP", reason="hook_or_outro")
+        elif under_broll or under_smash:
+            row.update(verdict="HOLD", reason="under_smash_or_broll")
+        elif dur >= SILENCE_CUT_LAG:
+            row.update(verdict="CUT", reason="lag_gt_1s")
+        elif dur > SILENCE_CUT_DEAD:
+            row.update(verdict="CUT", reason="dead_air_gt_0.70s")
+        elif dur <= SILENCE_KEEP_BREATH:
+            row.update(verdict="KEEP", reason="breath_or_beat")
+        else:
+            row.update(verdict="HOLD", reason="dramatic_pause_candidate")
+        classified.append(row)
+    return classified
+
+
+def jumpcut_quota(duration: float) -> int:
+    return max(0, int(duration // JUMPCUT_GAP_SEC))
+
+
+def select_jumpcuts(duration: float, classified: list[dict],
+                    broll_windows: list[tuple[float, float]] | None = None) -> list[dict]:
+    """Fenêtres IN/OUT : cut sec, déjà +20 %, gap 8 s, hors hook/outro/CUT/B-roll."""
+    broll_windows = broll_windows or []
+    cut_windows = [(c["start"], c["end"]) for c in classified if c.get("verdict") == "CUT"]
+    usable_start = HOOK_END_SEC
+    usable_end = max(usable_start, duration - OUTRO_SEC)
+    quota = jumpcut_quota(duration)
+    window = JUMPCUT_WINDOW_DEFAULT_SEC
+    chosen: list[dict] = []
+    t = usable_start
+    while t + window <= usable_end and len(chosen) < quota:
+        in_sec, out_sec = t, t + window
+        blocked = False
+        for a, b in cut_windows + broll_windows:
+            if in_sec < b and out_sec > a:
+                blocked = True
+                t = max(t, b) + 0.05
+                break
+        if blocked:
+            continue
+        if chosen and (in_sec - chosen[-1]["in_sec"]) < JUMPCUT_GAP_SEC:
+            t = chosen[-1]["in_sec"] + JUMPCUT_GAP_SEC
+            continue
+        chosen.append({
+            "in_sec": round(in_sec, 3),
+            "out_sec": round(out_sec, 3),
+            "scale": JUMPCUT_SCALE,
+            "kind": "jumpcut_hold",
+        })
+        t = in_sec + JUMPCUT_GAP_SEC
+    return chosen
+
+
+def _even(n: int) -> int:
+    return n if n % 2 == 0 else n - 1
+
+
+def _keep_intervals(duration: float, classified: list[dict]) -> list[tuple[float, float]]:
+    cuts = sorted((c["start"], c["end"]) for c in classified if c.get("verdict") == "CUT")
+    kept: list[tuple[float, float]] = []
+    cursor = 0.0
+    for a, b in cuts:
+        if a > cursor:
+            kept.append((cursor, a))
+        cursor = max(cursor, b)
+    if cursor < duration:
+        kept.append((cursor, duration))
+    return [(round(a, 3), round(b, 3)) for a, b in kept if b - a > 0.02]
+
+
+def _segment_plan(keep: list[tuple[float, float]], jumpcuts: list[dict]) -> list[dict]:
+    """Découpe les intervalles gardés en sous-segments crop/normal."""
+    cuts = [(j["in_sec"], j["out_sec"]) for j in jumpcuts]
+    segs: list[dict] = []
+    for a, b in keep:
+        points = {a, b}
+        for c0, c1 in cuts:
+            if c0 > a and c0 < b:
+                points.add(c0)
+            if c1 > a and c1 < b:
+                points.add(c1)
+        ordered = sorted(points)
+        for x, y in zip(ordered, ordered[1:]):
+            cropped = any(x >= c0 and y <= c1 for c0, c1 in cuts)
+            segs.append({"start": x, "end": y, "crop": cropped})
+    return segs
+
+
+def render_caviar_mp4(video: Path, manifest: dict, out_mp4: Path) -> Path:
+    """2e MP4 : CUT silences + jumpcuts +20 % instant. Flash blanc seulement si B-roll numéroté prêt."""
+    meta = probe(video)
+    w, h = _even(meta["width"] or 1080), _even(meta["height"] or 1920)
+    classified = (manifest.get("silences") or {}).get("classified") or []
+    jumpcuts = manifest.get("jumpcuts") or []
+    keep = _keep_intervals(meta["duration_sec"] or 0, classified)
+    segs = _segment_plan(keep, jumpcuts)
+    if not segs:
+        raise RuntimeError("aucun segment gardé — refus rendu")
+    out_mp4 = Path(out_mp4)
+    out_mp4.parent.mkdir(parents=True, exist_ok=True)
+    cw, ch = _even(int(w / JUMPCUT_SCALE)), _even(int(h / JUMPCUT_SCALE))
+    filters = []
+    concats = []
+    for i, seg in enumerate(segs):
+        dur = seg["end"] - seg["start"]
+        chain = (
+            f"[0:v]trim=start={seg['start']}:duration={dur},setpts=PTS-STARTPTS"
+        )
+        if seg["crop"]:
+            chain += f",crop={cw}:{ch}:(iw-{cw})/2:(ih-{ch})/2,scale={w}:{h}"
+        chain += f"[v{i}]"
+        filters.append(chain)
+        filters.append(
+            f"[0:a]atrim=start={seg['start']}:duration={dur},asetpts=PTS-STARTPTS[a{i}]"
+        )
+        concats.append(f"[v{i}][a{i}]")
+    n = len(segs)
+    filters.append(f"{''.join(concats)}concat=n={n}:v=1:a=1[outv][outa]")
+    cmd = [
+        "ffmpeg", "-y", "-i", str(video),
+        "-filter_complex", ";".join(filters),
+        "-map", "[outv]", "-map", "[outa]",
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "18",
+        "-c:a", "aac", "-b:a", "192k",
+        "-movflags", "+faststart",
+        str(out_mp4),
+    ]
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    if proc.returncode != 0 or not out_mp4.is_file() or out_mp4.stat().st_size == 0:
+        raise RuntimeError(f"ffmpeg rendu échoué : {(proc.stderr or '')[-800:]}")
+    return out_mp4
+
+
 # ═══════════════════════════════════════════════════════════════════
 # ÉMISSION DU MANIFESTE CAVIAR — PROPOSITIONS, jamais appliquées d'office
 # ═══════════════════════════════════════════════════════════════════
@@ -230,10 +449,11 @@ def _proposals_from_analysis(analysis: dict, duration: float,
 
 
 def build_caviar_manifest(video: Path, source_meta: dict | None = None,
-                          with_whisper: bool = True) -> dict:
+                          with_whisper: bool = True, pack: dict | None = None) -> dict:
     """Analyse une vidéo FINIE → caviar_manifest complet (verdict + propositions)."""
     caviar = _director()
     meta = probe(video)
+    pack = pack or {}
     duration = meta["duration_sec"] or float(source_meta or {}).get("duration_sec", 0) or 30.0
 
     # Verdict d'entrée — la vidéo doit être saine avant toute analyse
@@ -267,8 +487,24 @@ def build_caviar_manifest(video: Path, source_meta: dict | None = None,
         }
 
     narrative_hint = (source_meta or {}).get("narrative") or {}
-    budget = compute_budget(narrative_hint, silences_count, duration)
+    numbered = numbered_brolls_from_pack(pack) if pack else []
+    punchins_ignored = pack_punchins_ignored(pack) if pack else []
+    smash_secs = [float(s.get("at_sec")) for s in (pack.get("caviar_partition") or {}).get("smash_audio") or [] if s.get("at_sec") is not None]
+    broll_windows = [(b["start_sec"], b["start_sec"] + b["duration_frames"] / FLASH_FPS) for b in numbered]
+    classified = classify_silences(analysis.get("silences") or [], duration, smash_secs, broll_windows) if entry_ok else []
+    cut_count = sum(1 for c in classified if c.get("verdict") == "CUT")
+    jumpcuts = select_jumpcuts(duration, classified, broll_windows) if entry_ok else []
+    flashes = [{"at_sec": b["start_sec"], "color": "white", "frames": FLASH_FRAMES, "coupled_sfx": b["sfx"], "broll": b["asset_ref"]} for b in numbered if b.get("file_ready")]
+    budget_narrative = dict(narrative_hint)
+    budget_narrative["broll"] = numbered
+    budget_narrative["is_climax"] = smash_secs
+    budget_narrative["zooms"] = []
+    budget = compute_budget(budget_narrative, cut_count + len(jumpcuts), duration)
     proposals = _proposals_from_analysis(analysis, duration, with_whisper) if entry_ok else {}
+    proposals["jumpcuts"] = jumpcuts
+    proposals["silence_cuts"] = [c for c in classified if c.get("verdict") == "CUT"]
+    proposals["broll_proposals"] = numbered
+    proposals["flash_proposals"] = flashes
 
     manifest = {
         "schema_version": SCHEMA_VERSION,
@@ -284,6 +520,11 @@ def build_caviar_manifest(video: Path, source_meta: dict | None = None,
             "climax_candidates": analysis.get("climax_proposals") or [],
             "whisper": analysis.get("whisper"),
         },
+        "silences": {"classified": classified, "cut_count": cut_count},
+        "jumpcuts": jumpcuts,
+        "pack_ignored": {"punch_ins": punchins_ignored, "reason": "zoom_banned_2026-10-06"},
+        "broll": numbered,
+        "flashes": flashes,
         "budget": budget,
         "proposals": proposals,
         "doctrine": {
@@ -293,9 +534,11 @@ def build_caviar_manifest(video: Path, source_meta: dict | None = None,
         },
         "notes": [
             "PROPOSITIONS uniquement — rien n'est appliqué sans validation pack/manifeste + opérateur",
-            "flash blanc à l'ENTRÉE de chaque B-roll, jamais à la sortie (spec §1)",
+            "Jumpcut = cut sec +20% figé (IN/OUT), gap 8 s, jamais d'animation de zoom",
+            "flash blanc à l'ENTRÉE de chaque B-roll numéroté, jamais à la sortie, jamais sur jumpcut",
             "SFX uniquement à l'entrée des B-rolls (règle Warsmith anti-saturation)",
-            "pas de vidéo = pas de B-roll (si pas de candidat, rien n'est proposé)",
+            "pas de B-roll numéroté = 0 flash, 0 SFX — panels BLUR-0x ignorés",
+            "punch_ins / zooms du pack ignorés (bannis 2026-10-06)",
         ],
     }
     return manifest
@@ -320,11 +563,12 @@ def ledger_write(entry: dict, kind: str = "manifest") -> None:
 
 
 def emit(video: Path, out_dir: Path | None = None, with_whisper: bool = True,
-         source_meta: dict | None = None) -> dict:
-    """Reçoit une vidéo finie → écrit OUT/caviar_manifest_<stem>.json + ledger."""
+         source_meta: dict | None = None, pack: dict | None = None,
+         render: bool = False) -> dict:
+    """Reçoit une vidéo finie → écrit OUT/caviar_manifest_<stem>.json + ledger (+ MP4 si --render)."""
     out_dir = out_dir or (HEISENBERG_ROOT / "OUT")
     out_dir.mkdir(parents=True, exist_ok=True)
-    manifest = build_caviar_manifest(video, source_meta=source_meta, with_whisper=with_whisper)
+    manifest = build_caviar_manifest(video, source_meta=source_meta, with_whisper=with_whisper, pack=pack)
     out_path = out_dir / f"caviar_manifest_{video.stem}.json"
     out_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
     _log(f"  [✓] HEISENBERG : manifeste émis → {out_path}")
@@ -335,9 +579,20 @@ def emit(video: Path, out_dir: Path | None = None, with_whisper: bool = True,
         "verdict": manifest.get("verdict"),
         "spend_units": (manifest.get("budget") or {}).get("spend_units"),
         "out_file": out_path.name,
+        "jumpcuts": len(manifest.get("jumpcuts") or []),
+        "silence_cuts": (manifest.get("silences") or {}).get("cut_count"),
     }, kind="manifest")
     if manifest.get("verdict") == "REFUSED":
+        hold = out_dir / "hold"
+        hold.mkdir(parents=True, exist_ok=True)
+        (hold / out_path.name).write_text(out_path.read_text(encoding="utf-8"), encoding="utf-8")
         _log(f"  [✗] REFUS : {manifest.get('refusal_reason')}")
+    elif render and manifest.get("verdict") == "OK":
+        mp4 = out_dir / f"{video.stem}_caviar.mp4"
+        render_caviar_mp4(video, manifest, mp4)
+        manifest["rendered_mp4"] = mp4.name
+        out_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
+        _log(f"  [✓] HEISENBERG : MP4 caviar → {mp4}")
     return manifest
 
 
@@ -388,6 +643,8 @@ def main() -> int:
                    help="résout un ordre B-roll numéroté (démo du contrat bras armé)")
     p.add_argument("--broll-emotion", type=str, default=None, metavar="moqueur",
                    help="propose des numéros B-roll par émotion (PERTURABO tranche)")
+    p.add_argument("--pack", type=Path, default=None, help="production_pack JSON (lecture caviar_partition)")
+    p.add_argument("--render", action="store_true", help="écrit le 2e MP4 caviar (jumpcuts + CUT silences)")
     args = p.parse_args()
 
     _log(f"\n═══ HEISENBERG — sous-frégate Caviar — {now()} ═══")
@@ -418,12 +675,17 @@ def main() -> int:
         p.print_help()
         return 1
 
+    pack = load_pack(args.pack) if args.pack else {}
     ok = True
     for v in videos:
         _log(f"\n── {v.name}")
         try:
-            m = emit(v, out_dir=args.out, with_whisper=not args.no_whisper)
-            ok = ok and m.get("verdict") in ("OK", "REFUSED")
+            m = emit(v, out_dir=args.out, with_whisper=not args.no_whisper,
+                     pack=pack, render=args.render)
+            if args.render:
+                ok = ok and m.get("verdict") == "OK" and bool(m.get("rendered_mp4"))
+            else:
+                ok = ok and m.get("verdict") in ("OK", "REFUSED")
         except Exception as exc:
             _log(f"  [✗] échec : {exc}")
             ok = False

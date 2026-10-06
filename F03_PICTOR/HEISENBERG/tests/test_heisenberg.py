@@ -201,6 +201,68 @@ class TestLedger(unittest.TestCase):
             (HB / "LEDGER" / "gate_history.json").write_text(json.dumps(data, indent=2))
 
 
+class TestSilenceClassif(unittest.TestCase):
+    def test_keep_breath_and_hook(self):
+        rows = hb.classify_silences(
+            [{"start": 0.2, "end": 0.5, "duration_sec": 0.3},
+             {"start": 10.0, "end": 10.3, "duration_sec": 0.3}],
+            duration=60.0)
+        self.assertEqual(rows[0]["verdict"], "KEEP")
+        self.assertEqual(rows[1]["verdict"], "KEEP")
+
+    def test_cut_dead_air(self):
+        rows = hb.classify_silences(
+            [{"start": 12.0, "end": 13.1, "duration_sec": 1.1}],
+            duration=60.0)
+        self.assertEqual(rows[0]["verdict"], "CUT")
+
+    def test_hold_under_smash(self):
+        rows = hb.classify_silences(
+            [{"start": 12.8, "end": 13.5, "duration_sec": 0.7}],
+            duration=60.0, smash_secs=[13.05])
+        self.assertEqual(rows[0]["verdict"], "HOLD")
+
+
+class TestJumpcutSelect(unittest.TestCase):
+    def test_gap_eight_seconds_on_60s(self):
+        jumps = hb.select_jumpcuts(60.0, [], [])
+        self.assertEqual(len(jumps), 7)
+        ins = [j["in_sec"] for j in jumps]
+        gaps = [b - a for a, b in zip(ins, ins[1:])]
+        self.assertTrue(all(g >= hb.JUMPCUT_GAP_SEC - 1e-6 for g in gaps))
+        self.assertTrue(all(j["scale"] == 1.20 for j in jumps))
+        self.assertTrue(all(j["out_sec"] - j["in_sec"] <= hb.JUMPCUT_WINDOW_MAX_SEC for j in jumps))
+        self.assertGreaterEqual(jumps[0]["in_sec"], hb.HOOK_END_SEC)
+
+    def test_skips_cut_windows(self):
+        classified = [{"start": 3.0, "end": 8.0, "duration_sec": 5.0, "verdict": "CUT"}]
+        jumps = hb.select_jumpcuts(30.0, classified, [])
+        self.assertTrue(all(j["in_sec"] >= 8.0 for j in jumps))
+
+
+class TestPackIgnore(unittest.TestCase):
+    def test_blur_panels_are_not_numbered_broll(self):
+        pack = {
+            "caviar_partition": {
+                "panels": [{"broll_id": "BLUR-01", "start_sec": 15.0, "duration_frames": 36}],
+                "punch_ins": [{"at_sec": 13.05, "scale": 1.2}],
+            },
+            "montage_instructions": {"body": {"panels": [{"panel_id": "BLUR-02", "at_sec": 30.0}]}},
+        }
+        self.assertEqual(hb.numbered_brolls_from_pack(pack), [])
+        ignored = hb.pack_punchins_ignored(pack)
+        self.assertEqual(len(ignored), 1)
+
+    def test_numbered_broll_accepted(self):
+        pack = {"caviar_partition": {"panels": [
+            {"broll_number": 1, "start_sec": 15.0, "duration_frames": 36}
+        ]}}
+        got = hb.numbered_brolls_from_pack(pack)
+        self.assertEqual(len(got), 1)
+        self.assertEqual(got[0]["asset_ref"], "broll#1")
+        self.assertTrue(got[0]["entry_flash"])
+
+
 class TestPortePCavInchangee(unittest.TestCase):
     """La porte P-CAV du bras armé doit rester verte (non-régression Groupe 1)."""
 

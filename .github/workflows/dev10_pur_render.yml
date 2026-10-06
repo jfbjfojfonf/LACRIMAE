@@ -289,16 +289,18 @@ jobs:
           cat F03_PICTOR/OUT/pur_aggregate_report.json || true
           exit 1
 
-      - name: HEISENBERG — manifeste caviar par vidéo finale (advisory)
+      - name: HEISENBERG — MP4 caviar (jumpcuts + CUT silences)
         if: steps.aggregate.outcome == 'success'
         run: |
-          # La sous-frégate analyse les MP4 finis et émet un caviar_manifest par vidéo.
-          # Échec non bloquant : la frégate conseille, elle ne bloque pas la livraison.
+          set -euo pipefail
+          PACK=$(ls ${{ runner.temp }}/pur-packs/production_pack_*.json | head -1)
           python3 F03_PICTOR/HEISENBERG/heisenberg.py \
             --batch F03_PICTOR/OUT \
             --out F03_PICTOR/HEISENBERG/OUT \
+            --pack "$PACK" \
             --no-whisper \
-          || echo '⚠ HEISENBERG : analyse indisponible (advisory) — bundle publié quand même.'
+            --render
+          test -n "$(find F03_PICTOR/HEISENBERG/OUT -name '*_caviar.mp4' -print -quit)"
 
       - name: Upload bundle final lac-pur-final (N MP4 + manifestes + rapport)
         if: steps.aggregate.outcome == 'success'
@@ -306,5 +308,14 @@ jobs:
         with:
           name: lac-pur-final
           path: F03_PICTOR/OUT/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload bundle Heisenberg lac-heisenberg-final
+        if: steps.aggregate.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lac-heisenberg-final
+          path: F03_PICTOR/HEISENBERG/OUT/
           if-no-files-found: error
           retention-days: 30

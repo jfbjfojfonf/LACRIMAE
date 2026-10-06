@@ -35,3 +35,7 @@ F03_PICTOR/CODEBASE/public/codex.json
 F03_PICTOR/CODEBASE/public/pur_manifest.json
 F03_PREVIEW/CODEBASE/public/pur_manifest.json
 F03_PREVIEW/CODEBASE/public/clips/
+F03_PICTOR/HEISENBERG/OUT/*.mp4
+F03_PICTOR/HEISENBERG/OUT/caviar_manifest_*.json
+F03_PICTOR/HEISENBERG/LEDGER/manifest_ledger.json
+F03_PICTOR/HEISENBERG/LEDGER/gate_history.json

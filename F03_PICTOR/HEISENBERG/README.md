@@ -4,10 +4,11 @@
 
 ## Mission unique
 
-Heisenberg reçoit les **vidéos FINIES** produites par F03_PICTOR (validées par
-le gate qui suit F03), les **analyse**, et émet un **`caviar_manifest_<stem>.json`
-par vidéo finale** — le JSON que PERTURABO embarque dans son pack et que le
-bras armé transforme en clip caviar au rendu.
+Heisenberg reçoit les **vidéos FINIES** produites par F03_PICTOR + le **pack**,
+les **analyse**, et émet un **`caviar_manifest_<stem>.json`** **et** un
+**`*_caviar.mp4`** (2e MP4, `--render`) : jumpcuts +20 % instant (gap 8 s),
+CUT des mauvais silences, flash **blanc** uniquement à l'entrée d'un B-roll
+**numéroté**. Zoom / punch-in / BLUR-0x ignorés.
 
 Elle ne remplace RIEN : le Directeur Caviar (Groupe 1, `F00_INGEST/caviar.py`)
 reste le moteur d'analyse ; Heisenberg en est le **poste d'émission** dédié,
@@ -56,8 +57,9 @@ rendu si divergence), PERTURABO lit les mêmes chiffres pour composer.
 |---|---|---|
 | B-roll + flash + SFX (trio inséparable) | 12 u | ≤ 3 |
 | Smash audio (ducking au climax) | 8 u | ≤ 2 |
-| Punch-in (zoom) | 6 u | ≤ 4, espacés ≥ 2 s |
-| Jump cut (trim silence) | 1 u | ≤ 8 |
+| Punch-in (zoom) | 6 u | **banni 2026-10-06 — ignoré** |
+| Jumpcut (cut sec +20 % figé, gap 8 s) | 1 u | 1 / 8 s |
+| CUT silence (mauvais dead air) | 1 u | ≤ 8 |
 
 **Règles de survie** : dépense ≤ 55 u (le reste = respiration, source seule
 ≥ 60-70 % de la timeline) · **> 8 silences = REFUS d'émettre** (« segment
@@ -66,16 +68,13 @@ mauvais, prends un autre ») · jamais de manifeste toxique — diagnostic renvo
 ## Usage
 
 ```bash
-# Une vidéo finie (OUT de F03_PICTOR)
-python3 F03_PICTOR/HEISENBERG/heisenberg.py --manifest F03_PICTOR/OUT/A01/pur_A01_finale.mp4
+# JSON only
+python3 F03_PICTOR/HEISENBERG/heisenberg.py --manifest F03_PICTOR/OUT/pur_asf_c4_finale.mp4 --pack PACK.json --no-whisper
 
-# Toutes les vidéos déposées dans IN/
-python3 F03_PICTOR/HEISENBERG/heisenberg.py --batch F03_PICTOR/HEISENBERG/IN/
+# 2e MP4 caviar
+python3 F03_PICTOR/HEISENBERG/heisenberg.py --manifest F03_PICTOR/OUT/pur_asf_c4_finale.mp4 \
+  --pack PACK.json --no-whisper --render --out F03_PICTOR/HEISENBERG/OUT
 
-# La part à embarquer dans le pack PERTURABO (optionnel, v1-compatible)
-python3 F03_PICTOR/HEISENBERG/heisenberg.py --emit-pack-chunk OUT/caviar_manifest_pur_A01_finale.json
-
-# Tests
 python3 F03_PICTOR/HEISENBERG/tests/test_heisenberg.py
 ```
 
