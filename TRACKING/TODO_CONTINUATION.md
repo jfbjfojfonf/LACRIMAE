@@ -23,7 +23,7 @@ GitHub Actions, execution Modal. Puis F05/F06 (copie `dev10-v2`).
 |---|---|---|
 | P0 | Docs + arbre CODEBASE/IN/OUT | ✅ |
 | P1 | Copie F05/F06 depuis `dev10-v2` | ✅ |
-| P2 | Code F01 + F02 LUT, tests, purge Nexrender | ⬜ |
+| P2 | Code F01 + F02 LUT, tests, purge Nexrender | ✅ |
 | P3 | Modal app + workflow Actions | ⬜ bloque humain |
 | P4 | Cablage F02 OUT → F05 → F06 | ⬜ |
 
@@ -42,8 +42,8 @@ GitHub Actions, execution Modal. Puis F05/F06 (copie `dev10-v2`).
 
 ## Prochaine etape exacte
 
-P2 (agent) : ingest + lut.py, tests, purge Nexrender.
-P3 des que l'humain a un `.cube` et `MODAL_TOKEN`.
+P3 (agent, bloque) : `modal_app.py` + `.github/workflows/dev6f_lut_render.yml`.
+Humain : un `.cube` dans `SHARED/IN/` + secret GitHub `MODAL_TOKEN`.
 
 ## Reprise sandbox
 

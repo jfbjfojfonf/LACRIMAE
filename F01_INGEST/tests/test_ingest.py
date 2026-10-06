@@ -3,8 +3,8 @@ import sys
 import unittest
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "F01_INGEST"))
+CODE = Path(__file__).resolve().parent.parent / "CODEBASE"
+sys.path.insert(0, str(CODE))
 
 from ingest import ingest, make_id, validate_metadata  # noqa: E402
 
@@ -40,7 +40,7 @@ class IngestTests(unittest.TestCase):
         self.assertTrue(errs)
 
     def test_ingest_copies_and_manifest(self):
-        tmp = Path("/tmp/lacrimae_ingest_test")
+        tmp = Path("/tmp/lacrimae_f_ingest_test")
         source = tmp / "sources"
         inbox = tmp / "inbox"
         queue = tmp / "queue"
@@ -60,7 +60,7 @@ class IngestTests(unittest.TestCase):
         self.assertEqual(make_id(video), item["id"])
 
     def test_ingest_skips_bad_resolution(self):
-        tmp = Path("/tmp/lacrimae_ingest_skip")
+        tmp = Path("/tmp/lacrimae_f_ingest_skip")
         source = tmp / "sources"
         inbox = tmp / "inbox"
         queue = tmp / "queue"

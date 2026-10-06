@@ -28,7 +28,7 @@
           },
           "video_path": {
             "type": "string",
-            "description": "Absolute path of the mp4 deposited in the VPS inbox"
+            "description": "Absolute path of the mp4 deposited in F01 OUT"
           },
           "source_name": {
             "type": "string"

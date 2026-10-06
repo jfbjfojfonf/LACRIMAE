@@ -15,13 +15,9 @@ from pathlib import Path
 from typing import Callable, Mapping
 
 VIDEO_EXTS = {".mp4"}
-REPO_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_PATHS = REPO_ROOT / "NEXRENDER" / "paths.json"
-
-
-def load_paths(path: Path) -> dict:
-    with path.open(encoding="utf-8") as fh:
-        return json.load(fh)
+FREGATE_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_SOURCE = FREGATE_ROOT / "IN"
+DEFAULT_OUT = FREGATE_ROOT / "OUT"
 
 
 def make_id(path: Path) -> str:
@@ -177,30 +173,32 @@ def ingest(
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="F01_INGEST — file d'attente Nexrender")
-    parser.add_argument("--paths", type=Path, default=DEFAULT_PATHS)
-    parser.add_argument("--source", type=Path, default=None)
-    parser.add_argument("--inbox", type=Path, default=None)
-    parser.add_argument("--queue", type=Path, default=None)
+    parser = argparse.ArgumentParser(description="F01_INGEST — manifeste pour F02_RENDER")
+    parser.add_argument("--source", type=Path, default=DEFAULT_SOURCE)
+    parser.add_argument("--inbox", type=Path, default=DEFAULT_OUT)
+    parser.add_argument("--queue", type=Path, default=DEFAULT_OUT)
+    parser.add_argument("--width", type=int, default=1920)
+    parser.add_argument("--height", type=int, default=1080)
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    cfg = load_paths(args.paths)
-    vps = cfg["vps"]
-    conv = cfg["conventions"]
-    source = args.source or Path(vps["sources_dir"])
-    inbox = args.inbox or Path(vps["inbox_dir"])
-    queue = args.queue or Path(vps["queue_dir"])
     manifest = ingest(
-        source_dir=source,
-        inbox_dir=inbox,
-        queue_dir=queue,
-        expected_width=int(conv["expected_width"]),
-        expected_height=int(conv["expected_height"]),
+        source_dir=args.source,
+        inbox_dir=args.inbox,
+        queue_dir=args.queue,
+        expected_width=args.width,
+        expected_height=args.height,
     )
-    print(json.dumps({"items": len(manifest["items"]), "manifest": str(queue / "manifest.json")}))
+    print(
+        json.dumps(
+            {
+                "items": len(manifest["items"]),
+                "manifest": str(args.queue / "manifest.json"),
+            }
+        )
+    )
     return 0
 
 

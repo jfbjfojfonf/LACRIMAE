@@ -9,6 +9,16 @@ Le nom de fregate reste `F02_RENDER`.
 |--|--------|
 | IN | manifeste F01 + `SHARED/IN/*.cube` |
 | OUT | `OUT/<id>.mp4` |
-| Code | `CODEBASE/lut.py` (P2), `CODEBASE/modal_app.py` (P3) |
+| Code | `CODEBASE/lut.py` |
+| Tests | `tests/test_lut.py` |
 
-Un item = un job. CPU, pas GPU. Pas de Nexrender.
+```
+python3 F02_RENDER/CODEBASE/lut.py \
+  --manifest F01_INGEST/OUT/manifest.json \
+  --lut SHARED/IN/look.cube \
+  --outbox F02_RENDER/OUT \
+  --dry-run
+```
+
+G0 : `.cube` obligatoire. Un item = un job. CPU, pas GPU.
+P3 : `CODEBASE/modal_app.py` (pas encore).
