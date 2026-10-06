@@ -23,7 +23,7 @@ on:
       perturabo_branch:
         description: 'Branche PERTURABO à lire'
         required: false
-        default: 'main'
+        default: 'v2-live-vox-c'
         type: string
       style:
         description: 'Style PUR GLOBAL appliqué à toutes les vidéos (ranking/reframing/blur/split_scene) — ton choix'
@@ -56,7 +56,7 @@ permissions:
   actions: read
 
 env:
-  PERTURABO_REPO: kioka8877-ux/PERTURABO
+  PERTURABO_REPO: jfbjfojfonf/PERTURABO
   PERTURABO_EXPORT: MONDES_FORGES/CLIPPING/EXPORT
 
 jobs:
@@ -81,7 +81,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/pur-packs"
           PACKS=$(gh api "repos/${PERTURABO_REPO}/contents/${PERTURABO_EXPORT}?ref=${BRANCH}" \
-            --jq '[.[] | select(.name | startswith("production_pack_pur_")) | .name]')
+            --jq '[.[] | select(.name | test("^production_pack_(pur_|asf_)")) | .name]')
           echo "Assets PUR disponibles : ${PACKS}"
           if [ -n "${FILTER}" ]; then
             SELECTED=$(echo "${PACKS}" | jq -r --arg f "${FILTER}" '[.[] | select(contains($f))] | sort | .[]')
@@ -105,7 +105,7 @@ jobs:
       - name: F00-PUR dry-run G0 sur chaque pack (échec = stop avant tout rendu)
         run: |
           set -e
-          for PACK in "$RUNNER_TEMP"/pur-packs/production_pack_pur_*.json; do
+          for PACK in "$RUNNER_TEMP"/pur-packs/production_pack_*.json; do
             echo "── G0 : $(basename "${PACK}")"
             python3 F00_INGEST/CODEBASE/f00_pur.py --pack "${PACK}" --out "$RUNNER_TEMP/g0" --dry-run
           done
@@ -115,7 +115,7 @@ jobs:
         run: |
           python3 - << 'PYEOF'
           import json, glob, os
-          packs = sorted(glob.glob(os.environ['RUNNER_TEMP'] + '/pur-packs/production_pack_pur_*.json'))
+          packs = sorted(glob.glob(os.environ['RUNNER_TEMP'] + '/pur-packs/production_pack_*.json'))
           entries = []
           for p in packs:
               pack = json.load(open(p))
@@ -263,7 +263,7 @@ jobs:
         run: |
           # Manifeste multi-entrées reconstruit depuis les packs (mêmes règles)
           node tools/convert_pur_pack.mjs \
-            --packs "$(ls ${{ runner.temp }}/pur-packs/production_pack_pur_*.json | tr '\n' ',' | sed 's/,$//')" \
+            --packs "$(ls ${{ runner.temp }}/pur-packs/production_pack_*.json | tr '\n' ',' | sed 's/,$//')" \
             --out "${{ runner.temp }}/pur_manifest_full.json" \
             --canvas "${{ inputs.canvas }}" \
             --style "${{ inputs.style }}" \
