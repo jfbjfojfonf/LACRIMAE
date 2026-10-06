@@ -1,4 +1,4 @@
-# LACRIMAE — branche `dev10-v2`
+# LACRIMAE — branche `dev11-F07` (base `dev10-v2`)
 
 > *For the Angel's Tears shall become gold.*
 
@@ -8,6 +8,9 @@ heritage ranking / reveal / hybrid / Signum.
 Branche `dev10-v2` : contrat + portes figes, salvage A–G (F05/F06,
 F00_PUR, Bridge PUR, F03_PREVIEW LOOK, F03_PICTOR, F04_HEISENBERG,
 workflow `dev10_pur_render.yml`).
+
+Branche `dev11-F07` : palier H0 — scaffold F07_CAPTION (sous-titres 3D),
+hors flux PUR jour 1. Aucun moteur.
 
 ## Doctrine
 
@@ -57,6 +60,10 @@ PERTURABO EXPORT / production_pack_pur_*.json
 | F04_HEISENBERG | Execute le temps du pack sur le MP4 | MP4 reel (cuts / SFX / B-roll) |
 | F05_CAMOUFLAGE | Reencodage H.264 yuv420p, faststart | MP4 camoufle |
 | F06_LUTHER | Nettoyage metadonnees | livrable |
+| F07_CAPTION | Sous-titres 3D mot-a-mot (optionnel, hors PUR jour 1) | transcript + s1 + calque |
+
+F07 n'entre pas dans le pipeline PUR obligatoire. Preview / preuve /
+rendu captions : `TRACKING/GUIDE_CAPTION.md`. P-ZOOM ZERO inchange.
 
 ## Styles autorises (jour 1)
 
@@ -80,6 +87,8 @@ Uniquement trois : `blur`, `split_scene`, `reframing`. Ranking hors scope.
 | `TRACKING/GUIDE_BRAS_ARME_PUR.md` | Guide operateur PERTURABO → LACRIMAE |
 | `TRACKING/GUIDE_UTILISATION.md` | Guide d'utilisation local / CI |
 | `TRACKING/PUR_CAMPAIGN_LOG.md` | Journal des campagnes |
+| `TRACKING/CAPTION_GATES.md` | Portes F07 (separees de PUR) |
+| `TRACKING/GUIDE_CAPTION.md` | Guide operateur sous-titres 3D |
 
 ## Hors arbre (purge `dev10`)
 

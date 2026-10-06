@@ -1,9 +1,9 @@
-# LACRIMAE dev10-v2 — TODO DE CONTINUATION
+# LACRIMAE — TODO DE CONTINUATION
 
 > Point d'entree obligatoire apres toute reprise.
-> Derniere mise a jour : 2026-10-05.
-> Branche : `dev10-v2` sur `jfbjfojfonf/LACRIMAE`.
-> Statut : A–G poses (F05/F06, F00_PUR, Bridge, Preview, PICTOR, Heisenberg, CI).
+> Derniere mise a jour : 2026-10-06.
+> Branche : `dev11-F07` (base `dev10-v2`) sur `jfbjfojfonf/LACRIMAE`.
+> Statut : A–G poses. H0 F07_CAPTION pose (scaffold + docs, zero moteur).
 
 ## Etat confirme
 
@@ -30,6 +30,7 @@ Doctrine figee :
 6. **E F03_PICTOR** — miroir Remotion de la preview. FAIT.
 7. **F F04_HEISENBERG** — jump cuts, SFX, B-roll, flash, punch-in-cut → MP4. FAIT.
 8. **G CI** — un seul workflow `dev10_pur_render.yml`. FAIT.
+9. **H0 F07_CAPTION** — arbre TRAVAIL/PREVIEW + IN/OUT + gates caption. FAIT (docs only).
 
 ## Contrats a preserver
 
@@ -48,14 +49,28 @@ Doctrine figee :
 - F04_SIGNUM.
 - Heritage `sequences.json` / fps vole / re-routage ranking.
 
+## Palier H — F07_CAPTION (hors PUR)
+
+Sous-titres 3D mot-a-mot. Une frégate, deux halves (TRAVAIL / PREVIEW).
+`s1` = pack style rejouable. Transcript = 1 par video.
+
+| Palier | Contenu | Statut |
+|--------|---------|--------|
+| H0 | dirs + README + CAPTION_GATES + GUIDE_CAPTION | FAIT |
+| H1 | PREVIEW coque Vite (drop transcript + video, sliders, export s1) | ATTEND GO |
+| H2 | Whisper GHA : IN -> `transcript.json` | ATTEND GO |
+| H3 | proof frame Modal : 1 mot, 1–3 PNG | ATTEND GO |
+| H4 | Blender full + overlay ffmpeg, hook F05/F06 | ATTEND GO |
+
+H1–H4 = GO separes. Pas de moteur avant GO H1.
+
 ## Prochaine etape exacte
 
-Code pipeline clos (fonte Remotion, ducking/smash Heisenberg, lockfile
-PICTOR). Premier E2E CI (Actions → DEV10-v2 — PUR render) avec un pack
-PERTURABO joignable. SFX mp3 optionnels dans
-`F03_PICTOR/CODEBASE/public/sfx/` (impact / whoosh).
+**F07** : attendre GO H1 (coque preview). Pas de Whisper / Blender avant.
 
-Si le run E2E casse : corriger la frégate fautive, pas le pack.
+**PUR** (inchange) : premier E2E CI (`dev10_pur_render.yml`) avec un pack
+PERTURABO joignable. Si le run E2E casse : corriger la frégate fautive,
+pas le pack.
 
 ## Reprise sandbox
 
@@ -63,7 +78,8 @@ Si le run E2E casse : corriger la frégate fautive, pas le pack.
 git clone https://github.com/jfbjfojfonf/LACRIMAE.git
 cd LACRIMAE
 git fetch origin --prune
-git checkout dev10-v2
+git checkout dev11-F07
 ```
 
-Lire ce fichier puis `TRACKING/PUR_GATES.md` avant tout code.
+Lire ce fichier, `TRACKING/PUR_GATES.md` (flux PUR) et
+`TRACKING/CAPTION_GATES.md` (F07) avant tout code.

@@ -112,6 +112,11 @@ Camouflage puis luther. Livrable pret publication.
 
 1 codex = N videos = 1 run. Un asset manque → zip refuse.
 
+## F07_CAPTION (hors ce guide)
+
+Sous-titres 3D mot-a-mot : frégate optionnelle, pas une etape PUR.
+Voir `TRACKING/GUIDE_CAPTION.md`. Ne pas regler le caption dans F03_PREVIEW.
+
 ## Rappels
 
 - Pack intouchable cote LACRIMAE.

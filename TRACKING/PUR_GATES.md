@@ -31,6 +31,9 @@ PERTURABO EXPORT/production_pack_pur_*.json
 [TRACKING/PUR_CAMPAIGN_LOG.md]
 ```
 
+F07_CAPTION (sous-titres 3D) est **hors de ce flux**. Portes : `TRACKING/CAPTION_GATES.md`.
+P-ZOOM ZERO reste. Le pop-in F07 ne vit pas dans PICTOR / Heisenberg.
+
 ## Gates
 
 | Gate | Moment | Verification | Critere |

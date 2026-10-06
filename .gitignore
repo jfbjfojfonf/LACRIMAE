@@ -94,6 +94,10 @@ F06_LUTHER/IN/*
 !F06_LUTHER/IN/.gitkeep
 F06_LUTHER/OUT/*
 !F06_LUTHER/OUT/.gitkeep
+F07_CAPTION/IN/*
+!F07_CAPTION/IN/.gitkeep
+F07_CAPTION/OUT/*
+!F07_CAPTION/OUT/.gitkeep
 
 # Local production media — use GitHub Releases or CI artifacts
 **/*.mp4
