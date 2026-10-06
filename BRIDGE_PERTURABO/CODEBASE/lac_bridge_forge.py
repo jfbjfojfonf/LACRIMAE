@@ -20,9 +20,9 @@ BRIDGE_BASE = ROOT / "BRIDGE_PERTURABO"
 BRIDGE_IN = BRIDGE_BASE / "IN"
 BRIDGE_OUT = BRIDGE_BASE / "OUT"
 
-PERTURABO_REPO = "kioka8877-ux/PERTURABO"
+PERTURABO_REPO = "jfbjfojfonf/PERTURABO"
 PERTURABO_EXPORT_PATH = "MONDES_FORGES/CLIPPING/EXPORT"
-PERTURABO_BRANCH = "main"
+PERTURABO_BRANCH = "v2-live-vox-c"
 
 
 def log_ok(msg):
@@ -63,9 +63,9 @@ def fetch_pack_from_perturabo(repo=PERTURABO_REPO, export_path=PERTURABO_EXPORT_
     listing = github_api(
         f"https://api.github.com/repos/{repo}/contents/{export_path}?ref={branch}")
     files = [f for f in listing if f.get("type") == "file"]
-    packs = [f for f in files if f["name"].startswith("production_pack_pur_") and f["name"].endswith(".json")]
+    packs = [f for f in files if f["name"].startswith("production_pack_") and f["name"].endswith(".json")]
     if not packs:
-        log_err(f"Aucun production_pack_pur_*.json dans {export_path} (repo {repo})")
+        log_err(f"Aucun production_pack_*.json dans {export_path} (repo {repo})")
         sys.exit(1)
     if pack_filter:
         matched = [f for f in packs if pack_filter.lower() in f["name"].lower()]

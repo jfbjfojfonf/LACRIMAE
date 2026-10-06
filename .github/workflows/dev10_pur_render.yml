@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       pack_filter:
-        description: "Filtre pack PERTURABO (ex: pur_A01). Vide = tous les production_pack_pur_*.json"
+        description: "Filtre pack PERTURABO (ex: asf_c3). Vide = tous les production_pack_*.json"
         required: false
         default: ""
       canvas:
@@ -13,10 +13,14 @@ on:
         default: "9:16"
         type: choice
         options: ["9:16", "16:9", "1:1"]
+      perturabo_repo:
+        description: "Repo PERTURABO EXPORT"
+        required: false
+        default: "jfbjfojfonf/PERTURABO"
       perturabo_branch:
         description: "Branche PERTURABO EXPORT"
         required: false
-        default: "main"
+        default: "v2-live-vox-c"
       style:
         description: "Style LOOK force (G0-S). Vide = style declare par le pack."
         required: false
@@ -54,6 +58,7 @@ jobs:
       - name: Fetch PUR packs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PERTURABO_REPO: ${{ github.event.inputs.perturabo_repo }}
           PERTURABO_BRANCH: ${{ github.event.inputs.perturabo_branch }}
           PACK_FILTER: ${{ github.event.inputs.pack_filter }}
         run: |
@@ -62,8 +67,8 @@ jobs:
           python3 - <<'PY'
           import json, os, urllib.request
           from pathlib import Path
-          repo = "kioka8877-ux/PERTURABO"
-          branch = os.environ.get("PERTURABO_BRANCH") or "main"
+          repo = os.environ.get("PERTURABO_REPO") or "jfbjfojfonf/PERTURABO"
+          branch = os.environ.get("PERTURABO_BRANCH") or "v2-live-vox-c"
           export = "MONDES_FORGES/CLIPPING/EXPORT"
           filt = (os.environ.get("PACK_FILTER") or "").strip().lower()
           token = os.environ.get("GITHUB_TOKEN") or ""
@@ -76,12 +81,12 @@ jobs:
           )
           listing = json.loads(urllib.request.urlopen(req, timeout=90).read().decode())
           packs = [f for f in listing if f.get("type") == "file"
-                   and f["name"].startswith("production_pack_pur_")
+                   and f["name"].startswith("production_pack_")
                    and f["name"].endswith(".json")]
           if filt:
               packs = [f for f in packs if filt in f["name"].lower()]
           if not packs:
-              raise SystemExit("aucun production_pack_pur_*.json")
+              raise SystemExit("aucun production_pack_*.json")
           dest = Path("BRIDGE_PERTURABO/IN")
           dest.mkdir(parents=True, exist_ok=True)
           for item in packs:
@@ -93,7 +98,7 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
-          PACKS=(BRIDGE_PERTURABO/IN/production_pack_pur_*.json)
+          PACKS=(BRIDGE_PERTURABO/IN/production_pack_*.json)
           if [ ${#PACKS[@]} -eq 0 ]; then
             echo "aucun pack" >&2
             exit 1
@@ -159,7 +164,14 @@ jobs:
       - name: F00_PUR segment
         run: |
           set -euo pipefail
-          PACK=$(ls BRIDGE_PERTURABO/IN/production_pack_pur_*${{ matrix.angle }}*.json | head -1)
+          shopt -s nullglob
+          PACKS=(BRIDGE_PERTURABO/IN/production_pack_*${{ matrix.angle }}*.json)
+          PACK=${PACKS[0]:-}
+          if [ -z "$PACK" ]; then
+            echo "pack introuvable pour ${{ matrix.angle }}" >&2
+            ls BRIDGE_PERTURABO/IN/ >&2 || true
+            exit 1
+          fi
           python3 F00_PUR/CODEBASE/f00_pur.py --pack "$PACK" --out F00_PUR/OUT --clip-name "pur_${{ matrix.angle }}.mp4"
       - name: F03_PICTOR LOOK
         run: |
