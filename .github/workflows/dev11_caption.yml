@@ -1,6 +1,10 @@
 name: DEV11 — F07 CAPTION
 
 on:
+  push:
+    branches: [dev11-F07]
+    paths:
+      - ".github/workflows/dev11_caption.yml"
   workflow_dispatch:
     inputs:
       job:
