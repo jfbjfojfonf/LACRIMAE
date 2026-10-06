@@ -75,27 +75,36 @@ jobs:
 
       - name: Récupérer TOUS les assets PUR filtrés depuis PERTURABO EXPORT
         env:
-          GH_TOKEN: ${{ secrets.PERTURABO_TOKEN || secrets.GITHUB_TOKEN }}
           FILTER: ${{ inputs.pack_filter }}
           BRANCH: ${{ inputs.perturabo_branch }}
         run: |
+          set -euo pipefail
           mkdir -p "$RUNNER_TEMP/pur-packs"
-          PACKS=$(gh api "repos/${PERTURABO_REPO}/contents/${PERTURABO_EXPORT}?ref=${BRANCH}" \
-            --jq '[.[] | select(.name | test("^production_pack_(pur_|asf_)")) | .name]')
-          echo "Assets PUR disponibles : ${PACKS}"
-          if [ -n "${FILTER}" ]; then
-            SELECTED=$(echo "${PACKS}" | jq -r --arg f "${FILTER}" '[.[] | select(contains($f))] | sort | .[]')
+          API_URL="https://api.github.com/repos/${PERTURABO_REPO}/contents/${PERTURABO_EXPORT}?ref=${BRANCH}"
+          LISTING=$(curl -fsSL -H "Accept: application/vnd.github+json" "$API_URL" || true)
+          if echo "$LISTING" | jq -e 'type == "array"' >/dev/null 2>&1; then
+            PACKS=$(echo "$LISTING" | jq -c '[.[] | select(.name | test("^production_pack_(pur_|asf_)")) | .name]')
+            echo "Assets PUR disponibles : ${PACKS}"
+            if [ -n "${FILTER}" ]; then
+              SELECTED=$(echo "${PACKS}" | jq -r --arg f "${FILTER}" '[.[] | select(contains($f))] | sort | .[]')
+            else
+              SELECTED=$(echo "${PACKS}" | jq -r 'sort | .[]')
+            fi
+            COUNT=$(echo "${SELECTED}" | grep -c . || true)
+            echo "Assets sélectionnés : ${COUNT}"
+            [ "${COUNT}" -ge 1 ] || { echo "✗ aucun asset PUR trouvé"; exit 1; }
+            while IFS= read -r PACK; do
+              RAW_URL="https://raw.githubusercontent.com/${PERTURABO_REPO}/${BRANCH}/${PERTURABO_EXPORT}/${PACK}"
+              curl -fsSL "$RAW_URL" -o "$RUNNER_TEMP/pur-packs/${PACK}"
+              echo "  ▸ ${PACK}"
+            done <<< "${SELECTED}"
           else
-            SELECTED=$(echo "${PACKS}" | jq -r 'sort | .[]')
+            echo "⚠ listing PERTURABO indisponible — fallback pack local LACRIMAE"
+            LOCAL_PACK="F03_PREVIEW/CODEBASE/public/production_pack_asf_c4.json"
+            test -f "$LOCAL_PACK" || { echo "✗ pack local absent: $LOCAL_PACK"; exit 1; }
+            cp "$LOCAL_PACK" "$RUNNER_TEMP/pur-packs/production_pack_asf_c4.json"
+            echo "  ▸ production_pack_asf_c4.json (local)"
           fi
-          COUNT=$(echo "${SELECTED}" | grep -c . || true)
-          echo "Assets sélectionnés : ${COUNT}"
-          [ "${COUNT}" -ge 1 ] || { echo "✗ aucun asset PUR trouvé"; exit 1; }
-          while IFS= read -r PACK; do
-            gh api "repos/${PERTURABO_REPO}/contents/${PERTURABO_EXPORT}/${PACK}?ref=${BRANCH}" \
-              --jq .content | base64 -d > "$RUNNER_TEMP/pur-packs/${PACK}"
-            echo "  ▸ ${PACK}"
-          done <<< "${SELECTED}"
 
       - name: Installer ffmpeg + yt-dlp (validation G0 sans télécharger)
         run: |
