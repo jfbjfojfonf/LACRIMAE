@@ -94,6 +94,51 @@ def parse_transcript(raw: dict | None) -> dict:
     }
 
 
+def iter_couples(words: list) -> list[tuple]:
+    out = []
+    n = len(words)
+    for i in range(0, n, 2):
+        left = words[i]
+        right = words[i + 1] if i + 1 < n else None
+        if i + 2 < n:
+            hide = words[i + 2]["start"]
+        elif right:
+            hide = max(left["end"], right["end"])
+        else:
+            hide = left["end"]
+        out.append((left, right, hide))
+    return out
+
+
+def caption_couple(words: list, time_sec: float) -> dict:
+    if not words:
+        return {"left": None, "right": None, "spoken": None, "index": -1}
+    if time_sec < words[0]["start"]:
+        return {
+            "left": words[0],
+            "right": words[1] if len(words) > 1 else None,
+            "spoken": None,
+            "index": 0,
+        }
+    n = len(words)
+    for i, (left, right, hide) in enumerate(iter_couples(words)):
+        idx = i * 2
+        if time_sec >= left["start"] and time_sec < hide:
+            spoken = "right" if right and time_sec >= right["start"] else "left"
+            return {"left": left, "right": right, "spoken": spoken, "index": idx}
+    i = n - 2 if n % 2 == 0 else n - 1
+    if i < 0:
+        i = 0
+    left = words[i]
+    right = words[i + 1] if i + 1 < n else None
+    return {
+        "left": left,
+        "right": right,
+        "spoken": "right" if right else "left",
+        "index": i,
+    }
+
+
 def validate_transcript(data: dict) -> tuple[bool, list[str]]:
     parsed = parse_transcript(data)
     errors = []

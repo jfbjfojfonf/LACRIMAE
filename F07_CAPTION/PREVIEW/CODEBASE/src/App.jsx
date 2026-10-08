@@ -4,7 +4,7 @@ import {
   DEFAULT_STYLE,
   MOTION_VALUES,
   buildProofRequest,
-  captionPair,
+  captionCouple,
   downloadJson,
   firstWord,
   motionScale,
@@ -52,8 +52,9 @@ export default function App() {
   const videoRef = useRef(null);
   const jsonRef = useRef(null);
   const size = CANVAS[style.canvas] || CANVAS['9:16'];
-  const pair = useMemo(() => captionPair(transcript, time), [transcript, time]);
-  const punch = pair.current?.word || firstWord(transcript);
+  const couple = useMemo(() => captionCouple(transcript, time), [transcript, time]);
+  const spokenWord = couple.spoken === 'right' ? couple.right : couple.left;
+  const punch = spokenWord?.word || firstWord(transcript);
   const packed = useMemo(() => normalizeStyle(style), [style]);
   const jsonText = useMemo(() => JSON.stringify(packed, null, 2) + '\n', [packed]);
 
@@ -204,7 +205,7 @@ export default function App() {
     }
   };
 
-  const elapsed = pair.current ? Math.max(0, time - pair.current.start) : 0;
+  const elapsed = spokenWord ? Math.max(0, time - spokenWord.start) : 0;
   const spokenScale = motionScale(style.motion, elapsed, style.motion_speed);
   const popMs = `${(0.42 / Math.max(0.25, style.motion_speed)).toFixed(2)}s`;
   const previewRatio = size.width / size.height;
@@ -257,23 +258,31 @@ export default function App() {
               pointerEvents: 'none',
               maxWidth: '92%',
             }}>
-              {pair.current && (
+              {couple.left && (
                 <div
-                  key={`${pair.current.start}-${pair.current.word}`}
+                  key={`L-${couple.left.start}-${couple.left.word}`}
                   style={captionFace(style, {
                     fontSize: basePx,
-                    transform: style.motion === 'pop-in' ? undefined : `scale(${spokenScale})`,
+                    transform: couple.spoken === 'left' && style.motion !== 'pop-in' ? `scale(${spokenScale})` : 'scale(1)',
                     transformOrigin: 'center',
-                    animation: style.motion === 'pop-in' ? `f07-popin ${popMs} cubic-bezier(0.16, 1.2, 0.3, 1) both` : 'none',
+                    animation: couple.spoken === 'left' && style.motion === 'pop-in'
+                      ? `f07-popin ${popMs} cubic-bezier(0.16, 1.2, 0.3, 1) both`
+                      : 'none',
                   })}
-                >{pair.current.word}</div>
+                >{couple.left.word}</div>
               )}
-              {pair.next && (
-                <div style={captionFace(style, {
-                  fontSize: basePx,
-                  transform: 'scale(1)',
-                  transformOrigin: 'center',
-                })}>{pair.next.word}</div>
+              {couple.right && (
+                <div
+                  key={`R-${couple.right.start}-${couple.right.word}`}
+                  style={captionFace(style, {
+                    fontSize: basePx,
+                    transform: couple.spoken === 'right' && style.motion !== 'pop-in' ? `scale(${spokenScale})` : 'scale(1)',
+                    transformOrigin: 'center',
+                    animation: couple.spoken === 'right' && style.motion === 'pop-in'
+                      ? `f07-popin ${popMs} cubic-bezier(0.16, 1.2, 0.3, 1) both`
+                      : 'none',
+                  })}
+                >{couple.right.word}</div>
               )}
             </div>
           )}
@@ -291,7 +300,7 @@ export default function App() {
         <input type="file" accept="application/json" onChange={(e) => onStyleFile(e.target.files?.[0])} />
         {error && <p style={{ color: '#ff8866', fontSize: 12 }}>{error}</p>}
         {saveMsg && <p style={{ color: '#8f8', fontSize: 12 }}>{saveMsg}</p>}
-        {transcript && <p style={{ fontSize: 12 }}>C1 : {transcript.words.length} mots — punch « {punch} »{pair.next ? ` / next « ${pair.next.word} »` : ''}</p>}
+        {transcript && <p style={{ fontSize: 12 }}>C1 : {transcript.words.length} mots — couple « {couple.left?.word || ''} {couple.right?.word || ''} » — in « {punch} »</p>}
 
         <label style={field}>Canvas</label>
         <select style={input} value={style.canvas} onChange={(e) => patch({ canvas: e.target.value })}>

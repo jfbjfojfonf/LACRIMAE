@@ -51,6 +51,27 @@ def test_parse_transcript_drops_bad_cues():
     assert [w["word"] for w in parsed["words"]] == ["HOE"]
 
 
+def test_caption_couple_steps_by_two():
+    words = [
+        {"word": "A", "start": 0.0, "end": 0.3},
+        {"word": "B", "start": 0.3, "end": 0.6},
+        {"word": "C", "start": 0.6, "end": 0.9},
+        {"word": "D", "start": 0.9, "end": 1.2},
+    ]
+    first = caption_schema.caption_couple(words, 0.1)
+    assert first["left"]["word"] == "A"
+    assert first["right"]["word"] == "B"
+    assert first["spoken"] == "left"
+    second = caption_schema.caption_couple(words, 0.4)
+    assert second["left"]["word"] == "A"
+    assert second["right"]["word"] == "B"
+    assert second["spoken"] == "right"
+    nxt = caption_schema.caption_couple(words, 0.7)
+    assert nxt["left"]["word"] == "C"
+    assert nxt["right"]["word"] == "D"
+    assert nxt["spoken"] == "left"
+
+
 def test_fixture_transcript_c1():
     data = json.loads((FIXTURES / "transcript_sample.json").read_text(encoding="utf-8"))
     ok, errors = caption_schema.validate_transcript(data)

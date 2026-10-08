@@ -91,18 +91,33 @@ export function activeWords(transcript, timeSec) {
   return transcript.words.filter((w) => timeSec >= w.start && timeSec < w.end);
 }
 
-export function captionPair(transcript, timeSec) {
+export function captionCouple(transcript, timeSec) {
   const words = transcript && Array.isArray(transcript.words) ? transcript.words : [];
-  if (!words.length) return { current: null, next: null, index: -1 };
-  if (timeSec < words[0].start) return { current: null, next: words[0], index: -1 };
-  for (let i = 0; i < words.length; i += 1) {
-    const hide = i + 1 < words.length ? words[i + 1].start : Math.max(words[i].end, timeSec + 0.001);
-    if (timeSec >= words[i].start && timeSec < hide) {
-      return { current: words[i], next: words[i + 1] || null, index: i };
+  if (!words.length) return { left: null, right: null, spoken: null, index: -1 };
+  const n = words.length;
+  if (timeSec < words[0].start) {
+    return { left: words[0], right: words[1] || null, spoken: null, index: 0 };
+  }
+  for (let i = 0; i < n; i += 2) {
+    const left = words[i];
+    const right = words[i + 1] || null;
+    const hide = i + 2 < n ? words[i + 2].start : (right ? Math.max(left.end, right.end) : left.end);
+    if (timeSec >= left.start && timeSec < hide) {
+      const spoken = right && timeSec >= right.start ? 'right' : 'left';
+      return { left, right, spoken, index: i };
     }
   }
-  const last = words.length - 1;
-  return { current: words[last], next: null, index: last };
+  const i = n % 2 === 0 ? n - 2 : n - 1;
+  return {
+    left: words[i],
+    right: words[i + 1] || null,
+    spoken: words[i + 1] ? 'right' : 'left',
+    index: i,
+  };
+}
+
+export function captionPair(transcript, timeSec) {
+  return captionCouple(transcript, timeSec);
 }
 
 export function motionScale(motion, elapsedSec, speed = 1) {

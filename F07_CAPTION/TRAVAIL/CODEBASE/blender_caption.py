@@ -20,6 +20,7 @@ from caption_schema import (  # noqa: E402
     CANVAS_SIZE,
     build_proof_request,
     hex_to_rgba,
+    iter_couples,
     normalize_style,
     parse_transcript,
     resolve_font,
@@ -175,7 +176,7 @@ def make_material(style: dict, name: str):
     return mat
 
 
-def add_text(scene, style: dict, word: str, font_path: Path, width: int, height: int, start_frame: int, end_frame: int, wait_start_frame: int | None = None):
+def add_text(scene, style: dict, word: str, font_path: Path, width: int, height: int, start_frame: int, end_frame: int, wait_start_frame: int | None = None, slot: str = "left"):
     import bpy
 
     curve = bpy.data.curves.new(name=f"txt_{word[:12]}", type="FONT")
@@ -191,9 +192,10 @@ def add_text(scene, style: dict, word: str, font_path: Path, width: int, height:
     obj.data.materials.append(make_material(style, f"mat_{obj.name}"))
     size_norm = style["size"] / 72.0 * 0.22
     obj.scale = (size_norm, size_norm, size_norm)
-    x = (style["position"]["x_pct"] / 100.0 - 0.5) * 2.0
+    x_center = (style["position"]["x_pct"] / 100.0 - 0.5) * 2.0
     y = (0.5 - style["position"]["y_pct"] / 100.0) * 2.0 * (height / width)
-    x_wait = x + size_norm * 1.35
+    gap = size_norm * 1.45
+    x = x_center - gap / 2.0 if slot == "left" else x_center + gap / 2.0
     obj.location = (x, y, 0.0)
     motion = style["motion"]
     speed = float(style.get("motion_speed") or 1.0)
@@ -208,7 +210,7 @@ def add_text(scene, style: dict, word: str, font_path: Path, width: int, height:
         obj.hide_render = False
         obj.keyframe_insert(data_path="hide_render", frame=wait_start_frame)
         obj.scale = (size_norm, size_norm, size_norm)
-        obj.location = (x_wait, y, 0.0)
+        obj.location = (x, y, 0.0)
         obj.keyframe_insert(data_path="scale", frame=wait_start_frame)
         obj.keyframe_insert(data_path="location", frame=wait_start_frame)
         obj.keyframe_insert(data_path="scale", frame=start_frame - 1)
@@ -279,13 +281,19 @@ def run_render(args: dict) -> dict:
     fps = int(args["fps"])
     frame_end = max(1, int(math.ceil(last * fps)))
     scene, width, height = setup_scene(style, fps=fps, frame_end=frame_end)
-    words = transcript["words"]
-    for i, cue in enumerate(words):
-        start_f = max(1, int(cue["start"] * fps) + 1)
-        hide_t = words[i + 1]["start"] if i + 1 < len(words) else cue["end"]
-        end_f = max(start_f + 1, int(hide_t * fps) + 1)
-        wait_f = max(1, int(words[i - 1]["start"] * fps) + 1) if i > 0 else None
-        add_text(scene, style, cue["word"], font, width, height, start_f, end_f, wait_start_frame=wait_f)
+    for left, right, hide in iter_couples(transcript["words"]):
+        hide_f = max(2, int(hide * fps) + 1)
+        left_start = max(1, int(left["start"] * fps) + 1)
+        add_text(
+            scene, style, left["word"], font, width, height,
+            left_start, hide_f, wait_start_frame=None, slot="left",
+        )
+        if right:
+            right_start = max(left_start + 1, int(right["start"] * fps) + 1)
+            add_text(
+                scene, style, right["word"], font, width, height,
+                right_start, hide_f, wait_start_frame=left_start, slot="right",
+            )
     out = Path(args["out"]) / "frames"
     names = render_frames(scene, out, "cap")
     report = {
