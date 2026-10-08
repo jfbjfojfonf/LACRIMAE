@@ -3,33 +3,106 @@ import {
   CANVAS,
   DEFAULT_STYLE,
   MOTION_VALUES,
-  activeWords,
   buildProofRequest,
+  captionPair,
   downloadJson,
   firstWord,
+  motionScale,
   normalizeStyle,
   parseTranscript,
 } from './styleSchema';
 
 const field = { display: 'block', margin: '8px 0 4px', fontSize: 12, opacity: 0.8 };
 const input = { width: '100%', background: '#16161c', color: '#eee', border: '1px solid #333', padding: 6 };
+const btn = { background: '#222', color: '#eee', border: '1px solid #444', padding: '6px 10px', cursor: 'pointer' };
+
+function muteNativeCaptions(video) {
+  if (!video || !video.textTracks) return;
+  for (let i = 0; i < video.textTracks.length; i += 1) {
+    video.textTracks[i].mode = 'disabled';
+  }
+}
+
+function captionFace(style, extra) {
+  const glowPx = Math.max(6, Math.round(style.glow.intensity * 12));
+  return {
+    fontFamily: '"Montserrat ExtraBold", Montserrat, sans-serif',
+    fontWeight: 800,
+    color: style.color,
+    WebkitTextStroke: `${Math.max(1, style.outline.width * 0.28)}px ${style.outline.color}`,
+    paintOrder: 'stroke fill',
+    textShadow: `0 0 ${glowPx}px ${style.glow.color}, 0 2px 8px rgba(0,0,0,0.85)`,
+    whiteSpace: 'nowrap',
+    pointerEvents: 'none',
+    lineHeight: 1,
+    ...extra,
+  };
+}
 
 export default function App() {
   const [style, setStyle] = useState(DEFAULT_STYLE);
   const [transcript, setTranscript] = useState(null);
   const [error, setError] = useState(null);
+  const [saveMsg, setSaveMsg] = useState('');
   const [videoUrl, setVideoUrl] = useState(null);
   const [videoName, setVideoName] = useState('');
   const [time, setTime] = useState(0);
   const [proof, setProof] = useState(null);
   const [proofBusy, setProofBusy] = useState(false);
   const videoRef = useRef(null);
+  const jsonRef = useRef(null);
   const size = CANVAS[style.canvas] || CANVAS['9:16'];
-  const wordsNow = useMemo(() => activeWords(transcript, time), [transcript, time]);
-  const punch = wordsNow[0]?.word || firstWord(transcript);
+  const pair = useMemo(() => captionPair(transcript, time), [transcript, time]);
+  const punch = pair.current?.word || firstWord(transcript);
+  const packed = useMemo(() => normalizeStyle(style), [style]);
+  const jsonText = useMemo(() => JSON.stringify(packed, null, 2) + '\n', [packed]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [trRes, stRes] = await Promise.all([
+          fetch('/transcript.json'),
+          fetch('/style.json'),
+        ]);
+        if (cancelled) return;
+        if (trRes.ok) {
+          const parsed = parseTranscript(await trRes.json());
+          if (parsed.words.length) setTranscript(parsed);
+        }
+        if (stRes.ok) setStyle(normalizeStyle(await stRes.json()));
+        const probe = await fetch('/target.mp4', { method: 'HEAD' });
+        if (!cancelled && probe.ok) {
+          setVideoUrl('/target.mp4');
+          setVideoName('target.mp4');
+        }
+      } catch {
+        /* preview assets optionnels */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => () => {
-    if (videoUrl) URL.revokeObjectURL(videoUrl);
+    if (videoUrl && videoUrl.startsWith('blob:')) URL.revokeObjectURL(videoUrl);
+  }, [videoUrl]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return undefined;
+    muteNativeCaptions(video);
+    let raf = 0;
+    const tick = () => {
+      setTime(video.currentTime || 0);
+      raf = requestAnimationFrame(tick);
+    };
+    const onMeta = () => muteNativeCaptions(video);
+    video.addEventListener('loadedmetadata', onMeta);
+    raf = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(raf);
+      video.removeEventListener('loadedmetadata', onMeta);
+    };
   }, [videoUrl]);
 
   const patch = (partial) => setStyle((prev) => normalizeStyle({ ...prev, ...partial }));
@@ -67,7 +140,7 @@ export default function App() {
 
   const onVideo = (file) => {
     if (!file) return;
-    if (videoUrl) URL.revokeObjectURL(videoUrl);
+    if (videoUrl && videoUrl.startsWith('blob:')) URL.revokeObjectURL(videoUrl);
     setVideoUrl(URL.createObjectURL(file));
     setVideoName(file.name);
     setTime(0);
@@ -77,6 +150,33 @@ export default function App() {
     if (!file) return;
     if (proof?.url) URL.revokeObjectURL(proof.url);
     setProof({ name: file.name, url: URL.createObjectURL(file) });
+  };
+
+  const saveStyle = async () => {
+    setSaveMsg('');
+    setError(null);
+    try {
+      const res = await fetch('/api/save-style', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: jsonText,
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.ok) {
+        setError('Save s1 echoue — JSON non ecrit');
+        return;
+      }
+      setSaveMsg(`C2 : ${body.path}`);
+    } catch {
+      setError('Save s1 indisponible');
+    }
+  };
+
+  const selectAllJson = () => {
+    const el = jsonRef.current;
+    if (!el) return;
+    el.focus();
+    el.select();
   };
 
   const requestProof = async () => {
@@ -104,9 +204,11 @@ export default function App() {
     }
   };
 
-  const glowPx = Math.round(style.glow.intensity * 10);
-  const scale = style.motion === 'pop-in' ? 1.08 : style.motion === 'bounce' ? 1.04 : 1;
+  const elapsed = pair.current ? Math.max(0, time - pair.current.start) : 0;
+  const spokenScale = motionScale(style.motion, elapsed, style.motion_speed);
+  const popMs = `${(0.42 / Math.max(0.25, style.motion_speed)).toFixed(2)}s`;
   const previewRatio = size.width / size.height;
+  const basePx = Math.max(28, style.size * 0.42);
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#0b0b0f', color: '#eee', fontFamily: 'sans-serif' }}>
@@ -123,9 +225,11 @@ export default function App() {
             <video
               ref={videoRef}
               src={videoUrl}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               controls
-              onTimeUpdate={(e) => setTime(e.currentTarget.currentTime || 0)}
+              crossOrigin="anonymous"
+              disablePictureInPicture
+              onLoadedMetadata={(e) => muteNativeCaptions(e.currentTarget)}
             />
           ) : (
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
@@ -136,23 +240,42 @@ export default function App() {
             <img
               src={proof.url}
               alt="proof blender"
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }}
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none', zIndex: 4 }}
             />
           ) : (
             <div style={{
               position: 'absolute',
               left: `${style.position.x_pct}%`,
               top: `${style.position.y_pct}%`,
-              transform: `translate(-50%, -50%) scale(${scale})`,
-              fontFamily: 'Montserrat ExtraBold, Montserrat, sans-serif',
-              fontSize: style.size * 0.35,
-              fontWeight: 800,
-              color: style.color,
-              WebkitTextStroke: `${style.outline.width * 0.35}px ${style.outline.color}`,
-              textShadow: `0 0 ${glowPx}px ${style.glow.color}, 0 0 ${glowPx * 2}px ${style.glow.color}`,
-              whiteSpace: 'nowrap',
+              transform: 'translate(-50%, -100%)',
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'baseline',
+              gap: 18,
+              zIndex: 3,
+              overflow: 'visible',
               pointerEvents: 'none',
-            }}>{punch}</div>
+              maxWidth: '92%',
+            }}>
+              {pair.current && (
+                <div
+                  key={`${pair.current.start}-${pair.current.word}`}
+                  style={captionFace(style, {
+                    fontSize: basePx,
+                    transform: style.motion === 'pop-in' ? undefined : `scale(${spokenScale})`,
+                    transformOrigin: 'center',
+                    animation: style.motion === 'pop-in' ? `f07-popin ${popMs} cubic-bezier(0.16, 1.2, 0.3, 1) both` : 'none',
+                  })}
+                >{pair.current.word}</div>
+              )}
+              {pair.next && (
+                <div style={captionFace(style, {
+                  fontSize: basePx,
+                  transform: 'scale(1)',
+                  transformOrigin: 'center',
+                })}>{pair.next.word}</div>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -167,7 +290,8 @@ export default function App() {
         <label style={field}>style.json (optionnel)</label>
         <input type="file" accept="application/json" onChange={(e) => onStyleFile(e.target.files?.[0])} />
         {error && <p style={{ color: '#ff8866', fontSize: 12 }}>{error}</p>}
-        {transcript && <p style={{ fontSize: 12 }}>C1 : {transcript.words.length} mots — punch « {punch} »</p>}
+        {saveMsg && <p style={{ color: '#8f8', fontSize: 12 }}>{saveMsg}</p>}
+        {transcript && <p style={{ fontSize: 12 }}>C1 : {transcript.words.length} mots — punch « {punch} »{pair.next ? ` / next « ${pair.next.word} »` : ''}</p>}
 
         <label style={field}>Canvas</label>
         <select style={input} value={style.canvas} onChange={(e) => patch({ canvas: e.target.value })}>
@@ -193,11 +317,33 @@ export default function App() {
         <select style={input} value={style.motion} onChange={(e) => patch({ motion: e.target.value })}>
           {MOTION_VALUES.map((m) => <option key={m} value={m}>{m}</option>)}
         </select>
+        {style.motion === 'pop-in' && (
+          <>
+            <label style={field}>Vitesse in {style.motion_speed}</label>
+            <input
+              type="range"
+              min="0.25"
+              max="3"
+              step="0.05"
+              value={style.motion_speed}
+              onChange={(e) => patch({ motion_speed: Number(e.target.value) })}
+            />
+          </>
+        )}
 
         <fieldset style={{ marginTop: 16, borderColor: '#333' }}>
           <legend>C2 / C3</legend>
-          <button type="button" onClick={() => downloadJson('style.json', normalizeStyle(style))}>exporter s1</button>
-          <button type="button" onClick={requestProof} disabled={proofBusy} style={{ marginLeft: 8 }}>
+          <button type="button" style={btn} onClick={saveStyle}>Save s1</button>
+          <button type="button" style={{ ...btn, marginLeft: 8 }} onClick={selectAllJson}>tout selectionner</button>
+          <label style={field}>s1 JSON</label>
+          <textarea
+            ref={jsonRef}
+            readOnly
+            value={jsonText}
+            style={{ ...input, height: 160, fontFamily: 'monospace', fontSize: 11, resize: 'vertical' }}
+          />
+          <button type="button" style={{ ...btn, marginTop: 8 }} onClick={() => downloadJson('style.json', packed)}>exporter s1</button>
+          <button type="button" style={{ ...btn, marginLeft: 8 }} onClick={requestProof} disabled={proofBusy}>
             {proofBusy ? 'proof…' : `proof « ${punch} »`}
           </button>
           <label style={field}>deposer PNG proof Blender</label>

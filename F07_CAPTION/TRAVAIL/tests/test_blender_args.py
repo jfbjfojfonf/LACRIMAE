@@ -13,11 +13,17 @@ def test_parse_args_proof():
 
 
 def test_motion_scale_pop_in_overshoot():
-    assert blender_caption.motion_scale("pop-in", 0.0) == 0.0
-    mid = blender_caption.motion_scale("pop-in", 0.15)
+    assert blender_caption.motion_scale("pop-in", 0.0) == 0.2
+    mid = blender_caption.motion_scale("pop-in", 0.22)
     rest = blender_caption.motion_scale("pop-in", 1.0)
     assert mid > rest
     assert rest == 1.0
+
+
+def test_motion_scale_speed_faster():
+    slow = blender_caption.motion_scale("pop-in", 0.05, 0.5)
+    fast = blender_caption.motion_scale("pop-in", 0.05, 3.0)
+    assert fast > slow
 
 
 def test_motion_slide_offset():

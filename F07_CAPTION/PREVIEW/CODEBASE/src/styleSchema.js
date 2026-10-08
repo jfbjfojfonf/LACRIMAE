@@ -16,6 +16,7 @@ export const DEFAULT_STYLE = {
   outline: { width: 4, color: '#000000' },
   glow: { intensity: 1.2, color: '#FFFFFF' },
   motion: 'pop-in',
+  motion_speed: 1,
   canvas: '9:16',
 };
 
@@ -51,6 +52,7 @@ export function normalizeStyle(raw) {
       color: typeof glow.color === 'string' && glow.color ? glow.color : DEFAULT_STYLE.glow.color,
     },
     motion,
+    motion_speed: Math.round(clamp(src.motion_speed ?? 1, 0.25, 3) * 100) / 100,
     canvas,
   };
 }
@@ -65,6 +67,15 @@ export function parseTranscript(raw) {
     const start = Number(item.start);
     const end = Number(item.end);
     if (!word || !Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
+    const key = word.replace(/[.,!?;:]+$/, '').toLowerCase();
+    const prev = parsed[parsed.length - 1];
+    if (prev) {
+      const prevKey = prev.word.replace(/[.,!?;:]+$/, '').toLowerCase();
+      if (key === prevKey && start <= prev.end + 0.05) {
+        prev.end = Math.max(prev.end, end);
+        continue;
+      }
+    }
     parsed.push({ word, start, end });
   }
   return {
@@ -78,6 +89,35 @@ export function parseTranscript(raw) {
 export function activeWords(transcript, timeSec) {
   if (!transcript || !Array.isArray(transcript.words)) return [];
   return transcript.words.filter((w) => timeSec >= w.start && timeSec < w.end);
+}
+
+export function captionPair(transcript, timeSec) {
+  const words = transcript && Array.isArray(transcript.words) ? transcript.words : [];
+  if (!words.length) return { current: null, next: null, index: -1 };
+  if (timeSec < words[0].start) return { current: null, next: words[0], index: -1 };
+  for (let i = 0; i < words.length; i += 1) {
+    const hide = i + 1 < words.length ? words[i + 1].start : Math.max(words[i].end, timeSec + 0.001);
+    if (timeSec >= words[i].start && timeSec < hide) {
+      return { current: words[i], next: words[i + 1] || null, index: i };
+    }
+  }
+  const last = words.length - 1;
+  return { current: words[last], next: null, index: last };
+}
+
+export function motionScale(motion, elapsedSec, speed = 1) {
+  const elapsed = Math.max(0, Number(elapsedSec) || 0);
+  const spd = clamp(speed, 0.25, 3);
+  if (motion === 'slide') return 1;
+  if (motion === 'bounce') {
+    const t = Math.min(1, elapsed / Math.max(0.12, 0.28 / spd));
+    return 0.35 + 0.65 * (1 - Math.abs(Math.sin((1 - t) * Math.PI * 0.5)));
+  }
+  const attack = 0.22 / spd;
+  const settle = 0.4 / spd;
+  if (elapsed < attack) return 0.2 + 1.05 * (elapsed / attack);
+  if (elapsed < settle) return 1.25 - 0.25 * ((elapsed - attack) / Math.max(1e-6, settle - attack));
+  return 1;
 }
 
 export function firstWord(transcript) {

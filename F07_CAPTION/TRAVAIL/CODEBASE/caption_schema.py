@@ -59,6 +59,7 @@ def normalize_style(raw: dict | None) -> dict:
             "color": _str(glow.get("color"), "#FFFFFF"),
         },
         "motion": motion,
+        "motion_speed": round(_clamp(src.get("motion_speed"), 0.25, 3.0, 1.0), 2),
         "canvas": canvas,
     }
 
@@ -77,6 +78,13 @@ def parse_transcript(raw: dict | None) -> dict:
             continue
         if not word or end <= start:
             continue
+        key = word.rstrip(".,!?;:").lower()
+        if words:
+            prev = words[-1]
+            prev_key = prev["word"].rstrip(".,!?;:").lower()
+            if key == prev_key and start <= prev["end"] + 0.05:
+                prev["end"] = max(prev["end"], end)
+                continue
         words.append({"word": word, "start": start, "end": end})
     return {
         "schema_version": TRANSCRIPT_SCHEMA,

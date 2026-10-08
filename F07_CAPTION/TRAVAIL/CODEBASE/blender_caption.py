@@ -93,16 +93,20 @@ def load_json(path: str | None) -> dict:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def motion_scale(motion: str, local_t: float) -> float:
-    t = max(0.0, min(1.0, local_t))
+def motion_scale(motion: str, elapsed_sec: float, speed: float = 1.0) -> float:
+    elapsed = max(0.0, float(elapsed_sec) if elapsed_sec == elapsed_sec else 0.0)
+    spd = max(0.25, min(3.0, float(speed) if speed == speed else 1.0))
     if motion == "slide":
         return 1.0
     if motion == "bounce":
-        return 0.2 + 0.8 * (1 - abs(math.sin((1 - t) * math.pi * 0.5)))
-    if t < 0.15:
-        return t / 0.15 * 1.2
-    if t < 0.35:
-        return 1.2 - (t - 0.15) / 0.20 * 0.2
+        t = min(1.0, elapsed / max(0.12, 0.28 / spd))
+        return 0.35 + 0.65 * (1 - abs(math.sin((1 - t) * math.pi * 0.5)))
+    attack = 0.22 / spd
+    settle = 0.4 / spd
+    if elapsed < attack:
+        return 0.2 + 1.05 * (elapsed / attack)
+    if elapsed < settle:
+        return 1.25 - 0.25 * ((elapsed - attack) / max(1e-6, settle - attack))
     return 1.0
 
 
@@ -171,7 +175,7 @@ def make_material(style: dict, name: str):
     return mat
 
 
-def add_text(scene, style: dict, word: str, font_path: Path, width: int, height: int, start_frame: int, end_frame: int):
+def add_text(scene, style: dict, word: str, font_path: Path, width: int, height: int, start_frame: int, end_frame: int, wait_start_frame: int | None = None):
     import bpy
 
     curve = bpy.data.curves.new(name=f"txt_{word[:12]}", type="FONT")
@@ -189,20 +193,43 @@ def add_text(scene, style: dict, word: str, font_path: Path, width: int, height:
     obj.scale = (size_norm, size_norm, size_norm)
     x = (style["position"]["x_pct"] / 100.0 - 0.5) * 2.0
     y = (0.5 - style["position"]["y_pct"] / 100.0) * 2.0 * (height / width)
+    x_wait = x + size_norm * 1.35
     obj.location = (x, y, 0.0)
     motion = style["motion"]
-    span = max(1, end_frame - start_frame)
-    for frame in (start_frame, start_frame + max(1, int(span * 0.15)), start_frame + max(1, int(span * 0.35)), end_frame):
-        local_t = (frame - start_frame) / span
-        s = motion_scale(motion, local_t) * size_norm
+    speed = float(style.get("motion_speed") or 1.0)
+    fps = float(getattr(scene, "render", None).fps) if getattr(scene, "render", None) else 30.0
+    if fps <= 0:
+        fps = 30.0
+    attack = 0.22 / max(0.25, speed)
+    settle = 0.4 / max(0.25, speed)
+    if wait_start_frame is not None and wait_start_frame < start_frame:
+        obj.hide_render = True
+        obj.keyframe_insert(data_path="hide_render", frame=wait_start_frame - 1)
+        obj.hide_render = False
+        obj.keyframe_insert(data_path="hide_render", frame=wait_start_frame)
+        obj.scale = (size_norm, size_norm, size_norm)
+        obj.location = (x_wait, y, 0.0)
+        obj.keyframe_insert(data_path="scale", frame=wait_start_frame)
+        obj.keyframe_insert(data_path="location", frame=wait_start_frame)
+        obj.keyframe_insert(data_path="scale", frame=start_frame - 1)
+        obj.keyframe_insert(data_path="location", frame=start_frame - 1)
+    else:
+        obj.hide_render = True
+        obj.keyframe_insert(data_path="hide_render", frame=start_frame - 1)
+        obj.hide_render = False
+        obj.keyframe_insert(data_path="hide_render", frame=start_frame)
+    for frame in (
+        start_frame,
+        start_frame + max(1, int(round(attack * fps))),
+        start_frame + max(1, int(round(settle * fps))),
+        end_frame,
+    ):
+        elapsed = (frame - start_frame) / fps
+        s = motion_scale(motion, elapsed, speed) * size_norm
         obj.scale = (s, s, s)
-        obj.location = (x + motion_offset_x(motion, local_t, 2.0), y, 0.0)
+        obj.location = (x + motion_offset_x(motion, elapsed, 2.0), y, 0.0)
         obj.keyframe_insert(data_path="scale", frame=frame)
         obj.keyframe_insert(data_path="location", frame=frame)
-    obj.hide_render = True
-    obj.keyframe_insert(data_path="hide_render", frame=start_frame - 1)
-    obj.hide_render = False
-    obj.keyframe_insert(data_path="hide_render", frame=start_frame)
     obj.hide_render = True
     obj.keyframe_insert(data_path="hide_render", frame=end_frame + 1)
     return obj
@@ -252,10 +279,13 @@ def run_render(args: dict) -> dict:
     fps = int(args["fps"])
     frame_end = max(1, int(math.ceil(last * fps)))
     scene, width, height = setup_scene(style, fps=fps, frame_end=frame_end)
-    for cue in transcript["words"]:
+    words = transcript["words"]
+    for i, cue in enumerate(words):
         start_f = max(1, int(cue["start"] * fps) + 1)
-        end_f = max(start_f + 1, int(cue["end"] * fps) + 1)
-        add_text(scene, style, cue["word"], font, width, height, start_f, end_f)
+        hide_t = words[i + 1]["start"] if i + 1 < len(words) else cue["end"]
+        end_f = max(start_f + 1, int(hide_t * fps) + 1)
+        wait_f = max(1, int(words[i - 1]["start"] * fps) + 1) if i > 0 else None
+        add_text(scene, style, cue["word"], font, width, height, start_f, end_f, wait_start_frame=wait_f)
     out = Path(args["out"]) / "frames"
     names = render_frames(scene, out, "cap")
     report = {

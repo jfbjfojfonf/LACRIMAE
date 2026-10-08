@@ -12,13 +12,31 @@ def test_normalize_style_defaults():
     style = caption_schema.normalize_style({})
     assert style["id"] == "s1"
     assert style["motion"] == "pop-in"
+    assert style["motion_speed"] == 1.0
     assert style["canvas"] == "9:16"
     assert style["position"]["y_pct"] == 78
+
+
+def test_normalize_style_motion_speed_clamp():
+    assert caption_schema.normalize_style({"motion_speed": 9})["motion_speed"] == 3.0
+    assert caption_schema.normalize_style({"motion_speed": 0})["motion_speed"] == 0.25
 
 
 def test_normalize_style_rejects_free_motion():
     style = caption_schema.normalize_style({"motion": "spiral-camera"})
     assert style["motion"] == "pop-in"
+
+
+def test_parse_transcript_merges_adjacent_duplicates():
+    parsed = caption_schema.parse_transcript({
+        "words": [
+            {"word": "run", "start": 7.66, "end": 8.22},
+            {"word": "run", "start": 8.22, "end": 8.44},
+            {"word": "He's", "start": 12.39, "end": 12.87},
+        ]
+    })
+    assert [w["word"] for w in parsed["words"]] == ["run", "He's"]
+    assert parsed["words"][0]["end"] == 8.44
 
 
 def test_parse_transcript_drops_bad_cues():
