@@ -93,25 +93,32 @@ export function activeWords(transcript, timeSec) {
 
 export function captionCouple(transcript, timeSec) {
   const words = transcript && Array.isArray(transcript.words) ? transcript.words : [];
-  if (!words.length) return { left: null, right: null, spoken: null, index: -1 };
+  if (!words.length) return { left: null, right: null, spoken: null, index: -1, hide: 0 };
   const n = words.length;
+  const hideOf = (i, left, right) => (
+    i + 2 < n ? words[i + 2].start : (right ? Math.max(left.end, right.end) : left.end)
+  );
   if (timeSec < words[0].start) {
-    return { left: words[0], right: words[1] || null, spoken: null, index: 0 };
+    const right = words[1] || null;
+    return { left: words[0], right, spoken: null, index: 0, hide: hideOf(0, words[0], right) };
   }
   for (let i = 0; i < n; i += 2) {
     const left = words[i];
     const right = words[i + 1] || null;
-    const hide = i + 2 < n ? words[i + 2].start : (right ? Math.max(left.end, right.end) : left.end);
+    const hide = hideOf(i, left, right);
     if (timeSec >= left.start && timeSec < hide) {
       const spoken = right && timeSec >= right.start ? 'right' : 'left';
-      return { left, right, spoken, index: i };
+      return { left, right, spoken, hide, index: i };
     }
   }
   const i = n % 2 === 0 ? n - 2 : n - 1;
+  const left = words[i];
+  const right = words[i + 1] || null;
   return {
-    left: words[i],
-    right: words[i + 1] || null,
-    spoken: words[i + 1] ? 'right' : 'left',
+    left,
+    right,
+    spoken: right ? 'right' : 'left',
+    hide: hideOf(i, left, right),
     index: i,
   };
 }
@@ -120,17 +127,31 @@ export function captionPair(transcript, timeSec) {
   return captionCouple(transcript, timeSec);
 }
 
-export function motionScale(motion, elapsedSec, speed = 1) {
-  const elapsed = Math.max(0, Number(elapsedSec) || 0);
+export function motionWindows(speed, wordDur) {
   const spd = clamp(speed, 0.25, 3);
+  let attack = 0.22 / spd;
+  let settle = 0.4 / spd;
+  const dur = Number(wordDur);
+  if (Number.isFinite(dur) && dur > 0) {
+    const cap = Math.max(0.05, dur * 0.9);
+    if (settle > cap) {
+      const k = cap / settle;
+      attack *= k;
+      settle = cap;
+    }
+  }
+  return { attack, settle };
+}
+
+export function motionScale(motion, elapsedSec, speed = 1, wordDur) {
+  const elapsed = Math.max(0, Number(elapsedSec) || 0);
   if (motion === 'slide') return 1;
+  const { attack, settle } = motionWindows(speed, wordDur);
   if (motion === 'bounce') {
-    const t = Math.min(1, elapsed / Math.max(0.12, 0.28 / spd));
+    const t = Math.min(1, elapsed / Math.max(0.05, settle));
     return 0.35 + 0.65 * (1 - Math.abs(Math.sin((1 - t) * Math.PI * 0.5)));
   }
-  const attack = 0.22 / spd;
-  const settle = 0.4 / spd;
-  if (elapsed < attack) return 0.2 + 1.05 * (elapsed / attack);
+  if (elapsed < attack) return 0.2 + 1.05 * (elapsed / Math.max(1e-6, attack));
   if (elapsed < settle) return 1.25 - 0.25 * ((elapsed - attack) / Math.max(1e-6, settle - attack));
   return 1;
 }

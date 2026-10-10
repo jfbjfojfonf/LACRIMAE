@@ -58,14 +58,14 @@ Sous-titres 3D mot-a-mot. Une frégate, deux halves (TRAVAIL / PREVIEW).
 | Palier | Contenu | Statut |
 |--------|---------|--------|
 | H0 | dirs + README + CAPTION_GATES + GUIDE_CAPTION | FAIT |
-| H1 | PREVIEW coque Vite (drop transcript + video, sliders, export s1) | FAIT |
+| H1 | PREVIEW coque Vite (drop transcript + video, sliders, Save s1, couple pop-in) | FAIT |
 | H2 | Whisper GHA : IN -> `transcript.json` | FAIT |
 | H3 | proof frame Modal : 1 mot, 1–3 PNG | FAIT |
 | H4 | Blender full + overlay ffmpeg, hook F05/F06 | FAIT |
 
 ## Prochaine etape exacte
 
-**F07** : premier tir d'essais Actions `DEV11 — F07 CAPTION` (`job=whisper` puis `proof` puis `render`) avec une video IN. Corriger la frégate fautive, pas le pack `s1`.
+**F07** : C0+C1 OK (Whisper run 37544539417, 133 mots). C2 en cours : Save s1 + couple pop-in + `motion_speed` horloge video. Ensuite C3 proof puis C4 render. Corriger la frégate fautive, pas le pack `s1`.
 
 **PUR** (inchange) : premier E2E CI (`dev10_pur_render.yml`) avec un pack
 PERTURABO joignable. Si le run E2E casse : corriger la frégate fautive,

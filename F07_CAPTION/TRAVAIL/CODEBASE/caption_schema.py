@@ -178,6 +178,24 @@ def resolve_font(style: dict, fonts_dir: Path) -> Path:
     raise FileNotFoundError(f"font introuvable: {name}")
 
 
+def motion_windows(speed: float, word_dur: float | None = None) -> tuple[float, float]:
+    spd = _clamp(speed, 0.25, 3.0, 1.0)
+    attack = 0.22 / spd
+    settle = 0.4 / spd
+    if word_dur is not None:
+        try:
+            dur = float(word_dur)
+        except (TypeError, ValueError):
+            dur = 0.0
+        if dur > 0:
+            cap = max(0.05, dur * 0.9)
+            if settle > cap:
+                k = cap / settle
+                attack *= k
+                settle = cap
+    return (attack, settle)
+
+
 def hex_to_rgba(color: str) -> tuple[float, float, float, float]:
     raw = (color or "#FFFFFF").lstrip("#")
     if len(raw) == 3:

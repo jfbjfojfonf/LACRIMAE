@@ -21,6 +21,7 @@ from caption_schema import (  # noqa: E402
     build_proof_request,
     hex_to_rgba,
     iter_couples,
+    motion_windows,
     normalize_style,
     parse_transcript,
     resolve_font,
@@ -94,18 +95,16 @@ def load_json(path: str | None) -> dict:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def motion_scale(motion: str, elapsed_sec: float, speed: float = 1.0) -> float:
+def motion_scale(motion: str, elapsed_sec: float, speed: float = 1.0, word_dur: float | None = None) -> float:
     elapsed = max(0.0, float(elapsed_sec) if elapsed_sec == elapsed_sec else 0.0)
-    spd = max(0.25, min(3.0, float(speed) if speed == speed else 1.0))
     if motion == "slide":
         return 1.0
+    attack, settle = motion_windows(speed, word_dur)
     if motion == "bounce":
-        t = min(1.0, elapsed / max(0.12, 0.28 / spd))
+        t = min(1.0, elapsed / max(0.05, settle))
         return 0.35 + 0.65 * (1 - abs(math.sin((1 - t) * math.pi * 0.5)))
-    attack = 0.22 / spd
-    settle = 0.4 / spd
     if elapsed < attack:
-        return 0.2 + 1.05 * (elapsed / attack)
+        return 0.2 + 1.05 * (elapsed / max(1e-6, attack))
     if elapsed < settle:
         return 1.25 - 0.25 * ((elapsed - attack) / max(1e-6, settle - attack))
     return 1.0
@@ -176,7 +175,7 @@ def make_material(style: dict, name: str):
     return mat
 
 
-def add_text(scene, style: dict, word: str, font_path: Path, width: int, height: int, start_frame: int, end_frame: int, wait_start_frame: int | None = None, slot: str = "left"):
+def add_text(scene, style: dict, word: str, font_path: Path, width: int, height: int, start_frame: int, end_frame: int, wait_start_frame: int | None = None, slot: str = "left", word_dur: float | None = None):
     import bpy
 
     curve = bpy.data.curves.new(name=f"txt_{word[:12]}", type="FONT")
@@ -202,8 +201,7 @@ def add_text(scene, style: dict, word: str, font_path: Path, width: int, height:
     fps = float(getattr(scene, "render", None).fps) if getattr(scene, "render", None) else 30.0
     if fps <= 0:
         fps = 30.0
-    attack = 0.22 / max(0.25, speed)
-    settle = 0.4 / max(0.25, speed)
+    attack, settle = motion_windows(speed, word_dur)
     if wait_start_frame is not None and wait_start_frame < start_frame:
         obj.hide_render = True
         obj.keyframe_insert(data_path="hide_render", frame=wait_start_frame - 1)
@@ -227,7 +225,7 @@ def add_text(scene, style: dict, word: str, font_path: Path, width: int, height:
         end_frame,
     ):
         elapsed = (frame - start_frame) / fps
-        s = motion_scale(motion, elapsed, speed) * size_norm
+        s = motion_scale(motion, elapsed, speed, word_dur) * size_norm
         obj.scale = (s, s, s)
         obj.location = (x + motion_offset_x(motion, elapsed, 2.0), y, 0.0)
         obj.keyframe_insert(data_path="scale", frame=frame)
@@ -257,7 +255,7 @@ def run_proof(args: dict) -> dict:
     font = resolve_font(style, Path(args["fonts"]))
     frames = max(1, min(3, int(req["frames"])))
     scene, width, height = setup_scene(style, fps=30, frame_end=frames)
-    add_text(scene, style, req["word"], font, width, height, 1, frames)
+    add_text(scene, style, req["word"], font, width, height, 1, frames, word_dur=frames / 30.0)
     out = Path(args["out"])
     names = render_frames(scene, out, "proof")
     report = {
@@ -284,15 +282,18 @@ def run_render(args: dict) -> dict:
     for left, right, hide in iter_couples(transcript["words"]):
         hide_f = max(2, int(hide * fps) + 1)
         left_start = max(1, int(left["start"] * fps) + 1)
+        left_end_t = right["start"] if right else hide
         add_text(
             scene, style, left["word"], font, width, height,
             left_start, hide_f, wait_start_frame=None, slot="left",
+            word_dur=max(0.05, left_end_t - left["start"]),
         )
         if right:
             right_start = max(left_start + 1, int(right["start"] * fps) + 1)
             add_text(
                 scene, style, right["word"], font, width, height,
                 right_start, hide_f, wait_start_frame=left_start, slot="right",
+                word_dur=max(0.05, hide - right["start"]),
             )
     out = Path(args["out"]) / "frames"
     names = render_frames(scene, out, "cap")

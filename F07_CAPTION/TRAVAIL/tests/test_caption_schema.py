@@ -51,6 +51,12 @@ def test_parse_transcript_drops_bad_cues():
     assert [w["word"] for w in parsed["words"]] == ["HOE"]
 
 
+def test_motion_windows_caps_short_word():
+    attack, settle = caption_schema.motion_windows(0.25, 0.2)
+    assert settle <= 0.2 * 0.9 + 1e-9
+    assert attack < settle
+
+
 def test_caption_couple_steps_by_two():
     words = [
         {"word": "A", "start": 0.0, "end": 0.3},

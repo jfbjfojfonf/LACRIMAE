@@ -24,12 +24,17 @@ F07_CAPTION/
 | Fichier | Role | Duree de vie |
 |---------|------|----------------|
 | `transcript.json` | Whisper, mot + `start` + `end` | 1 par video |
-| `style.json` (`s1`) | police, place, taille, couleur, mouvement, glow, contour | pack, N videos |
+| `style.json` (`s1`) | police, place, taille, couleur, mouvement, `motion_speed`, glow, contour | pack, N videos |
 | `proof.json` | 1 mot + s1 -> 1–3 PNG Blender | validation operateur |
 
 Mouvement = enum uniquement : `pop-in` / `bounce` / `slide`. Pas de formule libre.
+`motion_speed` (0.25–3) pilote la duree du in sur **l'horloge video** (pas une anim CSS).
+Attack 0.22/speed, settle 0.4/speed, cappe a 90 % de la duree du mot. Preview = C4.
 
-`s1` n'est pas par video. Un style valide s'applique a N transcripts.
+Ecran = couple fixe (mot 1 + mot 2). Le in prend le mot 1, puis le mot 2, puis le couple suivant.
+Meme contraste / glow. Seul le mot prononce zoome.
+
+`s1` n'est pas par video. Un style valide s'applique a N transcripts. Save s1 → `OUT/style.json`.
 
 ## Commandes
 

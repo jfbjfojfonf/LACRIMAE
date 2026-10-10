@@ -40,7 +40,7 @@ Deux JSON, jamais un seul fichier mixte :
 |------|--------|--------------|---------|
 | **C0 IN** | Avant tout | Video cible | Fichier lisible dans `F07_CAPTION/IN/`, dimensions > 0 |
 | **C1 TRANSCRIPT** | Apres Whisper | JSON mot-a-mot | `word` + `start` + `end` par cue, `start < end` |
-| **C2 PREVIEW** | Apres sliders JS | Pack style | `style.json` ecrit (`s1`) : font, place, taille, couleur, mouvement enum, glow, contour |
+| **C2 PREVIEW** | Apres sliders JS | Pack style | `style.json` ecrit (`s1`) : font, place, taille, couleur, mouvement enum, `motion_speed`, glow, contour |
 | **C3 PROOF** | Avant rendu video | Matiere reelle | 1–3 PNG/EXR Blender (Eevee), 1 mot, operateur valide |
 | **C4 RENDER** | Apres Blender full | Calque + overlay | Sequence alpha + MP4 overlay. Pas de preview CSS dans le livrable |
 
@@ -58,6 +58,7 @@ Deux JSON, jamais un seul fichier mixte :
 - LUT `.cube` comme recette texte 3D
 - Toucher F03_PREVIEW / F03_PICTOR / P-ZOOM ZERO
 - Mouvement hors enum (`pop-in` / `bounce` / `slide`)
+- Anim CSS decoupee de l'horloge video pour le pop-in (`motion_speed` = temps reel, cap mot)
 - Volume Modal comme source de verite (GitHub detient s1 + fonts + scripts)
 
 ## Contrats

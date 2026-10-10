@@ -26,6 +26,13 @@ def test_motion_scale_speed_faster():
     assert fast > slow
 
 
+def test_motion_scale_caps_to_short_word():
+    rest = blender_caption.motion_scale("pop-in", 0.18, 0.25, word_dur=0.2)
+    assert rest == 1.0
+    mid = blender_caption.motion_scale("pop-in", 0.08, 0.25, word_dur=0.2)
+    assert mid > 1.0
+
+
 def test_motion_slide_offset():
     assert blender_caption.motion_offset_x("pop-in", 0.0, 2.0) == 0.0
     assert blender_caption.motion_offset_x("slide", 0.0, 2.0) < 0

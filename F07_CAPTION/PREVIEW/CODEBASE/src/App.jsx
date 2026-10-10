@@ -8,6 +8,7 @@ import {
   downloadJson,
   firstWord,
   motionScale,
+  motionWindows,
   normalizeStyle,
   parseTranscript,
 } from './styleSchema';
@@ -205,9 +206,13 @@ export default function App() {
     }
   };
 
+  const spokenEnd = couple.spoken === 'right'
+    ? (couple.hide || spokenWord?.end || 0)
+    : (couple.right ? couple.right.start : (couple.hide || spokenWord?.end || 0));
+  const spokenDur = spokenWord ? Math.max(0.05, spokenEnd - spokenWord.start) : 0.4;
   const elapsed = spokenWord ? Math.max(0, time - spokenWord.start) : 0;
-  const spokenScale = motionScale(style.motion, elapsed, style.motion_speed);
-  const popMs = `${(0.42 / Math.max(0.25, style.motion_speed)).toFixed(2)}s`;
+  const spokenScale = motionScale(style.motion, elapsed, style.motion_speed, spokenDur);
+  const windows = motionWindows(style.motion_speed, spokenDur);
   const previewRatio = size.width / size.height;
   const basePx = Math.max(28, style.size * 0.42);
 
@@ -263,11 +268,8 @@ export default function App() {
                   key={`L-${couple.left.start}-${couple.left.word}`}
                   style={captionFace(style, {
                     fontSize: basePx,
-                    transform: couple.spoken === 'left' && style.motion !== 'pop-in' ? `scale(${spokenScale})` : 'scale(1)',
+                    transform: `scale(${couple.spoken === 'left' ? spokenScale : 1})`,
                     transformOrigin: 'center',
-                    animation: couple.spoken === 'left' && style.motion === 'pop-in'
-                      ? `f07-popin ${popMs} cubic-bezier(0.16, 1.2, 0.3, 1) both`
-                      : 'none',
                   })}
                 >{couple.left.word}</div>
               )}
@@ -276,11 +278,8 @@ export default function App() {
                   key={`R-${couple.right.start}-${couple.right.word}`}
                   style={captionFace(style, {
                     fontSize: basePx,
-                    transform: couple.spoken === 'right' && style.motion !== 'pop-in' ? `scale(${spokenScale})` : 'scale(1)',
+                    transform: `scale(${couple.spoken === 'right' ? spokenScale : 1})`,
                     transformOrigin: 'center',
-                    animation: couple.spoken === 'right' && style.motion === 'pop-in'
-                      ? `f07-popin ${popMs} cubic-bezier(0.16, 1.2, 0.3, 1) both`
-                      : 'none',
                   })}
                 >{couple.right.word}</div>
               )}
@@ -328,7 +327,9 @@ export default function App() {
         </select>
         {style.motion === 'pop-in' && (
           <>
-            <label style={field}>Vitesse in {style.motion_speed}</label>
+            <label style={field}>
+              Vitesse in {style.motion_speed} — in {windows.settle.toFixed(2)}s (cap mot {spokenDur.toFixed(2)}s)
+            </label>
             <input
               type="range"
               min="0.25"

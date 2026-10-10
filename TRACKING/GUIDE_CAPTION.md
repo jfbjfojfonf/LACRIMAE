@@ -6,7 +6,7 @@
 ## Principe en 3 lignes
 
 1. Whisper sort un transcript **au mot pres** (`transcript.json`).
-2. La preview JS sert a regler **un** pack `s1` (police, place, taille, couleur, mouvement, glow, contour). Ce pack se rejoue sur N videos.
+2. La preview JS sert a regler **un** pack `s1` (police, place, taille, couleur, mouvement, `motion_speed`, glow, contour). Ce pack se rejoue sur N videos.
 3. Un bouton **proof** demande a Blender 1 mot / 1–3 frames. Sans cette frame, pas de rendu video.
 
 ## Ce que tu ne fais pas
@@ -20,7 +20,7 @@
 
 - Video dans `F07_CAPTION/IN/` (C0)
 - Transcript `OUT/transcript.json` (C1) — Whisper GHA `job=whisper`
-- `s1` exporte `OUT/style.json` (C2) — preview `npm run dev`
+- `s1` Save → `OUT/style.json` (C2) — preview `npm run dev`, bouton Save s1
 - Proof PNG valide visuellement (C3) — GHA `job=proof` ou bouton preview
 - Puis seulement : calque alpha + overlay (C4) — GHA `job=render` → F05 → F06
 
@@ -44,6 +44,7 @@ Secrets : `MODAL_TOKEN_ID` / `MODAL_TOKEN_SECRET` (deja poses pour dev6-F).
 Coque du meme type que `F03_PREVIEW` (Vite, drop fichier, canvas 9:16, barre laterale).
 Moteur CODEBASE : telecharge ailleurs — pas copie du LOOK blur/split/reframing.
 Sliders = proxy layout. Glow Eevee = proof Blender uniquement.
+Pop-in : couple cote a cote, in sur l'horloge video (`motion_speed`). Pas d'anim CSS. Preview = C4.
 
 ## Proof frame
 
