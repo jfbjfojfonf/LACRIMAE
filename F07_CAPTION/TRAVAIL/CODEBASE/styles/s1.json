@@ -17,6 +17,6 @@
     "color": "#FFFFFF"
   },
   "motion": "pop-in",
-  "motion_speed": 1.0,
+  "motion_speed": 1.95,
   "canvas": "9:16"
 }

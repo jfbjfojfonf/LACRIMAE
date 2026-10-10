@@ -5,46 +5,66 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const styleOut = resolve(here, '../../../OUT/style.json')
+const styleOut = resolve(here, '../../OUT/style.json')
+
+function saveStyleMiddleware(req, res, next) {
+  const path = (req.url || '').split('?')[0]
+  if (path !== '/api/save-style' || req.method !== 'POST') {
+    next()
+    return
+  }
+  const chunks = []
+  req.on('data', (chunk) => chunks.push(chunk))
+  req.on('end', () => {
+    try {
+      const raw = Buffer.concat(chunks).toString('utf8')
+      JSON.parse(raw)
+      mkdirSync(dirname(styleOut), { recursive: true })
+      writeFileSync(styleOut, raw.endsWith('\n') ? raw : `${raw}\n`, 'utf8')
+      res.statusCode = 200
+      res.setHeader('Content-Type', 'application/json')
+      res.end(JSON.stringify({ ok: true, path: 'F07_CAPTION/OUT/style.json' }))
+    } catch (err) {
+      res.statusCode = 400
+      res.setHeader('Content-Type', 'application/json')
+      res.end(JSON.stringify({ ok: false, error: String(err.message || err) }))
+    }
+  })
+}
 
 function saveStylePlugin() {
   return {
     name: 'save-style',
     configureServer(server) {
-      server.middlewares.use((req, res, next) => {
-        const path = (req.url || '').split('?')[0]
-        if (path !== '/api/save-style' || req.method !== 'POST') {
-          next()
-          return
-        }
-        const chunks = []
-        req.on('data', (chunk) => chunks.push(chunk))
-        req.on('end', () => {
-          try {
-            const raw = Buffer.concat(chunks).toString('utf8')
-            JSON.parse(raw)
-            mkdirSync(dirname(styleOut), { recursive: true })
-            writeFileSync(styleOut, raw.endsWith('\n') ? raw : `${raw}\n`, 'utf8')
-            res.statusCode = 200
-            res.setHeader('Content-Type', 'application/json')
-            res.end(JSON.stringify({ ok: true, path: 'F07_CAPTION/OUT/style.json' }))
-          } catch (err) {
-            res.statusCode = 400
-            res.setHeader('Content-Type', 'application/json')
-            res.end(JSON.stringify({ ok: false, error: String(err.message || err) }))
-          }
-        })
-      })
+      server.middlewares.use(saveStyleMiddleware)
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(saveStyleMiddleware)
     },
   }
 }
 
 export default defineConfig({
   plugins: [react(), saveStylePlugin()],
-  base: './',
+  base: '/',
   server: {
-    host: true,
+    host: '0.0.0.0',
+    port: 5173,
+    strictPort: true,
     allowedHosts: ['.monkeycode-ai.live'],
+    hmr: false,
+    headers: {
+      'Cache-Control': 'no-store',
+    },
+  },
+  preview: {
+    host: '0.0.0.0',
+    port: 5173,
+    strictPort: true,
+    allowedHosts: ['.monkeycode-ai.live'],
+    headers: {
+      'Cache-Control': 'no-store',
+    },
   },
   build: {
     outDir: 'dist',

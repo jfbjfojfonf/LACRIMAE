@@ -11,11 +11,26 @@
       font-weight: 800;
       font-style: normal;
     }
-    html, body, #root { margin: 0; min-height: 100%; }
+    html, body, #root { margin: 0; min-height: 100%; background: #0b0b0f; color: #eee; }
+    #root { font-family: sans-serif; }
   </style>
+  <script>
+    window.addEventListener('error', function (e) {
+      var el = document.getElementById('root');
+      if (!el || el.dataset.booted) return;
+      el.style.padding = '24px';
+      el.textContent = 'Preview JS: ' + (e.message || String(e));
+    });
+    window.addEventListener('unhandledrejection', function (e) {
+      var el = document.getElementById('root');
+      if (!el || el.dataset.booted) return;
+      el.style.padding = '24px';
+      el.textContent = 'Preview JS: ' + String(e.reason || e);
+    });
+  </script>
 </head>
 <body>
-  <div id="root"></div>
+  <div id="root">Chargement F07 CAPTION…</div>
   <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>

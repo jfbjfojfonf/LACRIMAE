@@ -1,7 +1,7 @@
 # LACRIMAE — TODO DE CONTINUATION
 
 > Point d'entree obligatoire apres toute reprise.
-> Derniere mise a jour : 2026-10-06.
+> Derniere mise a jour : 2026-10-10.
 > Branche : `dev11-F07` (base `dev10-v2`) sur `jfbjfojfonf/LACRIMAE`.
 > Statut : A–G poses. H0–H4 F07_CAPTION poses.
 
@@ -65,7 +65,7 @@ Sous-titres 3D mot-a-mot. Une frégate, deux halves (TRAVAIL / PREVIEW).
 
 ## Prochaine etape exacte
 
-**F07** : C0+C1 OK (Whisper run 37544539417, 133 mots). C2 en cours : Save s1 + couple pop-in + `motion_speed` horloge video. Ensuite C3 proof puis C4 render. Corriger la frégate fautive, pas le pack `s1`.
+**F07** : C0+C1 OK (Whisper run 37544539417, 133 mots). C2 OK : `s1` dans `F07_CAPTION/TRAVAIL/CODEBASE/styles/s1.json` (`motion_speed: 1.95`, pop-in). Prochaine etape = C3 proof (1 mot, 1–3 PNG Blender), sans lancer le run tant que l'operateur n'a pas dit go. Puis C4 render. Corriger la fregate fautive, pas le pack `s1`.
 
 **PUR** (inchange) : premier E2E CI (`dev10_pur_render.yml`) avec un pack
 PERTURABO joignable. Si le run E2E casse : corriger la frégate fautive,
